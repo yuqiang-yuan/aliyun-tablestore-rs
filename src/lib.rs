@@ -1,0 +1,210 @@
+use std::{collections::HashMap, fmt::Display, str::FromStr};
+
+use base64::{Engine, prelude::BASE64_STANDARD};
+use error::OtsError;
+use reqwest::{
+    Response,
+    header::{HeaderMap, HeaderName, HeaderValue},
+};
+use url::Url;
+use util::get_iso8601_date_time_string;
+
+pub mod crc8;
+pub mod error;
+pub mod index;
+pub mod model;
+pub mod protos;
+pub mod table;
+pub mod util;
+
+const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
+const HEADER_API_VERSION: &str = "x-ots-apiversion";
+const HEADER_ACCESS_KEY_ID: &str = "x-ots-accesskeyid";
+const HEADER_CONTENT_MD5: &str = "x-ots-contentmd5";
+const HEADER_SIGNATURE: &str = "x-ots-signature";
+const HEADER_DATE: &str = "x-ots-date";
+const HEADER_STS_TOKEN: &str = "x-ots-ststoken";
+const HEADER_INSTANCE_NAME: &str = "x-ots-instancename";
+
+const API_VERSION: &str = "2015-12-31";
+
+pub type OtsResult<T> = Result<T, OtsError>;
+
+#[derive(Default, Debug, Clone, Copy)]
+pub enum OtsOp {
+    #[default]
+    Undefined,
+
+    CreateTable,
+    ListTable,
+    DescribeTable,
+}
+
+impl From<OtsOp> for String {
+    fn from(value: OtsOp) -> Self {
+        value.to_string()
+    }
+}
+
+impl Display for OtsOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            OtsOp::Undefined => "_Undefined_",
+
+            OtsOp::CreateTable => "CreateTable",
+            OtsOp::ListTable => "ListTable",
+            OtsOp::DescribeTable => "DescribeTable",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+/// The request to send to aliyun tablestore service
+#[allow(dead_code)]
+#[derive(Default, Debug)]
+pub struct OtsRequest {
+    method: reqwest::Method,
+    operation: OtsOp,
+    headers: HashMap<String, String>,
+    query: HashMap<String, String>,
+    body: reqwest::Body,
+}
+
+/// Aliyun tablestore client
+#[allow(dead_code)]
+#[derive(Clone, Default)]
+pub struct OtsClient {
+    access_key_id: String,
+    access_key_secret: String,
+    sts_token: Option<String>,
+    region: String,
+    instance_name: String,
+    endpoint: String,
+    http_client: reqwest::Client,
+}
+
+impl OtsClient {
+    fn parse_instance_and_region(endpoint: &str) -> (&str, &str) {
+        let s = endpoint.strip_prefix("http://").unwrap_or(endpoint);
+        let s = s.strip_prefix("https://").unwrap_or(s);
+        let parts = s.split(".").collect::<Vec<_>>();
+        if parts.len() < 2 {
+            panic!("can not parse instance name and region from endpoint: {}", endpoint);
+        }
+
+        (parts[0], parts[1])
+    }
+
+    /// Build an OtsClient from env values. The following env vars are required:
+    ///
+    /// - `ALIYUN_OTS_AK_ID`: The access key id.
+    /// - `ALIYUN_OTS_AK_SEC`: The access key secret
+    /// - `ALIYUN_OTS_ENDPOINT`: The tablestore instance endpoint. e.g. `https://${instance-name}.cn-beijing.ots.aliyuncs.com`
+    pub fn from_env() -> Self {
+        let access_key_id = std::env::var("ALIYUN_OTS_AK_ID").expect("env var ALI_ACCESS_KEY_ID is missing");
+        let access_key_secret = std::env::var("ALIYUN_OTS_AK_SEC").expect("env var ALI_ACCESS_KEY_SECRET is missing");
+        let endpoint = std::env::var("ALIYUN_OTS_ENDPOINT").expect("env var ALI_OSS_ENDPOINT is missing");
+        let endpoint = endpoint.to_lowercase();
+        let (instance_name, region) = Self::parse_instance_and_region(endpoint.as_str());
+
+        Self {
+            access_key_id,
+            access_key_secret,
+            sts_token: None,
+            region: region.to_string(),
+            instance_name: instance_name.to_string(),
+            endpoint,
+            http_client: reqwest::Client::new(),
+        }
+    }
+
+    fn prepare_headers(&self, req: &mut OtsRequest) {
+        let headers = &mut req.headers;
+        headers.insert("User-Agent".to_string(), USER_AGENT.to_string());
+        headers.insert(HEADER_API_VERSION.to_string(), API_VERSION.to_string());
+        headers.insert(HEADER_DATE.to_string(), get_iso8601_date_time_string());
+        headers.insert(HEADER_ACCESS_KEY_ID.to_string(), self.access_key_id.clone());
+        headers.insert(HEADER_INSTANCE_NAME.to_string(), self.instance_name.clone());
+
+        if let Some(s) = &self.sts_token {
+            headers.insert(HEADER_STS_TOKEN.to_string(), s.to_string());
+        }
+
+        let body_bytes = match req.body.as_bytes() {
+            Some(b) => b,
+            _ => b"",
+        };
+
+        log::debug!("body bytes: {:?}", body_bytes);
+
+        headers.insert("Content-Length".to_string(), format!("{}", body_bytes.len()));
+        let content_md5_base64 = BASE64_STANDARD.encode(md5::compute(body_bytes).as_slice());
+        headers.insert(HEADER_CONTENT_MD5.to_string(), content_md5_base64);
+    }
+
+    fn header_sign(&self, req: &mut OtsRequest) {
+        self.prepare_headers(req);
+
+        let mut canonical_headers = req
+            .headers
+            .iter()
+            .map(|(k, v)| (k.to_lowercase(), v))
+            .filter(|(k, _)| k.starts_with("x-ots-") && k != HEADER_SIGNATURE)
+            .map(|(k, v)| format!("{}:{}", k, v))
+            .collect::<Vec<_>>();
+        canonical_headers.sort();
+
+        let canonical_headers = canonical_headers.join("\n");
+
+        let string_to_sign = format!("/{}\n{}\n\n{}\n", req.operation, req.method, canonical_headers);
+
+        log::debug!("string to sign: ({})", string_to_sign);
+        let sig = util::hmac_sha1(self.access_key_secret.as_bytes(), string_to_sign.as_bytes());
+        let sig_string = BASE64_STANDARD.encode(&sig);
+
+        log::debug!("signature = {}", sig_string);
+
+        req.headers.insert(HEADER_SIGNATURE.to_string(), sig_string);
+    }
+
+    pub async fn send(&self, req: OtsRequest) -> OtsResult<Response> {
+        let mut req = req;
+        self.header_sign(&mut req);
+
+        let OtsRequest {
+            method,
+            operation,
+            headers,
+            query: _,
+            body,
+        } = req;
+
+        let mut header_map = HeaderMap::new();
+        headers.into_iter().for_each(|(k, v)| {
+            log::debug!(">> header: {}: {}", k, v);
+            header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(&v).unwrap());
+        });
+
+        let request = self
+            .http_client
+            .request(method, Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap())
+            .headers(header_map)
+            .body(body)
+            .build()
+            .unwrap();
+        let response = self.http_client.execute(request).await?;
+
+        response.headers().iter().for_each(|(k, v)| {
+            log::debug!("<< header: {}: {}", k, v.to_str().unwrap());
+        });
+
+        if !&response.status().is_success() {
+            let status = response.status();
+            let err_msg = response.text().await?;
+            return Err(OtsError::StatusError(status, err_msg));
+        }
+
+        Ok(response)
+    }
+}
