@@ -1,11 +1,18 @@
-use std::{collections::HashMap, fmt::Display, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr, time::Duration};
 
 use base64::{Engine, prelude::BASE64_STANDARD};
+use bytes::Bytes;
+use defined_column::{AddDefinedColumnOperation, DeleteDefinedColumnOperation};
 use error::OtsError;
+use prost::Message;
+use protos::table_store;
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
 };
+
+use row::GetRowOperation;
+use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
@@ -15,6 +22,8 @@ pub mod index;
 pub mod model;
 pub mod protos;
 pub mod table;
+pub mod defined_column;
+pub mod row;
 pub mod util;
 
 const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
@@ -35,9 +44,20 @@ pub enum OtsOp {
     #[default]
     Undefined,
 
+    // tables
     CreateTable,
+    UpdateTable,
     ListTable,
     DescribeTable,
+    DeleteTable,
+    ComputeSplitPointsBySize,
+
+    // defined columns
+    AddDefinedColumn,
+    DeleteDefinedColumn,
+
+    // Data operations
+    GetRow,
 }
 
 impl From<OtsOp> for String {
@@ -52,8 +72,16 @@ impl Display for OtsOp {
             OtsOp::Undefined => "_Undefined_",
 
             OtsOp::CreateTable => "CreateTable",
+            OtsOp::UpdateTable => "UpdateTable",
             OtsOp::ListTable => "ListTable",
             OtsOp::DescribeTable => "DescribeTable",
+            OtsOp::DeleteTable => "DeleteTable",
+            OtsOp::ComputeSplitPointsBySize => "ComputeSplitPointsBySize",
+
+            OtsOp::AddDefinedColumn => "AddDefinedColumn",
+            OtsOp::DeleteDefinedColumn => "DeleteDefinedColumn",
+
+            OtsOp::GetRow => "GetRow",
         };
 
         write!(f, "{}", s)
@@ -62,13 +90,70 @@ impl Display for OtsOp {
 
 /// The request to send to aliyun tablestore service
 #[allow(dead_code)]
-#[derive(Default, Debug)]
+#[derive(Debug, Clone)]
 pub struct OtsRequest {
     method: reqwest::Method,
     operation: OtsOp,
     headers: HashMap<String, String>,
     query: HashMap<String, String>,
-    body: reqwest::Body,
+    body: Vec<u8>,
+}
+
+impl Default for OtsRequest {
+    fn default() -> Self {
+        Self {
+            method: reqwest::Method::POST,
+            operation: OtsOp::Undefined,
+            headers: HashMap::new(),
+            query: HashMap::new(),
+            body: Vec::new(),
+        }
+    }
+}
+
+pub trait RetryPolicy: std::fmt::Debug + Send + Sync {
+    fn should_retry(&self, op: OtsOp, api_error: crate::table_store::Error) -> bool;
+    fn clone_box(&self) -> Box<dyn RetryPolicy>;
+}
+
+impl Clone for Box<dyn RetryPolicy> {
+    fn clone(&self) -> Box<dyn RetryPolicy> {
+        self.clone_box()
+    }
+}
+
+#[derive(Debug)]
+pub struct DefaultRetryPolicy;
+
+impl RetryPolicy for DefaultRetryPolicy {
+    fn should_retry(&self, _op: OtsOp, _api_error: crate::table_store::Error) -> bool {
+        false
+    }
+
+    fn clone_box(&self) -> Box<dyn RetryPolicy> {
+        Box::new(DefaultRetryPolicy)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OtsClientOptions {
+    pub timeout_ms: Option<u64>,
+    pub retry_policy: Box<dyn RetryPolicy>,
+}
+
+impl OtsClientOptions {
+    pub fn new() -> Self {
+        Self {
+            retry_policy: Box::new(DefaultRetryPolicy),
+            timeout_ms: None,
+        }
+    }
+}
+
+impl Default for OtsClientOptions {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Aliyun tablestore client
@@ -82,6 +167,7 @@ pub struct OtsClient {
     instance_name: String,
     endpoint: String,
     http_client: reqwest::Client,
+    options: OtsClientOptions,
 }
 
 impl OtsClient {
@@ -116,6 +202,7 @@ impl OtsClient {
             instance_name: instance_name.to_string(),
             endpoint,
             http_client: reqwest::Client::new(),
+            options: OtsClientOptions::default(),
         }
     }
 
@@ -131,10 +218,7 @@ impl OtsClient {
             headers.insert(HEADER_STS_TOKEN.to_string(), s.to_string());
         }
 
-        let body_bytes = match req.body.as_bytes() {
-            Some(b) => b,
-            _ => b"",
-        };
+        let body_bytes = &req.body;
 
         log::debug!("body bytes: {:?}", body_bytes);
 
@@ -186,14 +270,17 @@ impl OtsClient {
             header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(&v).unwrap());
         });
 
-        let request = self
-            .http_client
-            .request(method, Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap())
-            .headers(header_map)
-            .body(body)
-            .build()
-            .unwrap();
-        let response = self.http_client.execute(request).await?;
+        let request_body = Bytes::from_owner(body);
+        let url = Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap();
+
+        let mut request_builder = self.http_client.request(method, url.clone()).headers(header_map.clone()).body(request_body.clone());
+
+        // Handle per-request options
+        if let Some(ms) = self.options.timeout_ms {
+            request_builder = request_builder.timeout(Duration::from_millis(ms));
+        }
+
+        let response = request_builder.send().await?;
 
         response.headers().iter().for_each(|(k, v)| {
             log::debug!("<< header: {}: {}", k, v.to_str().unwrap());
@@ -201,10 +288,61 @@ impl OtsClient {
 
         if !&response.status().is_success() {
             let status = response.status();
-            let err_msg = response.text().await?;
-            return Err(OtsError::StatusError(status, err_msg));
+
+            match response.bytes().await {
+                Ok(bytes) => {
+                    let api_error = table_store::Error::decode(bytes)?;
+                    return Err(OtsError::ApiError(Box::new(api_error)));
+                }
+                Err(_) => return Err(OtsError::StatusError(status, "".to_string())),
+            }
         }
 
         Ok(response)
+    }
+
+    /// List tables in a instance
+    pub fn list_table(&self) -> ListTableOperation {
+        ListTableOperation::new(self.clone())
+    }
+
+    /// Create table
+    pub fn create_table(&self, table_name: &str) -> CreateTableOperation {
+        CreateTableOperation::new(self.clone(), table_name)
+    }
+
+    /// Update table
+    pub fn update_table(&self, table_name: &str) -> UpdateTableOperation {
+        UpdateTableOperation::new(self.clone(), table_name)
+    }
+
+    /// Describe table
+    pub fn describe_table(&self, table_name: &str) -> DescribeTableOperation {
+        DescribeTableOperation::new(self.clone(), table_name)
+    }
+
+    /// Delete table
+    pub fn delete_table(&self, table_name: &str) -> DeleteTableOperation {
+        DeleteTableOperation::new(self.clone(), table_name)
+    }
+
+    /// Compute split points by size
+    pub fn compute_split_points_by_size(&self, table_name: &str, size: u64) -> ComputeSplitPointsBySizeOperation {
+        ComputeSplitPointsBySizeOperation::new(self.clone(), table_name, size)
+    }
+
+    /// Add defined column
+    pub fn add_defined_column(&self, table_name: &str) -> AddDefinedColumnOperation {
+        AddDefinedColumnOperation::new(self.clone(), table_name)
+    }
+
+    /// Delete defined column
+    pub fn delete_defined_column(&self, table_name: &str) -> DeleteDefinedColumnOperation {
+        DeleteDefinedColumnOperation::new(self.clone(), table_name)
+    }
+
+    /// Get row by primary key
+    pub fn get_row(&self, table_name: &str) -> GetRowOperation {
+        GetRowOperation::new(self.clone(), table_name)
     }
 }

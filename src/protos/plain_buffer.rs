@@ -1,4 +1,4 @@
-//! Aliyun plain buffer. See [https://help.aliyun.com/zh/tablestore/developer-reference/plainbuffer] for more details.
+//! Aliyun plain buffer. See <https://help.aliyun.com/zh/tablestore/developer-reference/plainbuffer> for more details.
 
 use std::io::{Cursor, Write};
 
@@ -48,7 +48,7 @@ pub const VT_INF_MAX: u8 = 0xa;
 pub const VT_AUTO_INCREMENT: u8 = 0xb;
 
 #[derive(Default)]
-pub struct PlainBufferCodedStream {
+pub(crate) struct PlainBufferCodedStream {
     buffer: Cursor<Vec<u8>>,
 }
 
@@ -65,56 +65,56 @@ impl PlainBufferCodedStream {
         }
     }
 
-    pub fn into_inner(self) -> Vec<u8> {
+    fn into_inner(self) -> Vec<u8> {
         self.buffer.into_inner()
     }
 
-    pub fn write_u8(&mut self, b: u8) -> &mut Self {
+    fn write_u8(&mut self, b: u8) -> &mut Self {
         self.buffer.write_all(&[b]).unwrap();
         self
     }
 
-    pub fn write_bytes(&mut self, buf: &[u8]) -> &mut Self {
+    fn write_bytes(&mut self, buf: &[u8]) -> &mut Self {
         self.buffer.write_all(buf).unwrap();
         self
     }
 
-    pub fn write_i32_le(&mut self, n: i32) -> &mut Self {
+    fn write_i32_le(&mut self, n: i32) -> &mut Self {
         self.buffer.write_i32::<LittleEndian>(n).unwrap();
         self
     }
 
-    pub fn write_u32_le(&mut self, n: u32) -> &mut Self {
+    fn write_u32_le(&mut self, n: u32) -> &mut Self {
         self.buffer.write_u32::<LittleEndian>(n).unwrap();
         self
     }
 
-    pub fn write_i64_le(&mut self, n: i64) -> &mut Self {
+    fn write_i64_le(&mut self, n: i64) -> &mut Self {
         self.buffer.write_i64::<LittleEndian>(n).unwrap();
         self
     }
 
-    pub fn write_u64_le(&mut self, n: u64) -> &mut Self {
+    fn write_u64_le(&mut self, n: u64) -> &mut Self {
         self.buffer.write_u64::<LittleEndian>(n).unwrap();
         self
     }
 
-    pub fn write_f64_le(&mut self, v: f64) -> &mut Self {
+    fn write_f64_le(&mut self, v: f64) -> &mut Self {
         self.buffer.write_f64::<LittleEndian>(v).unwrap();
         self
     }
 
-    pub fn write_f32_le(&mut self, v: f32) -> &mut Self {
+    fn write_f32_le(&mut self, v: f32) -> &mut Self {
         self.buffer.write_f32::<LittleEndian>(v).unwrap();
         self
     }
 
-    pub fn write_bool(&mut self, b: bool) -> &mut Self {
+    fn write_bool(&mut self, b: bool) -> &mut Self {
         self.write_u8(if b { 0x01 } else { 0x00 });
         self
     }
 
-    pub fn write_primary_key_column(&mut self, kc: &PrimaryKeyColumn, cell_checksum: u8) -> u8 {
+    fn write_primary_key_column(&mut self, kc: &PrimaryKeyColumn, cell_checksum: u8) -> u8 {
         self.write_u8(TAG_CELL)
             .write_u8(TAG_CELL_NAME)
             .write_u32_le(kc.name.len() as u32)
@@ -126,7 +126,7 @@ impl PlainBufferCodedStream {
         0u8
     }
 
-    pub fn write_primary_key_value(&mut self, kv: &PrimaryKeyValue) -> &mut Self {
+    fn write_primary_key_value(&mut self, kv: &PrimaryKeyValue) -> &mut Self {
         match kv {
             PrimaryKeyValue::Integer(n) => self.write_u32_le(LITTLE_ENDIAN_64_SIZE + 1).write_u8(VT_INTEGER).write_i64_le(*n),
 
@@ -150,12 +150,13 @@ impl PlainBufferCodedStream {
         }
     }
 
-    pub fn write_cell_name(&mut self, name: &str, cell_checksum: u8) -> u8 {
+    fn write_cell_name(&mut self, name: &str, cell_checksum: u8) -> u8 {
         self.write_u8(TAG_CELL_NAME).write_u32_le(name.len() as u32).write_bytes(name.as_bytes());
 
         crc_bytes(cell_checksum, name.as_bytes())
     }
 
+    /// Build primary key and value plain buffer.
     pub fn build_primary_key_with_header(pk: &PrimaryKey) -> Vec<u8> {
         let mut coded_stream = Self::with_capacity(pk.compute_size_with_header() as usize);
         coded_stream.write_u32_le(HEADER).write_u8(TAG_ROW_PK);
@@ -196,7 +197,6 @@ mod test {
             keys: vec![PrimaryKeyColumn {
                 name: "user_id".to_string(),
                 value: PrimaryKeyValue::String("0005358A-DCAF-665E-EECF-D9935E821B87".to_string()),
-                auto_increment: false,
             }],
         };
 

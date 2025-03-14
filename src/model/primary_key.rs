@@ -4,7 +4,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct PrimaryKey {
+pub(crate) struct PrimaryKey {
     pub keys: Vec<PrimaryKeyColumn>,
 }
 
@@ -19,7 +19,7 @@ impl PrimaryKey {
 }
 
 #[derive(Debug, Clone)]
-pub enum PrimaryKeyValue {
+pub(crate) enum PrimaryKeyValue {
     Integer(i64),
     String(String),
     Binary(Vec<u8>),
@@ -69,10 +69,9 @@ impl PrimaryKeyValue {
 }
 
 #[derive(Debug, Clone)]
-pub struct PrimaryKeyColumn {
+pub(crate) struct PrimaryKeyColumn {
     pub name: String,
     pub value: PrimaryKeyValue,
-    pub auto_increment: bool,
 }
 
 impl PrimaryKeyColumn {
