@@ -1,16 +1,14 @@
 use std::collections::HashSet;
 
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse},
+    add_per_request_options, protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// Update table
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct UpdateTableOperation {
     client: OtsClient,
 
@@ -32,6 +30,8 @@ pub struct UpdateTableOperation {
     stream_expiration_hour: Option<i32>,
     stream_columns: HashSet<String>,
 }
+
+add_per_request_options!(UpdateTableOperation);
 
 impl UpdateTableOperation {
     /// Create a new update table operation

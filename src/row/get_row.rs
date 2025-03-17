@@ -1,11 +1,10 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 
-use crate::{error::OtsError, model::primary_key::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue}, protos::{plain_buffer::PlainBufferCodedStream, table_store::{GetRowRequest, GetRowResponse, TimeRange}}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, model::primary_key::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue}, protos::{plain_buffer::PlainBufferCodedStream, table_store::{GetRowRequest, GetRowResponse, TimeRange}}, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 
 /// Get row using primary key
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct GetRowOperation {
     client: OtsClient,
     table_name: String,
@@ -22,6 +21,8 @@ pub struct GetRowOperation {
     end_column: Option<String>,
     transaction_id: Option<String>,
 }
+
+add_per_request_options!(GetRowOperation);
 
 impl GetRowOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {

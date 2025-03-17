@@ -1,15 +1,16 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
-use crate::{error::OtsError, protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType}, OtsClient, OtsOp, OtsRequest, OtsResult};
 
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct AddDefinedColumnOperation {
     client: OtsClient,
     table_name: String,
     columns: Vec<DefinedColumnSchema>
 }
+
+add_per_request_options!(AddDefinedColumnOperation);
 
 impl AddDefinedColumnOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {

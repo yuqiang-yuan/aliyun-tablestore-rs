@@ -1,17 +1,17 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    protos::table_store::{ListTableRequest, ListTableResponse},
+    add_per_request_options, protos::table_store::{ListTableRequest, ListTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// List table
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct ListTableOperation {
     client: OtsClient,
 }
+
+add_per_request_options!(ListTableOperation);
 
 impl ListTableOperation {
     pub(crate) fn new(client: OtsClient) -> Self {

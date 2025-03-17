@@ -1,18 +1,18 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    protos::table_store::{DeleteTableRequest, DeleteTableResponse},
+    add_per_request_options, protos::table_store::{DeleteTableRequest, DeleteTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// Delete table
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct DeleteTableOperation {
     client: OtsClient,
     table_name: String,
 }
+
+add_per_request_options!(DeleteTableOperation);
 
 impl DeleteTableOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {

@@ -1,18 +1,18 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    protos::table_store::{DescribeTableRequest, DescribeTableResponse},
+    add_per_request_options, protos::table_store::{DescribeTableRequest, DescribeTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// Describe table
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct DescribeTableOperation {
     client: OtsClient,
     table_name: String,
 }
+
+add_per_request_options!(DescribeTableOperation);
 
 impl DescribeTableOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {

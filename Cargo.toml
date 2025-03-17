@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aliyun-tablestore-rs-macro = { version = "0.0.1", path = "../aliyun-tablestore-rs-macro" }
 base64 = "0.22.1"
 byteorder = "1.5.0"
 bytes = "1.10.1"

@@ -25,6 +25,7 @@ pub mod table;
 pub mod defined_column;
 pub mod row;
 pub mod util;
+pub mod macros;
 
 const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
 const HEADER_API_VERSION: &str = "x-ots-apiversion";

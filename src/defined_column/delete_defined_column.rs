@@ -1,14 +1,15 @@
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 
-use crate::{protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
 
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct DeleteDefinedColumnOperation {
     client: OtsClient,
     table_name: String,
     columns: Vec<String>,
 }
+
+add_per_request_options!(DeleteDefinedColumnOperation);
 
 impl DeleteDefinedColumnOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {

@@ -30,7 +30,6 @@ dependencies = [
 name = "aliyun-tablestore-rs"
 version = "0.1.0"
 dependencies = [
- "aliyun-tablestore-rs-macro",
  "base64",
  "byteorder",
  "bytes",
@@ -52,15 +51,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
-]
-
-[[package]]
-name = "aliyun-tablestore-rs-macro"
-version = "0.0.1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

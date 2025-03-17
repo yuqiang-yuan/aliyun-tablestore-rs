@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 
-use aliyun_tablestore_rs_macro::PerRequestOptions;
 use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    error::OtsError, protos::table_store::{
+    add_per_request_options, error::OtsError, protos::table_store::{
         CapacityUnit, CreateTableRequest, CreateTableResponse, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType,
         ReservedThroughput, SseKeyType, SseSpecification, StreamSpecification, TableMeta, TableOptions,
     }, OtsClient, OtsOp, OtsRequest, OtsResult
@@ -25,7 +24,7 @@ use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column
 /// - 本地事务
 ///
 /// 所以，虽然 `table_store.proto` 文件中的 `CreateTableRequest` 包含了分区相关的，但是这里没有放上来。对应的 Java SDK 5.17.5 版本中创建宽表的时候也是没有分区设定的。
-#[derive(Default, PerRequestOptions)]
+#[derive(Default)]
 pub struct CreateTableOperation {
     client: OtsClient,
     // table meta
@@ -64,6 +63,8 @@ pub struct CreateTableOperation {
     // indexes
     indexes: Vec<IndexMeta>,
 }
+
+add_per_request_options!(CreateTableOperation);
 
 impl CreateTableOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
