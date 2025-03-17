@@ -1,7 +1,10 @@
 use prost::Message;
 use reqwest::Method;
 
-use crate::{add_per_request_options, protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse},
+};
 
 #[derive(Default)]
 pub struct ComputeSplitPointsBySizeOperation {
@@ -9,7 +12,7 @@ pub struct ComputeSplitPointsBySizeOperation {
     table_name: String,
     split_size: u64,
     split_size_unit_in_byte: Option<u64>,
-    split_point_limit: Option<u32>
+    split_point_limit: Option<u32>,
 }
 
 add_per_request_options!(ComputeSplitPointsBySizeOperation);
@@ -21,7 +24,7 @@ impl ComputeSplitPointsBySizeOperation {
             table_name: table_name.to_string(),
             split_size,
             split_size_unit_in_byte: None,
-            split_point_limit: None
+            split_point_limit: None,
         }
     }
 

@@ -5,27 +5,27 @@ use bytes::Bytes;
 use defined_column::{AddDefinedColumnOperation, DeleteDefinedColumnOperation};
 use error::OtsError;
 use prost::Message;
-use protos::table_store;
+use protos::table_store::{self};
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use row::GetRowOperation;
+use row::{GetRangeOperation, GetRowOperation};
 use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
 pub mod crc8;
+pub mod defined_column;
 pub mod error;
 pub mod index;
+pub mod macros;
 pub mod model;
 pub mod protos;
-pub mod table;
-pub mod defined_column;
 pub mod row;
+pub mod table;
 pub mod util;
-pub mod macros;
 
 const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
 const HEADER_API_VERSION: &str = "x-ots-apiversion";
@@ -59,6 +59,7 @@ pub enum OtsOp {
 
     // Data operations
     GetRow,
+    GetRange,
 }
 
 impl From<OtsOp> for String {
@@ -83,6 +84,7 @@ impl Display for OtsOp {
             OtsOp::DeleteDefinedColumn => "DeleteDefinedColumn",
 
             OtsOp::GetRow => "GetRow",
+            OtsOp::GetRange => "GetRange",
         };
 
         write!(f, "{}", s)
@@ -274,7 +276,11 @@ impl OtsClient {
         let request_body = Bytes::from_owner(body);
         let url = Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap();
 
-        let mut request_builder = self.http_client.request(method, url.clone()).headers(header_map.clone()).body(request_body.clone());
+        let mut request_builder = self
+            .http_client
+            .request(method, url.clone())
+            .headers(header_map.clone())
+            .body(request_body.clone());
 
         // Handle per-request options
         if let Some(ms) = self.options.timeout_ms {
@@ -345,5 +351,9 @@ impl OtsClient {
     /// Get row by primary key
     pub fn get_row(&self, table_name: &str) -> GetRowOperation {
         GetRowOperation::new(self.clone(), table_name)
+    }
+
+    pub fn get_range(&self, table_name: &str) -> GetRangeOperation {
+        GetRangeOperation::new(self.clone(), table_name)
     }
 }

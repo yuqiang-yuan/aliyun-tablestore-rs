@@ -2,7 +2,8 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    add_per_request_options, protos::table_store::{DeleteTableRequest, DeleteTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    protos::table_store::{DeleteTableRequest, DeleteTableResponse},
 };
 
 /// Delete table

@@ -1,6 +1,9 @@
 use prost::Message;
 
-use crate::{add_per_request_options, protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse},
+};
 
 #[derive(Default)]
 pub struct DeleteDefinedColumnOperation {
@@ -27,16 +30,9 @@ impl DeleteDefinedColumnOperation {
     }
 
     pub async fn send(self) -> OtsResult<DeleteDefinedColumnResponse> {
-        let Self {
-            client,
-            table_name,
-            columns,
-        } = self;
+        let Self { client, table_name, columns } = self;
 
-        let msg = DeleteDefinedColumnRequest {
-            table_name,
-            columns,
-        };
+        let msg = DeleteDefinedColumnRequest { table_name, columns };
 
         let req = OtsRequest {
             operation: OtsOp::DeleteDefinedColumn,

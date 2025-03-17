@@ -1,13 +1,17 @@
 use prost::Message;
 use reqwest::Method;
 
-use crate::{add_per_request_options, error::OtsError, protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType},
+};
 
 #[derive(Default)]
 pub struct AddDefinedColumnOperation {
     client: OtsClient,
     table_name: String,
-    columns: Vec<DefinedColumnSchema>
+    columns: Vec<DefinedColumnSchema>,
 }
 
 add_per_request_options!(AddDefinedColumnOperation);
@@ -17,7 +21,7 @@ impl AddDefinedColumnOperation {
         Self {
             client,
             table_name: table_name.to_string(),
-            columns: vec![]
+            columns: vec![],
         }
     }
 
@@ -57,20 +61,13 @@ impl AddDefinedColumnOperation {
 
     /// 执行添加预定义列操作
     pub async fn send(self) -> OtsResult<AddDefinedColumnResponse> {
-        let Self {
-            client,
-            table_name,
-            columns,
-        } = self;
+        let Self { client, table_name, columns } = self;
 
         if columns.is_empty() {
             return Err(OtsError::ValidationFailed("No columns to add".to_string()));
         }
 
-        let msg = AddDefinedColumnRequest {
-            table_name,
-            columns,
-        };
+        let msg = AddDefinedColumnRequest { table_name, columns };
 
         let req = OtsRequest {
             method: Method::POST,

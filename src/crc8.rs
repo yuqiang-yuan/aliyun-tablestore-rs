@@ -43,24 +43,24 @@ pub fn crc_u32(crc: u8, n: u32) -> u8 {
 
 pub fn crc_i64(crc: u8, n: i64) -> u8 {
     let mut crc = crc;
-    let mut n = n;
 
-    (0..8).for_each(|_| {
-        crc = crc_u8(crc, (n & 0xFF) as u8);
-        n >>= 8;
-    });
+    let low = n as u32;
+    let hi = (n >> 32) as u32;
+
+    crc = crc_u32(crc, low);
+    crc = crc_u32(crc, hi);
 
     crc
 }
 
 pub fn crc_u64(crc: u8, n: u64) -> u8 {
     let mut crc = crc;
-    let mut n = n;
 
-    (0..8).for_each(|_| {
-        crc = crc_u8(crc, (n & 0xFF) as u8);
-        n >>= 8;
-    });
+    let low = n as u32;
+    let hi = (n >> 32) as u32;
+
+    crc = crc_u32(crc, low);
+    crc = crc_u32(crc, hi);
 
     crc
 }

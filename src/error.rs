@@ -1,4 +1,7 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    string::FromUtf8Error,
+};
 
 use reqwest::StatusCode;
 use thiserror::Error;
@@ -31,6 +34,15 @@ pub enum OtsError {
     #[error("{0}")]
     ApiError(Box<table_store::Error>),
 
+    #[error("{0}")]
+    FromUtf8Error(#[from] FromUtf8Error),
+
+    #[error("{0}")]
+    ReadError(#[from] std::io::Error),
+
     #[error("Aliyun ots api response with non-successful code: {0}. response message is: {1}")]
     StatusError(StatusCode, String),
+
+    #[error("{0}")]
+    PlainBufferError(String),
 }

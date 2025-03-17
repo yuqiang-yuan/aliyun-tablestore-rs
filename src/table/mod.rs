@@ -1,17 +1,17 @@
 //! 宽表操作
+mod compute_split_points;
 mod create_table;
 mod delete_table;
 mod describe_table;
 mod list_table;
 mod update_table;
-mod compute_split_points;
 
+pub use compute_split_points::*;
 pub use create_table::*;
 pub use delete_table::*;
 pub use describe_table::*;
 pub use list_table::*;
 pub use update_table::*;
-pub use compute_split_points::*;
 
 /// Validation rules for table
 pub(crate) mod rules {
@@ -122,9 +122,7 @@ mod test_table {
     async fn test_validate_create_table_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.create_table("_invalid_table_name")
-            .request_timeout_ms(1000)
-            .send().await;
+        let response = client.create_table("_invalid_table_name").request_timeout_ms(1000).send().await;
         assert!(response.is_err());
 
         let response = client.create_table("1dd").send().await;

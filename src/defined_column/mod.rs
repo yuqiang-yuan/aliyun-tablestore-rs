@@ -25,11 +25,13 @@ mod test_defined_column {
     async fn test_add_defined_column_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.add_defined_column("ccs")
+        let response = client
+            .add_defined_column("ccs")
             .add_integer_column("created_at")
             .add_string_column("cover_url")
             .add_double_column("avg_score")
-            .send().await;
+            .send()
+            .await;
 
         assert!(response.is_ok());
 
@@ -45,9 +47,7 @@ mod test_defined_column {
     async fn test_delete_defined_column_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.delete_defined_column("ccs" )
-            .delete_column("created_at")
-            .send().await;
+        let response = client.delete_defined_column("ccs").delete_column("created_at").send().await;
 
         log::debug!("{:#?}", response);
         assert!(response.is_ok());

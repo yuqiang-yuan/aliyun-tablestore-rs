@@ -4,10 +4,12 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::table_store::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{
         CapacityUnit, CreateTableRequest, CreateTableResponse, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType,
         ReservedThroughput, SseKeyType, SseSpecification, StreamSpecification, TableMeta, TableOptions,
-    }, OtsClient, OtsOp, OtsRequest, OtsResult
+    },
 };
 
 use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column_name, validate_index_name, validate_table_name};

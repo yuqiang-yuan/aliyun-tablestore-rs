@@ -1,7 +1,11 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, model::primary_key::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue}, protos::{plain_buffer::PlainBufferCodedStream, table_store::{GetRowRequest, GetRowResponse, TimeRange}}, OtsClient, OtsOp, OtsRequest, OtsResult};
-
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
+    protos::table_store::{GetRowRequest, GetRowResponse, TimeRange},
+};
 
 /// Get row using primary key
 #[derive(Default)]
@@ -37,7 +41,8 @@ impl GetRowOperation {
     pub fn add_string_pk_value(mut self, pk_name: &str, pk_value: impl Into<String>) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
-            value: PrimaryKeyValue::String(pk_value.into())
+            value: PrimaryKeyValue::String(pk_value.into()),
+            ..Default::default()
         });
         self
     }
@@ -46,7 +51,8 @@ impl GetRowOperation {
     pub fn add_integer_pk_value(mut self, pk_name: &str, pk_value: i64) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
-            value: PrimaryKeyValue::Integer(pk_value)
+            value: PrimaryKeyValue::Integer(pk_value),
+            ..Default::default()
         });
 
         self
@@ -56,7 +62,8 @@ impl GetRowOperation {
     pub fn add_binary_pk_value(mut self, pk_name: &str, pk_value: impl Into<Vec<u8>>) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
-            value: PrimaryKeyValue::Binary(pk_value.into())
+            value: PrimaryKeyValue::Binary(pk_value.into()),
+            ..Default::default()
         });
 
         self
@@ -135,11 +142,9 @@ impl GetRowOperation {
             transaction_id,
         } = self;
 
-        let pk = PrimaryKey {
-            keys: pk_values
-        };
+        let pk = PrimaryKey { keys: pk_values };
 
-        let pk_bytes = PlainBufferCodedStream::build_primary_key_with_header(&pk);
+        let pk_bytes = pk.into_plain_buffer(true);
 
         let msg = GetRowRequest {
             table_name,
