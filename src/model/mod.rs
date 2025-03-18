@@ -1,8 +1,13 @@
+//! 自定义的类型，主要是将 Protobuf 的类型映射到 Rust 类型
 mod defined_column;
+mod get_range_response;
+mod get_row_response;
 mod primary_key;
 mod row;
 
 pub use defined_column::*;
+pub use get_range_response::*;
+pub use get_row_response::*;
 pub use primary_key::*;
 pub use row::*;
 

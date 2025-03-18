@@ -6,13 +6,16 @@ use crate::{
     protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse},
 };
 
-#[derive(Default)]
+/// 将全表的数据在逻辑上划分成接近指定大小的若干分片，返回这些分片之间的分割点以及分片所在机器的提示。一般用于计算引擎规划并发度等执行计划。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/computesplitpointsbysize>
+#[derive(Default, Clone, Debug)]
 pub struct ComputeSplitPointsBySizeOperation {
     client: OtsClient,
-    table_name: String,
-    split_size: u64,
-    split_size_unit_in_byte: Option<u64>,
-    split_point_limit: Option<u32>,
+    pub table_name: String,
+    pub split_size: u64,
+    pub split_size_unit_in_byte: Option<u64>,
+    pub split_point_limit: Option<u32>,
 }
 
 add_per_request_options!(ComputeSplitPointsBySizeOperation);

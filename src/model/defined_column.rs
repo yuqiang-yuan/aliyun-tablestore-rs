@@ -4,12 +4,12 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{
     OtsResult,
-    crc8::{crc_bytes, crc_i64, crc_u8, crc_u32, crc_u64},
+    crc8::{crc_bytes, crc_f64, crc_i64, crc_u8, crc_u32, crc_u64},
     error::OtsError,
     protos::plain_buffer::{self, VT_BLOB, VT_BOOLEAN, VT_DOUBLE, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_NULL, VT_STRING},
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum CellValue {
     #[default]
     Null,
@@ -39,7 +39,7 @@ impl CellValue {
 
             Self::Double(d) => {
                 checksum = crc_u8(checksum, VT_DOUBLE);
-                crc_bytes(checksum, &d.to_le_bytes())
+                crc_f64(checksum, *d)
             }
 
             Self::Boolean(b) => {
@@ -62,12 +62,11 @@ impl CellValue {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct DefinedColumn {
     pub name: String,
     pub value: CellValue,
     pub timestamp: Option<u64>,
-    pub(crate) checksum: Option<u8>,
 }
 
 impl DefinedColumn {
@@ -94,8 +93,7 @@ impl DefinedColumn {
                 }
 
                 plain_buffer::TAG_CELL_VALUE => {
-                    // I don't know how to use this value
-                    let _marker = cursor.read_u32::<LittleEndian>()?;
+                    let _previx = cursor.read_u32::<LittleEndian>()?;
                     let cell_value_type = cursor.read_u8()?;
 
                     value = match cell_value_type {
@@ -139,14 +137,12 @@ impl DefinedColumn {
             }
         }
 
-        let col = Self {
-            name,
-            value,
-            timestamp: ts,
-            checksum: Some(checksum),
-        };
+        let col = Self { name, value, timestamp: ts };
 
         let cell_checksum = col.crc8_checksum();
+
+        // log::debug!("cell {}, calculated checksum {}, received checksum {}", col.name, cell_checksum, checksum);
+
         if cell_checksum != checksum {
             return Err(OtsError::PlainBufferError(format!(
                 "data row cell checksum validation failed. calculated: {}, received: {}",

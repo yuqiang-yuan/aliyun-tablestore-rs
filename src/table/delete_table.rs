@@ -6,11 +6,13 @@ use crate::{
     protos::table_store::{DeleteTableRequest, DeleteTableResponse},
 };
 
-/// Delete table
-#[derive(Default)]
+/// 删除本实例下指定的表。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletetable>
+#[derive(Debug, Clone, Default)]
 pub struct DeleteTableOperation {
     client: OtsClient,
-    table_name: String,
+    pub table_name: String,
 }
 
 add_per_request_options!(DeleteTableOperation);

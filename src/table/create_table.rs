@@ -14,7 +14,7 @@ use crate::{
 
 use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column_name, validate_index_name, validate_table_name};
 
-/// Create table
+/// 根据给定的表结构信息创建相应的数据表。
 ///
 /// 根据官方文档 <https://help.aliyun.com/zh/tablestore/table-operations> 2025-03-06 10:05:03 更新的内容，在创建表的时候，支持设置以下内容：
 ///
@@ -26,44 +26,61 @@ use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column
 /// - 本地事务
 ///
 /// 所以，虽然 `table_store.proto` 文件中的 `CreateTableRequest` 包含了分区相关的，但是这里没有放上来。对应的 Java SDK 5.17.5 版本中创建宽表的时候也是没有分区设定的。
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct CreateTableOperation {
     client: OtsClient,
-    // table meta
-    table_name: String,
-    primary_keys: Vec<PrimaryKeySchema>,
-    defined_columns: Vec<DefinedColumnSchema>,
+    /// 表名
+    pub table_name: String,
 
-    // reserved throughput
-    reserved_throughput_read: Option<i32>,
-    reserved_throughput_write: Option<i32>,
+    /// 全部主键列
+    pub primary_keys: Vec<PrimaryKeySchema>,
 
-    // table options
-    ttl_seconds: Option<i32>,
-    max_versions: Option<i32>,
-    deviation_cell_version_in_sec: Option<i64>,
-    allow_update: Option<bool>,
+    /// 预定义列
+    pub defined_columns: Vec<DefinedColumnSchema>,
 
-    // stream spec.
-    stream_enabled: bool,
-    stream_expiration_hour: Option<i32>,
-    stream_columns: HashSet<String>,
+    /// 预留读取吞吐量
+    pub reserved_throughput_read: Option<i32>,
 
-    // sse
-    sse_enabled: bool,
-    sse_key_type: Option<SseKeyType>,
+    /// 预留写入吞吐量
+    pub reserved_throughput_write: Option<i32>,
 
-    // required when sse_key_type is byok
-    sse_key_id: Option<String>,
+    /// 数据生命周期，即数据的过期时间。当数据的保存时间超过设置的数据生命周期时，系统会自动清理超过数据生命周期的数据。
+    /// 数据生命周期至少为86400秒（一天）或-1（数据永不过期）。
+    pub ttl_seconds: Option<i32>,
 
-    // required when sse_key_type is byok
-    sse_arn: Option<String>,
+    /// 最大版本数，即属性列能够保留数据的最大版本个数。当属性列数据的版本个数超过设置的最大版本数时，系统会自动删除较早版本的数据。
+    pub max_versions: Option<i32>,
 
-    // local tx
-    enable_local_txn: Option<bool>,
+    /// 有效版本偏差，即写入数据的时间戳与系统当前时间的偏差允许最大值。只有当写入数据所有列的版本号与写入时时间的差值在数据有效版本偏差范围内，数据才能成功写入。
+    pub deviation_cell_version_in_sec: Option<i64>,
 
-    // indexes
-    indexes: Vec<IndexMeta>,
+    /// 是否允许通过 UpdateRow 更新写入数据。
+    pub allow_update: Option<bool>,
+
+    /// 该表是否打开stream。
+    pub stream_enabled: bool,
+
+    /// 该表的stream过期时间。
+    pub stream_expiration_hour: Option<i32>,
+    pub stream_columns: HashSet<String>,
+
+    /// 是否启用加密
+    pub sse_enabled: bool,
+
+    /// 加密密钥类型
+    pub sse_key_type: Option<SseKeyType>,
+
+    /// 当密钥类型为 BYOK 时需要
+    pub sse_key_id: Option<String>,
+
+    /// 当密钥类型为 BYOK 时需要
+    pub sse_arn: Option<String>,
+
+    /// 是否启用本地事务
+    pub enable_local_txn: Option<bool>,
+
+    /// 二级索引
+    pub indexes: Vec<IndexMeta>,
 }
 
 add_per_request_options!(CreateTableOperation);

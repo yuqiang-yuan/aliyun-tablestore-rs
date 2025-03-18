@@ -40,7 +40,7 @@ const API_VERSION: &str = "2015-12-31";
 
 pub type OtsResult<T> = Result<T, OtsError>;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OtsOp {
     #[default]
     Undefined,
@@ -171,6 +171,19 @@ pub struct OtsClient {
     endpoint: String,
     http_client: reqwest::Client,
     options: OtsClientOptions,
+}
+
+impl std::fmt::Debug for OtsClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OtsClient")
+            .field("access_key_id", &self.access_key_id)
+            .field("region", &self.region)
+            .field("instance_name", &self.instance_name)
+            .field("endpoint", &self.endpoint)
+            .field("http_client", &self.http_client)
+            .field("options", &self.options)
+            .finish()
+    }
 }
 
 impl OtsClient {

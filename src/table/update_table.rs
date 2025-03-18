@@ -8,28 +8,32 @@ use crate::{
     protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse},
 };
 
-/// Update table
+/// 修改表的配置信息 table_options 和 Stream 配置 StreamSpecification。
+/// 如果表处于 CU 模式（原按量模式）的高性能型实例中，
+/// 您还可以为数据表配置预留读/写吞吐量 reserved_throughput，新设定将于更新成功后的一分钟内生效。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updatetable-of-tablestore>
 #[derive(Default)]
 pub struct UpdateTableOperation {
     client: OtsClient,
 
     // table meta
-    table_name: String,
+    pub table_name: String,
 
     // reserved throughput
-    reserved_throughput_read: Option<i32>,
-    reserved_throughput_write: Option<i32>,
+    pub reserved_throughput_read: Option<i32>,
+    pub reserved_throughput_write: Option<i32>,
 
     // table options
-    ttl_seconds: Option<i32>,
-    max_versions: Option<i32>,
-    deviation_cell_version_in_sec: Option<i64>,
-    allow_update: Option<bool>,
+    pub ttl_seconds: Option<i32>,
+    pub max_versions: Option<i32>,
+    pub deviation_cell_version_in_sec: Option<i64>,
+    pub allow_update: Option<bool>,
 
     // stream spec.
-    stream_enabled: bool,
-    stream_expiration_hour: Option<i32>,
-    stream_columns: HashSet<String>,
+    pub stream_enabled: bool,
+    pub stream_expiration_hour: Option<i32>,
+    pub stream_columns: HashSet<String>,
 }
 
 add_per_request_options!(UpdateTableOperation);

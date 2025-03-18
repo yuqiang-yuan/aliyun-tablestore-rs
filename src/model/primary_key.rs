@@ -12,13 +12,14 @@ use crate::{
     },
 };
 
+/// 主键容器
 #[derive(Debug, Clone)]
 pub struct PrimaryKey {
     pub keys: Vec<PrimaryKeyColumn>,
 }
 
 impl PrimaryKey {
-    /// 0x03 - TAG_ROW_CELL
+    /// 0x03 - TAG_CELL
     /// 0x00 ... Keys size
     pub(crate) fn compute_size(&self) -> u32 {
         1u32 + self.keys.iter().map(|k| k.compute_size()).sum::<u32>()
@@ -67,14 +68,18 @@ impl PrimaryKey {
     }
 }
 
-#[derive(Debug, Clone)]
+/// 主键值
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrimaryKeyValue {
     Integer(i64),
     String(String),
     Binary(Vec<u8>),
+
+    /// 主要是用来查询
     InfMax,
+
+    /// 主要是用来查询
     InfMin,
-    // AutoIncrement,
 }
 
 impl Default for PrimaryKeyValue {
@@ -175,16 +180,57 @@ impl PrimaryKeyValue {
     }
 }
 
+/// 主键列
 #[derive(Debug, Clone, Default)]
 pub struct PrimaryKeyColumn {
+    /// 列名
     pub name: String,
-    pub value: PrimaryKeyValue,
 
-    /// This is for parsing data crc check.
-    pub(crate) checksum: Option<u8>,
+    /// 列的值
+    pub value: PrimaryKeyValue,
 }
 
 impl PrimaryKeyColumn {
+    /// 创建字符串类型的主键列及值
+    pub fn with_string_value(name: &str, value: impl Into<String>) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::String(value.into()),
+        }
+    }
+
+    /// 创建整数类型的主键列及值
+    pub fn with_integer_value(name: &str, value: i64) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Integer(value),
+        }
+    }
+
+    /// 创建二进制类型的主键列及值
+    pub fn with_binary_value(name: &str, value: impl Into<Vec<u8>>) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Binary(value.into()),
+        }
+    }
+
+    /// 创建无穷小值的主键列
+    pub fn with_infinite_min(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::InfMin,
+        }
+    }
+
+    /// 创建无穷大值的主键列
+    pub fn with_infinite_max(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::InfMax,
+        }
+    }
+
     /// Read the cursor from TAG_CELL_NAME. that means HEADER, TAG_ROW_PK has been read
     pub(crate) fn from_cursor(cursor: &mut Cursor<Vec<u8>>) -> OtsResult<Self> {
         let mut name = String::new();
@@ -207,8 +253,7 @@ impl PrimaryKeyColumn {
                 }
 
                 plain_buffer::TAG_CELL_VALUE => {
-                    // I don't know how to use this value
-                    let _marker = cursor.read_u32::<LittleEndian>()?;
+                    let _prefix = cursor.read_u32::<LittleEndian>()?;
                     let cell_value_type = cursor.read_u8()?;
 
                     value = match cell_value_type {
@@ -243,11 +288,7 @@ impl PrimaryKeyColumn {
             }
         }
 
-        let pk_col = Self {
-            name,
-            value,
-            checksum: Some(checksum),
-        };
+        let pk_col = Self { name, value };
 
         let cell_checksum = pk_col.crc8_checksum();
 
@@ -280,7 +321,7 @@ impl PrimaryKeyColumn {
     }
 
     pub(crate) fn write_plain_buffer(self, cursor: &mut Cursor<Vec<u8>>) -> u8 {
-        let Self { name, value, checksum } = self;
+        let Self { name, value } = self;
 
         let mut cell_checksum = 0u8;
         cell_checksum = crc_bytes(cell_checksum, name.as_bytes());
@@ -314,7 +355,6 @@ mod test_primary_key {
             keys: vec![PrimaryKeyColumn {
                 name: "user_id".to_string(),
                 value: PrimaryKeyValue::String("0005358A-DCAF-665E-EECF-D9935E821B87".to_string()),
-                checksum: None,
             }],
         };
 

@@ -1,4 +1,44 @@
 //! Aliyun plain buffer. See <https://help.aliyun.com/zh/tablestore/developer-reference/plainbuffer> for more details.
+//!
+//! - plain buffer 中涉及到数值的，包括整数、浮点数，都是用小端序（Little Endian）排列。
+//! - plain buffer 中涉及到字符串的，都是用 UTF-8 编码表示。
+//! - plain buffer 中的 Cell 是指：
+//!   - 主键中的一个列和其值的组合
+//!   - 数据中的一个列和其值的组合
+//!
+//! | Value | Bytes | Description |
+//! | ----  | ----- | ----------- |
+//! | `0x75u32` | 4 | HEADER |
+//! | `0x01u8`| 1 | TAG_ROW_PK |
+//! | `0x03u8` | 1 | TAG_CELL |
+//! | `0x04u8` | 1 | TAG_CELL_NAME |
+//! | `<name-len>u32` | 4 | cell name length |
+//! | `<name-bytes>` | variant length | cell name |
+//! | `0x05u8` | 1 | TAG_CELL_VALUE |
+//! | `<prefix>u32` | 4 | cell value prefix |
+//! | `<variant>u8` | 1 | cell value type. See the following `VT_` constants |
+//! | `<variant>u32` | 4 | cell value length. **optional** |
+//! | `<value-bytes>` | variant length | cell value. **optional** |
+//! | `0x0Au8` | 1 | TAG_CELL_CHECKSUM |
+//! | `<variant>u8` | 1 | cell checksum |
+//! | `0x09u8` | 1 | TAG_ROW_CHECKSUM |
+//! | `<variant>u8` | 1 | row checksum |
+//! | `0x02u8` | 1 | TAG_ROW_DATA |
+//! | ... | ... | 循环 TAG_CELL 到 cell value |
+//! | `0x01u8` or `0x03u8` or `0x04u8`  | 1 | cell op. DELETE_ALL_VERSION, DELETE_ONE_VERSION or INCREMENT. **optional** |
+//! | `0x07u8` | 1 | TAG_CELL_TIMESTAMP. **optional** |
+//! | `<variant>u64` | 8 | cell timestamp value. **optional** |
+//! | `0x09u8` | 1 | TAG_ROW_CHECKSUM |
+//! | `<variant>u8` | 1 | row checksum |
+//!
+//! cell value prefix 实际上是指整个 cell 值（不包含 CRC 校验码部分）占多少字节
+//!
+//! - 整数及双精：4 字节前缀 + 1 字节类型 + 8 字节数据 = 13 = 0x0D
+//! - 字符串：4 字节前缀 + 1 字节类型 + 4 字节长度 + 内容长度
+//! - BLOB: 4 字节前缀 + 1 字节类型 + 4 字节长度 + 内容长度
+//! - 布尔值：4 字节前缀 + 1 字节类型 + 1 字节值
+//! - InfMin, InfMax: 4 字节前缀 + 1 字节类型 = 5 = 0x05
+//!
 
 pub const LITTLE_ENDIAN_32_SIZE: u32 = 4;
 pub const LITTLE_ENDIAN_64_SIZE: u32 = 8;

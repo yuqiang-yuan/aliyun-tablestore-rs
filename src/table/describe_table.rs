@@ -6,11 +6,13 @@ use crate::{
     protos::table_store::{DescribeTableRequest, DescribeTableResponse},
 };
 
-/// Describe table
-#[derive(Default)]
+/// 查询指定表的结构信息以及预留读吞吐量和预留写吞吐量设置信息。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/describetable>
+#[derive(Default, Debug, Clone)]
 pub struct DescribeTableOperation {
     client: OtsClient,
-    table_name: String,
+    pub table_name: String,
 }
 
 add_per_request_options!(DescribeTableOperation);

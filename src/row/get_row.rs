@@ -3,27 +3,29 @@ use prost::Message;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
-    protos::table_store::{GetRowRequest, GetRowResponse, TimeRange},
+    model::{GetRowResponse, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
+    protos::table_store::{GetRowRequest, TimeRange},
 };
 
-/// Get row using primary key
-#[derive(Default)]
+/// 根据指定的主键读取单行数据。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/getrow>
+#[derive(Default, Debug, Clone)]
 pub struct GetRowOperation {
     client: OtsClient,
-    table_name: String,
-    pk_values: Vec<PrimaryKeyColumn>,
-    columns: Vec<String>,
+    pub table_name: String,
+    pub pk_values: Vec<PrimaryKeyColumn>,
+    pub columns: Vec<String>,
 
     // Time range fields
-    time_range_start_ms: Option<i64>,
-    time_range_end_ms: Option<i64>,
-    time_range_specific_ms: Option<i64>,
+    pub time_range_start_ms: Option<i64>,
+    pub time_range_end_ms: Option<i64>,
+    pub time_range_specific_ms: Option<i64>,
 
-    max_versions: Option<i32>,
-    start_column: Option<String>,
-    end_column: Option<String>,
-    transaction_id: Option<String>,
+    pub max_versions: Option<i32>,
+    pub start_column: Option<String>,
+    pub end_column: Option<String>,
+    pub transaction_id: Option<String>,
 }
 
 add_per_request_options!(GetRowOperation);
@@ -42,7 +44,6 @@ impl GetRowOperation {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
             value: PrimaryKeyValue::String(pk_value.into()),
-            ..Default::default()
         });
         self
     }
@@ -52,7 +53,6 @@ impl GetRowOperation {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
             value: PrimaryKeyValue::Integer(pk_value),
-            ..Default::default()
         });
 
         self
@@ -63,7 +63,6 @@ impl GetRowOperation {
         self.pk_values.push(PrimaryKeyColumn {
             name: pk_name.to_string(),
             value: PrimaryKeyValue::Binary(pk_value.into()),
-            ..Default::default()
         });
 
         self
@@ -178,6 +177,6 @@ impl GetRowOperation {
         };
 
         let response = client.send(req).await?;
-        Ok(GetRowResponse::decode(response.bytes().await?)?)
+        GetRowResponse::decode(response.bytes().await?.to_vec())
     }
 }

@@ -65,6 +65,10 @@ pub fn crc_u64(crc: u8, n: u64) -> u8 {
     crc
 }
 
+pub fn crc_f64(crc: u8, f: f64) -> u8 {
+    crc_bytes(crc, &f.to_le_bytes())
+}
+
 pub fn crc_bytes(crc: u8, bytes: &[u8]) -> u8 {
     let mut crc = crc;
 

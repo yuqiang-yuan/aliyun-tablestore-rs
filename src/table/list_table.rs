@@ -6,8 +6,8 @@ use crate::{
     protos::table_store::{ListTableRequest, ListTableResponse},
 };
 
-/// List table
-#[derive(Default)]
+/// 获取当前实例下已创建的所有表的表名。
+#[derive(Default, Debug, Clone)]
 pub struct ListTableOperation {
     client: OtsClient,
 }

@@ -50,3 +50,10 @@ pub(crate) fn hmac_sha1(key_data: &[u8], msg_data: &[u8]) -> Vec<u8> {
     // finalize the hash and convert to a static array
     hasher.finalize().into_bytes().to_vec()
 }
+
+#[allow(dead_code)]
+pub(crate) fn debug_bytes(bytes: &[u8]) {
+    for b in bytes {
+        log::debug!("{:02X} ", *b);
+    }
+}

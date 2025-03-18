@@ -5,11 +5,14 @@ use crate::{
     protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse},
 };
 
-#[derive(Default)]
+/// 删除预定义列
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletedefinedcolumn>
+#[derive(Default, Debug, Clone)]
 pub struct DeleteDefinedColumnOperation {
     client: OtsClient,
-    table_name: String,
-    columns: Vec<String>,
+    pub table_name: String,
+    pub columns: Vec<String>,
 }
 
 add_per_request_options!(DeleteDefinedColumnOperation);

@@ -7,11 +7,14 @@ use crate::{
     protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType},
 };
 
-#[derive(Default)]
+/// 添加预定义列
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/adddefinedcolumn>
+#[derive(Default, Debug, Clone)]
 pub struct AddDefinedColumnOperation {
     client: OtsClient,
-    table_name: String,
-    columns: Vec<DefinedColumnSchema>,
+    pub table_name: String,
+    pub columns: Vec<DefinedColumnSchema>,
 }
 
 add_per_request_options!(AddDefinedColumnOperation);
@@ -34,7 +37,7 @@ impl AddDefinedColumnOperation {
         self
     }
 
-    /// 添加整数类型预定以列
+    /// 添加整数类型预定义列
     pub fn add_integer_column(self, name: impl Into<String>) -> Self {
         self.add_column(name, DefinedColumnType::DctInteger)
     }

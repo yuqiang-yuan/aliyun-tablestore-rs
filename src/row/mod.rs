@@ -9,7 +9,7 @@ pub use get_row::*;
 mod test_row {
     use std::sync::Once;
 
-    use crate::OtsClient;
+    use crate::{OtsClient, model::PrimaryKeyValue, protos::table_store::Direction};
 
     static INIT: Once = Once::new();
 
@@ -33,6 +33,17 @@ mod test_row {
 
         log::debug!("get row response: \n{:#?}", response);
         assert!(response.is_ok());
+        let response = response.unwrap();
+        assert!(response.row.is_some());
+        assert!(
+            response
+                .row
+                .as_ref()
+                .unwrap()
+                .primary_keys
+                .iter()
+                .any(|k| { &k.name == "school_id" && k.value == PrimaryKeyValue::String("00020FFB-BB14-CCAD-0181-A929E71C7312".to_string()) })
+        );
 
         // let response = response.unwrap();
         // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-row-response-versions.data", response.row).unwrap();
@@ -57,8 +68,57 @@ mod test_row {
         setup();
         let client = OtsClient::from_env();
 
-        let response = client.get_range("").send().await.unwrap();
-        std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-range-response.data", response.rows).unwrap();
+        // let response = client.get_range("schools")
+        //     .add_inf_min_start_pk_value("school_id")
+        //     .add_inf_min_start_pk_value("id")
+        //     .add_inf_max_end_pk_value("school_id")
+        //     .add_inf_max_end_pk_value("id")
+        //     .max_versions(1)
+        //     .limit(1000)
+        //     .direction(Direction::Forward)
+        //     .send().await;
+
+        let mut op = client
+            .get_range("ccNgMemberRecord")
+            .add_inf_min_start_pk_value("cc_id")
+            .add_string_start_pk_value("stat_date", "2023-12-04")
+            .add_inf_min_start_pk_value("user_id")
+            .add_inf_min_start_pk_value("id")
+            .add_inf_max_end_pk_value("cc_id")
+            .add_string_end_pk_value("stat_date", "2023-12-04")
+            .add_inf_max_end_pk_value("user_id")
+            .add_inf_max_end_pk_value("id")
+            .max_versions(1)
+            .limit(1000)
+            .direction(Direction::Forward);
+
+        let mut total_row = 0;
+
+        loop {
+            let response = op.clone().send().await;
+            assert!(response.is_ok());
+            let response = response.unwrap();
+
+            for row in &response.rows {
+                log::debug!(
+                    "cc_id: {:?}, user_id: {:?}",
+                    row.get_primary_key_value("cc_id"),
+                    row.get_primary_key_value("user_id")
+                );
+            }
+
+            total_row += response.rows.len();
+            log::debug!("total read: {} rows", total_row);
+
+            if let Some(keys) = response.next_start_primary_key {
+                log::debug!("Going to send next query");
+                op.inclusive_start_primary_key = keys;
+            } else {
+                break;
+            }
+        }
+        // log::debug!("{:#?}", response);
+        // assert_eq!(2, response.rows.len());
     }
 
     #[tokio::test]
