@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{OtsResult, crc8::crc_u8, error::OtsError, protos::plain_buffer};
 
-use super::{ColumnValue, Column, PrimaryKeyColumn, PrimaryKeyValue};
+use super::{Column, ColumnValue, PrimaryKeyColumn, PrimaryKeyValue};
 
 /// 宽表模型的行
 #[derive(Debug, Clone, Default)]

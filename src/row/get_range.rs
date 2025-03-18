@@ -3,7 +3,7 @@ use prost::Message;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    model::{PrimaryKey, PrimaryKeyColumn},
+    model::{Filter, PrimaryKey, PrimaryKeyColumn},
     protos::table_store::{Direction, GetRangeRequest, TimeRange},
 };
 
@@ -40,6 +40,9 @@ pub struct GetRangeOperation {
     /// 本次读取最多返回的行数。取值必须大于 0。如果查询到的行数超过此值，则通过响应中会包含断点来记录本次读取到的位置，以便下一次读取。
     /// 无论是否设置此项，表格存储最多返回的行数为 5000 且总数据大小不超过 4 MB。
     pub limit: Option<i32>,
+
+    /// 过滤条件表达式
+    pub filter: Option<Filter>,
 
     /// 指定读取时的起始列，主要用于宽行读。返回结果中会包含当前起始列。列的顺序按照列名的字典序排序。
     pub start_column: Option<String>,
@@ -200,6 +203,13 @@ impl GetRangeOperation {
         self
     }
 
+    /// 设置过滤条件
+    pub fn filter(mut self, f: Filter) -> Self {
+        self.filter = Some(f);
+
+        self
+    }
+
     /// 局部事务ID。当使用局部事务功能读取数据时必须设置此参数。
     pub fn transaction_id(mut self, tx_id: impl Into<String>) -> Self {
         self.transaction_id = Some(tx_id.into());
@@ -223,6 +233,7 @@ impl GetRangeOperation {
             end_column,
             table_name,
             transaction_id,
+            filter,
         } = self;
 
         if max_versions.is_some() && (time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some()) {
@@ -259,7 +270,10 @@ impl GetRangeOperation {
             limit,
             inclusive_start_primary_key: start_pk_bytes,
             exclusive_end_primary_key: end_pk_bytes,
-            filter: None,
+            filter: filter.map(|f| {
+                let proto_filter: crate::protos::table_store_filter::Filter = f.into();
+                proto_filter.encode_to_vec()
+            }),
             start_column,
             end_column,
             token: None,

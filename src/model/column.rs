@@ -1,12 +1,14 @@
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Write};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{
     OtsResult,
     crc8::{crc_bytes, crc_f64, crc_i64, crc_u8, crc_u32, crc_u64},
     error::OtsError,
-    protos::plain_buffer::{self, VT_BLOB, VT_BOOLEAN, VT_DOUBLE, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_NULL, VT_STRING},
+    protos::plain_buffer::{
+        self, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, VT_BLOB, VT_BOOLEAN, VT_DOUBLE, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_NULL, VT_STRING,
+    },
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -23,6 +25,73 @@ pub enum ColumnValue {
 }
 
 impl ColumnValue {
+    /// 计算写出 plainbuffer 的字节数量。
+    /// *不包含* TAG_CELL_VALUE 1 byte,
+    /// *不包含* TAG_CHECKSUM 和 checksum 值的 2 个字节
+    pub(crate) fn compute_size(&self, with_prefix: bool) -> u32 {
+        // 4 bytes for total length,
+        // 1 byte for cell value type
+        let size = if with_prefix { LITTLE_ENDIAN_32_SIZE + 1 } else { 1 };
+
+        match self {
+            // 8 bytes for i64
+            Self::Integer(_) => size + LITTLE_ENDIAN_64_SIZE,
+
+            // 4 bytes for string length, and n bytes for string bytes
+            Self::String(s) => size + LITTLE_ENDIAN_32_SIZE + s.len() as u32,
+
+            // 8 bytes for double value
+            Self::Double(_) => size + LITTLE_ENDIAN_64_SIZE,
+
+            // 1 byte for boolean value
+            Self::Boolean(_) => size + 1,
+
+            // 4 bytes for buf length, and n bytes for buf bytes
+            Self::Blob(buf) => size + LITTLE_ENDIAN_32_SIZE + buf.len() as u32,
+
+            // cell value type has been set at the beginning
+            Self::Null | Self::InfMin | Self::InfMax => size,
+        }
+    }
+
+    /// Consume self values and write to cursor *WITHOUT* TAG_CELL_VALUE byte.
+    /// `with_prefix` 控制是否填充 Cell Value 开始的 prefix 的 4 个字节
+    pub(crate) fn write_plain_buffer(self, cursor: &mut Cursor<Vec<u8>>, with_prefix: bool) {
+        if with_prefix {
+            let size = self.compute_size(with_prefix);
+            cursor.write_u32::<LittleEndian>(size).unwrap();
+        }
+
+        match self {
+            Self::Null => cursor.write_u8(VT_NULL).unwrap(),
+            Self::InfMin => cursor.write_u8(VT_INF_MIN).unwrap(),
+            Self::InfMax => cursor.write_u8(VT_INF_MAX).unwrap(),
+
+            Self::Integer(n) => {
+                cursor.write_u8(VT_INTEGER).unwrap();
+                cursor.write_i64::<LittleEndian>(n).unwrap();
+            }
+            Self::Double(d) => {
+                cursor.write_u8(VT_DOUBLE).unwrap();
+                cursor.write_f64::<LittleEndian>(d).unwrap();
+            }
+            Self::Boolean(b) => {
+                cursor.write_u8(VT_BOOLEAN).unwrap();
+                cursor.write_u8(if b { 1u8 } else { 0u8 }).unwrap();
+            }
+            Self::String(s) => {
+                cursor.write_u8(VT_STRING).unwrap();
+                cursor.write_u32::<LittleEndian>(s.len() as u32).unwrap();
+                cursor.write_all(s.as_bytes()).unwrap();
+            }
+            Self::Blob(bytes) => {
+                cursor.write_u8(VT_BLOB).unwrap();
+                cursor.write_u32::<LittleEndian>(bytes.len() as u32).unwrap();
+                cursor.write_all(&bytes).unwrap();
+            }
+        }
+    }
+
     /// Calculate the cell checksum
     pub(crate) fn crc8_checksum(&self, input_checksum: u8) -> u8 {
         let mut checksum = input_checksum;
