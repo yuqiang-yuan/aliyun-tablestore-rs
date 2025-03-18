@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{OtsResult, crc8::crc_u8, error::OtsError, protos::plain_buffer};
 
-use super::{CellValue, DefinedColumn, PrimaryKeyColumn, PrimaryKeyValue};
+use super::{ColumnValue, Column, PrimaryKeyColumn, PrimaryKeyValue};
 
 /// 宽表模型的行
 #[derive(Debug, Clone, Default)]
@@ -13,7 +13,7 @@ pub struct Row {
     pub primary_keys: Vec<PrimaryKeyColumn>,
 
     /// 数据列
-    pub columns: Vec<DefinedColumn>,
+    pub columns: Vec<Column>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -29,7 +29,7 @@ impl Row {
     }
 
     /// 获取给定名称的列的值, 适用于列在行中只出现一次的情况
-    pub fn get_column_value(&self, name: &str) -> Option<&CellValue> {
+    pub fn get_column_value(&self, name: &str) -> Option<&ColumnValue> {
         self.columns.iter().find(|c| c.name.as_str() == name).map(|c| &c.value)
     }
 
@@ -66,7 +66,7 @@ impl Row {
                     }
 
                     RowType::Column => {
-                        let cell = DefinedColumn::from_cursor(cursor)?;
+                        let cell = Column::from_cursor(cursor)?;
                         // log::debug!("data column read: {:#?}", cell);
                         columns.push(cell);
                     }

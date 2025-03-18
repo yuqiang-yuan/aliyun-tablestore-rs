@@ -5,6 +5,8 @@
 //! - plain buffer 中的 Cell 是指：
 //!   - 主键中的一个列和其值的组合
 //!   - 数据中的一个列和其值的组合
+//! - 如果行只有主键，那么主键之后就是行校验码
+//! - 如果既有主键又有列，那么是在所有列之后是行的校验码
 //!
 //! | Value | Bytes | Description |
 //! | ----  | ----- | ----------- |
@@ -21,8 +23,6 @@
 //! | `<value-bytes>` | variant length | cell value. **optional** |
 //! | `0x0Au8` | 1 | TAG_CELL_CHECKSUM |
 //! | `<variant>u8` | 1 | cell checksum |
-//! | `0x09u8` | 1 | TAG_ROW_CHECKSUM |
-//! | `<variant>u8` | 1 | row checksum |
 //! | `0x02u8` | 1 | TAG_ROW_DATA |
 //! | ... | ... | 循环 TAG_CELL 到 cell value |
 //! | `0x01u8` or `0x03u8` or `0x04u8`  | 1 | cell op. DELETE_ALL_VERSION, DELETE_ONE_VERSION or INCREMENT. **optional** |

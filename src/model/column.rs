@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub enum CellValue {
+pub enum ColumnValue {
     #[default]
     Null,
     Integer(i64),
@@ -22,7 +22,7 @@ pub enum CellValue {
     InfMax,
 }
 
-impl CellValue {
+impl ColumnValue {
     /// Calculate the cell checksum
     pub(crate) fn crc8_checksum(&self, input_checksum: u8) -> u8 {
         let mut checksum = input_checksum;
@@ -63,16 +63,16 @@ impl CellValue {
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct DefinedColumn {
+pub struct Column {
     pub name: String,
-    pub value: CellValue,
+    pub value: ColumnValue,
     pub timestamp: Option<u64>,
 }
 
-impl DefinedColumn {
+impl Column {
     pub(crate) fn from_cursor(cursor: &mut Cursor<Vec<u8>>) -> OtsResult<Self> {
         let mut name = String::new();
-        let mut value = CellValue::Integer(0);
+        let mut value = ColumnValue::Integer(0);
         let mut checksum = 0u8;
         let mut ts: Option<u64> = None;
 
@@ -97,27 +97,27 @@ impl DefinedColumn {
                     let cell_value_type = cursor.read_u8()?;
 
                     value = match cell_value_type {
-                        plain_buffer::VT_INTEGER => CellValue::Integer(cursor.read_i64::<LittleEndian>()?),
+                        plain_buffer::VT_INTEGER => ColumnValue::Integer(cursor.read_i64::<LittleEndian>()?),
 
-                        plain_buffer::VT_DOUBLE => CellValue::Double(cursor.read_f64::<LittleEndian>()?),
+                        plain_buffer::VT_DOUBLE => ColumnValue::Double(cursor.read_f64::<LittleEndian>()?),
 
                         plain_buffer::VT_BOOLEAN => {
                             let b = cursor.read_u8()?;
-                            CellValue::Boolean(b == 0x01)
+                            ColumnValue::Boolean(b == 0x01)
                         }
 
                         plain_buffer::VT_STRING => {
                             let len = cursor.read_u32::<LittleEndian>()? as usize;
                             let mut buf: Vec<u8> = vec![0u8; len];
                             cursor.read_exact(&mut buf)?;
-                            CellValue::String(String::from_utf8(buf)?)
+                            ColumnValue::String(String::from_utf8(buf)?)
                         }
 
                         plain_buffer::VT_BLOB => {
                             let len = cursor.read_u32::<LittleEndian>()? as usize;
                             let mut buf: Vec<u8> = vec![0u8; len];
                             cursor.read_exact(&mut buf)?;
-                            CellValue::Blob(buf)
+                            ColumnValue::Blob(buf)
                         }
 
                         _ => return Err(OtsError::PlainBufferError(format!("unknown data row cell value type: {}", cell_value_type))),
@@ -166,7 +166,7 @@ impl DefinedColumn {
     pub fn with_integer_value(name: &str, value: i64) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::Integer(value),
+            value: ColumnValue::Integer(value),
             ..Default::default()
         }
     }
@@ -174,7 +174,7 @@ impl DefinedColumn {
     pub fn with_double_value(name: &str, value: f64) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::Double(value),
+            value: ColumnValue::Double(value),
             ..Default::default()
         }
     }
@@ -182,7 +182,7 @@ impl DefinedColumn {
     pub fn with_bool_value(name: &str, value: bool) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::Boolean(value),
+            value: ColumnValue::Boolean(value),
             ..Default::default()
         }
     }
@@ -190,7 +190,7 @@ impl DefinedColumn {
     pub fn with_string_value(name: &str, value: impl Into<String>) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::String(value.into()),
+            value: ColumnValue::String(value.into()),
             ..Default::default()
         }
     }
@@ -198,7 +198,7 @@ impl DefinedColumn {
     pub fn with_blob_value(name: &str, value: impl Into<Vec<u8>>) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::Blob(value.into()),
+            value: ColumnValue::Blob(value.into()),
             ..Default::default()
         }
     }
@@ -206,7 +206,7 @@ impl DefinedColumn {
     pub fn with_null(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::Null,
+            value: ColumnValue::Null,
             ..Default::default()
         }
     }
@@ -214,7 +214,7 @@ impl DefinedColumn {
     pub fn with_infinite_min(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::InfMin,
+            value: ColumnValue::InfMin,
             ..Default::default()
         }
     }
@@ -222,7 +222,7 @@ impl DefinedColumn {
     pub fn with_infinite_max(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            value: CellValue::InfMax,
+            value: ColumnValue::InfMax,
             ..Default::default()
         }
     }
