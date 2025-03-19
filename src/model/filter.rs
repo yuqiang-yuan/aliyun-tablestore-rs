@@ -149,13 +149,10 @@ impl From<SingleColumnValueFilter> for crate::protos::table_store_filter::Single
 
         let Column { name, value, timestamp: _ } = column;
 
-        // 这里写出的数据不包含 TAG_CELL_VALUE 标记位，也不包含 CELL_VALUE 前缀的 4 个字节，
-        // 直接从值的类型开始写。
-        let mut cursor = Cursor::new(vec![0u8; value.compute_size(false) as usize]);
-        value.write_plain_buffer(&mut cursor, false);
-        let filter_bytes = cursor.into_inner();
-
-        // debug_bytes(&filter_bytes);
+        // 这里写出的数据不包含 CELL_VALUE 前缀的 4 个字节，
+        let mut cursor = Cursor::new(vec![0u8; value.compute_size() as usize]);
+        value.write_plain_buffer(&mut cursor);
+        let filter_bytes = cursor.into_inner()[4..].into();
 
         crate::protos::table_store_filter::SingleColumnValueFilter {
             comparator: comparator as i32,

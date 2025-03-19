@@ -17,13 +17,13 @@ use url::Url;
 use util::get_iso8601_date_time_string;
 
 pub mod crc8;
+pub mod data;
 pub mod defined_column;
 pub mod error;
 pub mod index;
 pub mod macros;
 pub mod model;
 pub mod protos;
-pub mod data;
 pub mod table;
 pub mod util;
 
@@ -60,6 +60,7 @@ pub enum OtsOp {
     // Data operations
     GetRow,
     GetRange,
+    PutRow,
 }
 
 impl From<OtsOp> for String {
@@ -85,6 +86,7 @@ impl Display for OtsOp {
 
             OtsOp::GetRow => "GetRow",
             OtsOp::GetRange => "GetRange",
+            OtsOp::PutRow => "PutRow",
         };
 
         write!(f, "{}", s)

@@ -28,4 +28,5 @@ prost-build = "0.13.5"
 
 [dev-dependencies]
 dotenvy = "0.15.7"
+md5 = "0.7.0"
 simple_logger = "5.0.0"

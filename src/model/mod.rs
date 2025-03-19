@@ -37,7 +37,7 @@ mod test_model {
 
         assert_eq!(plain_buffer::HEADER, header);
 
-        let row = Row::from_cursor(&mut cursor).unwrap();
+        let row = Row::read_plain_buffer(&mut cursor).unwrap();
         log::debug!("{:#?}", row);
     }
 }

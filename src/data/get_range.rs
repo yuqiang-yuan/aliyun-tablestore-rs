@@ -1,15 +1,15 @@
+use crate::model::Row;
+use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
+use crate::protos::table_store::ConsumedCapacity;
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::{Filter, PrimaryKey, PrimaryKeyColumn},
+    protos::table_store::{Direction, GetRangeRequest, TimeRange},
+};
+use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 use std::io::Cursor;
-use byteorder::{LittleEndian, ReadBytesExt};
-use crate::{
-    add_per_request_options, error::OtsError, model::{Filter, PrimaryKey, PrimaryKeyColumn}, protos::table_store::{Direction, GetRangeRequest, TimeRange}, OtsClient,
-    OtsOp,
-    OtsRequest,
-    OtsResult,
-};
-use crate::model::Row;
-use crate::protos::plain_buffer::HEADER;
-use crate::protos::table_store::ConsumedCapacity;
 
 /// 读取指定主键范围内的数据。
 ///
@@ -254,8 +254,8 @@ impl GetRangeOperation {
             keys: exclusive_end_primary_key,
         };
 
-        let start_pk_bytes = start_pk.into_plain_buffer(true);
-        let end_pk_bytes = end_pk.into_plain_buffer(true);
+        let start_pk_bytes = start_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
+        let end_pk_bytes = end_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
         let msg = GetRangeRequest {
             table_name,
@@ -328,7 +328,7 @@ impl GetRangeResponse {
                 return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
             }
 
-            let row = Row::from_cursor(&mut cursor)?;
+            let row = Row::read_plain_buffer(&mut cursor)?;
 
             Some(row.primary_keys)
         } else {
@@ -352,7 +352,7 @@ impl GetRangeResponse {
                     break;
                 }
 
-                let row = Row::from_cursor(&mut cursor)?;
+                let row = Row::read_plain_buffer(&mut cursor)?;
                 rows.push(row);
             }
         }

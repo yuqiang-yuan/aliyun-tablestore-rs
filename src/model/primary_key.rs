@@ -7,8 +7,8 @@ use crate::{
     crc8::{crc_bytes, crc_i64, crc_u8, crc_u32},
     error::OtsError,
     protos::plain_buffer::{
-        self, HEADER, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, TAG_CELL, TAG_CELL_CHECKSUM, TAG_CELL_NAME, TAG_CELL_VALUE, TAG_ROW_CHECKSUM, VT_BLOB,
-        VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_STRING,
+        self, HEADER, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, MASK_HEADER, MASK_ROW_CHECKSUM, TAG_CELL, TAG_CELL_CHECKSUM, TAG_CELL_NAME, TAG_CELL_VALUE,
+        TAG_ROW_CHECKSUM, VT_BLOB, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_STRING,
     },
 };
 
@@ -19,52 +19,66 @@ pub struct PrimaryKey {
 }
 
 impl PrimaryKey {
-    /// 0x03 - TAG_CELL
+    /// 返回的长度：1 字节的 TAG_ROW_PK + 各 Key 的长度 + 行校验码（看掩码）。
+    ///
+    /// 只有当一行数据只有 PK 的时候，才把它当整行处理，需要补充行校验码，例如：在 GetRow 操作中。
+    ///
+    /// 0x01 - TAG_ROW_PK
     /// 0x00 ... Keys size
-    pub(crate) fn compute_size(&self) -> u32 {
-        1u32 + self.keys.iter().map(|k| k.compute_size()).sum::<u32>()
-    }
+    pub(crate) fn compute_size(&self, masks: u32) -> u32 {
+        let mut size = 1u32 + self.keys.iter().map(|k| k.compute_size()).sum::<u32>();
 
-    /// 0x75 0x00 0x00 0x00    - header: 4 bytes
-    /// 0x01                   - TAG_ROW_PK
-    /// 0x00 ...               - Keys keysize with TAG_ROW_CELL
-    /// 0x09                   - TAG_ROW_CHECKSUM
-    /// 0x00                   - Checksum: 1 byte
-    pub(crate) fn compute_size_with_header(&self) -> u32 {
-        LITTLE_ENDIAN_32_SIZE + self.compute_size() + 2
+        if masks & MASK_ROW_CHECKSUM == MASK_ROW_CHECKSUM {
+            size += 2;
+        }
+
+        if masks & MASK_HEADER == MASK_HEADER {
+            size += 4;
+        }
+
+        size
     }
 
     /// Consume self and output plain buffer data
-    pub(crate) fn into_plain_buffer(self, with_header: bool) -> Vec<u8> {
-        let size = if with_header { self.compute_size_with_header() } else { self.compute_size() } as usize;
+    pub(crate) fn encode_plain_buffer(&self, masks: u32) -> Vec<u8> {
+        let size = self.compute_size(masks);
 
-        let bytes = Vec::<u8>::with_capacity(size);
+        let bytes = vec![0u8; size as usize];
         let mut cursor = Cursor::new(bytes);
 
-        if with_header {
+        if masks & MASK_HEADER == MASK_HEADER {
             cursor.write_u32::<LittleEndian>(HEADER).unwrap();
-            cursor.write_u8(plain_buffer::TAG_ROW_PK).unwrap();
         }
 
-        self.write_plain_buffer(&mut cursor);
+        self.write_plain_buffer(&mut cursor, masks);
 
         cursor.into_inner()
     }
 
     /// Write data to cursor
-    pub(crate) fn write_plain_buffer(self, cursor: &mut Cursor<Vec<u8>>) {
+    pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, masks: u32) {
         let Self { keys } = self;
 
-        let mut row_checksum = 0u8;
+        cursor.write_u8(plain_buffer::TAG_ROW_PK).unwrap();
+
         for key_col in keys {
-            cursor.write_u8(TAG_CELL).unwrap();
-            let cell_checksum = key_col.write_plain_buffer(cursor);
-            row_checksum = crc_u8(row_checksum, cell_checksum);
+            key_col.write_plain_buffer(cursor);
         }
 
-        row_checksum = crc_u8(row_checksum, 0u8);
-        cursor.write_u8(TAG_ROW_CHECKSUM).unwrap();
-        cursor.write_u8(row_checksum).unwrap();
+        if masks & MASK_ROW_CHECKSUM == MASK_ROW_CHECKSUM {
+            cursor.write_u8(TAG_ROW_CHECKSUM).unwrap();
+            cursor.write_u8(self.crc8_checksum()).unwrap();
+        }
+    }
+
+    /// 计算主键的一行的校验码
+    pub(crate) fn crc8_checksum(&self) -> u8 {
+        let mut c = 0u8;
+        for key_col in &self.keys {
+            c = crc_u8(c, key_col.crc8_checksum());
+        }
+
+        c
     }
 }
 
@@ -89,6 +103,8 @@ impl Default for PrimaryKeyValue {
 }
 
 impl PrimaryKeyValue {
+    /// 返回的长度包含：4 字节前缀 + 1 字节类型 + 4 字节值的长度（仅针对 String 和 Binary）+ 值的实际数据长度
+    ///
     /// 0x00 0x00 0x00 0x00 - Marker?, 4 bytes le
     ///                     - Integer: 0x08 + 0x01 = 0x09
     ///                     - String:  0x04 + 0x01 + string bytes len
@@ -145,12 +161,12 @@ impl PrimaryKeyValue {
     }
 
     /// Consume self and write plain buffer.
-    pub(crate) fn write_plain_buffer(self, cursor: &mut Cursor<Vec<u8>>) {
+    pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>) {
         match self {
             Self::Integer(n) => {
                 cursor.write_u32::<LittleEndian>(LITTLE_ENDIAN_64_SIZE + 1).unwrap();
                 cursor.write_u8(VT_INTEGER).unwrap();
-                cursor.write_i64::<LittleEndian>(n).unwrap();
+                cursor.write_i64::<LittleEndian>(*n).unwrap();
             }
 
             Self::String(s) => {
@@ -164,7 +180,7 @@ impl PrimaryKeyValue {
                 cursor.write_u32::<LittleEndian>(1 + LITTLE_ENDIAN_32_SIZE + buf.len() as u32).unwrap();
                 cursor.write_u8(VT_BLOB).unwrap();
                 cursor.write_u32::<LittleEndian>(buf.len() as u32).unwrap();
-                cursor.write_all(&buf).unwrap();
+                cursor.write_all(buf).unwrap();
             }
 
             Self::InfMin => {
@@ -232,7 +248,7 @@ impl PrimaryKeyColumn {
     }
 
     /// Read the cursor from TAG_CELL_NAME. that means HEADER, TAG_ROW_PK has been read
-    pub(crate) fn from_cursor(cursor: &mut Cursor<Vec<u8>>) -> OtsResult<Self> {
+    pub(crate) fn read_plain_buffer(cursor: &mut Cursor<Vec<u8>>) -> OtsResult<Self> {
         let mut name = String::new();
         let mut value = PrimaryKeyValue::Integer(0);
         let mut checksum = 0u8;
@@ -302,15 +318,18 @@ impl PrimaryKeyColumn {
         Ok(pk_col)
     }
 
+    /// 主键列的校验码，列名和列值都计算在内的
     pub(crate) fn crc8_checksum(&self) -> u8 {
         let mut cell_checksum = 0u8;
         cell_checksum = crc_bytes(cell_checksum, self.name.as_bytes());
         self.value.crc8_checksum(cell_checksum)
     }
 
+    /// 返回的长度： 1 字节 TAG_CELL + 1 字节 TAG_CELL_NAME + 4 字节名称长度 + 名称数据 + 1 字节 TAG_CELL_VALUE + 值的长度 + 2 字节校验码
+    ///
     /// 0x03                - TAG_CELL
     /// 0x04                - TAG_CELL_NAME
-    /// 0x00 0x00 0x00 0x00 - Cell name length u32, le
+    /// 0x00 0x00 0x00 0x00 - Cell name length u32, le 4 bytes
     /// 0x00 ...            - Cell name utf8 bytes
     /// 0x05                - TAG_CELL_VALUE
     /// 0x00 ...            - Cell value
@@ -320,28 +339,27 @@ impl PrimaryKeyColumn {
         2u32 + plain_buffer::LITTLE_ENDIAN_32_SIZE + self.name.len() as u32 + 1 + self.value.compute_size() + 2
     }
 
-    pub(crate) fn write_plain_buffer(self, cursor: &mut Cursor<Vec<u8>>) -> u8 {
+    /// 返回值是 Cell 的校验码
+    pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>) {
         let Self { name, value } = self;
 
-        let mut cell_checksum = 0u8;
-        cell_checksum = crc_bytes(cell_checksum, name.as_bytes());
-        cell_checksum = value.crc8_checksum(cell_checksum);
-
+        cursor.write_u8(TAG_CELL).unwrap();
         cursor.write_u8(TAG_CELL_NAME).unwrap();
         cursor.write_u32::<LittleEndian>(name.len() as u32).unwrap();
         cursor.write_all(name.as_bytes()).unwrap();
         cursor.write_u8(TAG_CELL_VALUE).unwrap();
         value.write_plain_buffer(cursor);
         cursor.write_u8(TAG_CELL_CHECKSUM).unwrap();
-        cursor.write_u8(cell_checksum).unwrap();
-
-        cell_checksum
+        cursor.write_u8(self.crc8_checksum()).unwrap();
     }
 }
 
 #[cfg(test)]
 mod test_primary_key {
-    use crate::model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue};
+    use crate::{
+        model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
+        protos::plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+    };
 
     #[test]
     fn test_build_primary_key() {
@@ -358,10 +376,10 @@ mod test_primary_key {
             }],
         };
 
-        let size = pk.compute_size_with_header();
+        let size = pk.compute_size(MASK_HEADER | MASK_ROW_CHECKSUM);
         assert_eq!(68, size);
 
-        let buf = pk.into_plain_buffer(true);
+        let buf = pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
         assert_eq!(bytes_from_java_sdk, &buf[..]);
         println!("{:?}", buf);
     }

@@ -1,9 +1,11 @@
-//! 基础数据操作
+//! 宽表模型数据操作
 mod get_range;
 mod get_row;
+mod put_row;
 
 pub use get_range::*;
 pub use get_row::*;
+pub use put_row::*;
 
 #[cfg(test)]
 mod test_row {
@@ -11,7 +13,7 @@ mod test_row {
 
     use crate::{
         OtsClient,
-        model::{Column, PrimaryKeyValue, SingleColumnValueFilter},
+        model::{Column, ColumnValue, PrimaryKeyValue, SingleColumnValueFilter},
         protos::table_store::Direction,
     };
 
@@ -68,7 +70,7 @@ mod test_row {
         test_get_row_impl().await;
     }
 
-    async fn test_get_range_impl() {
+    async fn test_get_range_with_single_filter_impl() {
         setup();
         let client = OtsClient::from_env();
 
@@ -120,7 +122,6 @@ mod test_row {
 
         loop {
             let response = op.clone().send().await;
-            // log::debug!("{:#?}", response);
 
             assert!(response.is_ok());
             let response = response.unwrap();
@@ -130,6 +131,11 @@ mod test_row {
                     "cc_id: {:?}, user_id: {:?}, school_id: {:?}",
                     row.get_primary_key_value("cc_id"),
                     row.get_primary_key_value("user_id"),
+                    row.get_column_value("cc_school_id")
+                );
+
+                assert_eq!(
+                    Some(&ColumnValue::String("A006D67B-4330-1DEF-1354-0DB43F2F5F21".to_string())),
                     row.get_column_value("cc_school_id")
                 );
             }
@@ -149,7 +155,7 @@ mod test_row {
     }
 
     #[tokio::test]
-    async fn test_get_range() {
-        test_get_range_impl().await;
+    async fn test_get_range_with_single_filter() {
+        test_get_range_with_single_filter_impl().await;
     }
 }

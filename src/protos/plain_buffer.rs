@@ -62,6 +62,25 @@ pub const TAG_SEQ_INFO_EPOCH: u8 = 0x0D;
 pub const TAG_SEQ_INFO_TS: u8 = 0x0E;
 pub const TAG_SEQ_INFO_ROW_INDEX: u8 = 0x0F;
 
+// 一些用来控制输出 plainbuf 的时候的掩码
+pub const MASK_HEADER: u32 = 0x00_00_00_01;
+pub const MASK_TAG_ROW_PK: u32 = 0x00_00_00_02;
+pub const MASK_TAG_ROW_DATA: u32 = 0x00_00_00_04;
+pub const MASK_TAG_CELL: u32 = 0x00_00_00_08;
+pub const MASK_TAG_CELL_NAME: u32 = 0x00_00_00_10;
+pub const MASK_TAG_CELL_VALUE: u32 = 0x00_00_00_20;
+pub const MASK_TAG_CELL_VALUE_TYPE: u32 = 0x00_00_00_40;
+pub const MASK_TAG_CELL_TIMESTAMP: u32 = 0x00_00_00_80;
+pub const MASK_TAG_DELETE_ROW_MARKER: u32 = 0x00_00_01_00;
+pub const MASK_CELL_CHESKSUM: u32 = 0x00_00_02_00;
+pub const MASK_ROW_CHECKSUM: u32 = 0x00_00_04_00;
+
+/// 对于列值，这里是指列值开始前的 4 字节前缀
+pub const MASK_CELL_VALUE_PREFIX: u32 = 0x00_00_04_00;
+
+pub const MASK_CELL_DEFAULT: u32 = MASK_CELL_VALUE_PREFIX | MASK_TAG_CELL | MASK_TAG_CELL_NAME | MASK_TAG_CELL_VALUE | MASK_CELL_CHESKSUM;
+pub const MASK_ROW_DEFAULT: u32 = MASK_HEADER | MASK_TAG_ROW_PK | MASK_TAG_ROW_DATA | MASK_CELL_DEFAULT | MASK_ROW_CHECKSUM;
+
 // cell operation types
 pub const DELETE_ALL_VERSION: u8 = 0x01;
 pub const DELETE_ONE_VERSION: u8 = 0x03;

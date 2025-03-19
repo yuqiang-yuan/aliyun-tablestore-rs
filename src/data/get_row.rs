@@ -4,7 +4,13 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row}, protos::{plain_buffer::HEADER, table_store::{ConsumedCapacity, GetRowRequest, TimeRange}}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
+    protos::{
+        plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
+        table_store::{ConsumedCapacity, GetRowRequest, TimeRange},
+    },
 };
 
 /// 根据指定的主键读取单行数据。
@@ -143,7 +149,7 @@ impl GetRowOperation {
 
         let pk = PrimaryKey { keys: pk_values };
 
-        let pk_bytes = pk.into_plain_buffer(true);
+        let pk_bytes = pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
         let msg = GetRowRequest {
             table_name,
@@ -181,8 +187,6 @@ impl GetRowOperation {
     }
 }
 
-
-
 #[derive(Clone, Default, Debug)]
 pub struct GetRowResponse {
     pub consumed: ConsumedCapacity,
@@ -207,7 +211,7 @@ impl GetRowResponse {
                 return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
             }
 
-            Some(Row::from_cursor(&mut cursor)?)
+            Some(Row::read_plain_buffer(&mut cursor)?)
         } else {
             None
         };

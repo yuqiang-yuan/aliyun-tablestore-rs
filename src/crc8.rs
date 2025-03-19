@@ -78,3 +78,18 @@ pub fn crc_bytes(crc: u8, bytes: &[u8]) -> u8 {
 
     crc
 }
+
+#[cfg(test)]
+mod test_crc8 {
+    use super::crc_u8;
+
+    #[test]
+    fn test_crc8() {
+        let mut v = 0u8;
+        v = crc_u8(v, 0xBF);
+        v = crc_u8(v, 0x72);
+        v = crc_u8(v, 0xB0);
+        v = crc_u8(v, 0);
+        println!("{:02x}", v);
+    }
+}
