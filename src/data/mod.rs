@@ -11,10 +11,13 @@ pub use put_row::*;
 mod test_row {
     use std::sync::Once;
 
+    use fake::{Fake, faker::name::raw::Name, locales::ZH_CN};
+    use uuid::Uuid;
+
     use crate::{
         OtsClient,
-        model::{Column, ColumnValue, PrimaryKeyValue, SingleColumnValueFilter},
-        protos::table_store::Direction,
+        model::{Column, ColumnValue, PrimaryKeyValue, Row, SingleColumnValueFilter},
+        protos::table_store::{Direction, ReturnType},
     };
 
     static INIT: Once = Once::new();
@@ -31,13 +34,13 @@ mod test_row {
         let client = OtsClient::from_env();
         let response = client
             .get_row("schools")
-            .add_string_pk_value("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
-            .add_integer_pk_value("id", 1742203524276000)
-            .max_versions(21)
+            .add_string_primary_key("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+            .add_integer_primary_key("id", 1742203524276000)
+            .max_versions(1)
             .send()
             .await;
 
-        log::debug!("get data response: \n{:#?}", response);
+        log::debug!("get data response: \n{:?}", response);
         assert!(response.is_ok());
         let response = response.unwrap();
         assert!(response.row.is_some());
@@ -100,14 +103,14 @@ mod test_row {
 
         let mut op = client
             .get_range("ccNgMemberRecord")
-            .add_string_start_pk_value("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
-            .add_string_start_pk_value("stat_date", "2023-12-04")
-            .add_inf_min_start_pk_value("user_id")
-            .add_inf_min_start_pk_value("id")
-            .add_string_end_pk_value("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
-            .add_string_end_pk_value("stat_date", "2023-12-04")
-            .add_inf_max_end_pk_value("user_id")
-            .add_inf_max_end_pk_value("id")
+            .add_string_start_primary_key("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
+            .add_string_start_primary_key("stat_date", "2023-12-04")
+            .add_inf_min_start_primary_key("user_id")
+            .add_inf_min_start_primary_key("id")
+            .add_string_end_primary_key("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
+            .add_string_end_primary_key("stat_date", "2023-12-04")
+            .add_inf_max_end_primary_key("user_id")
+            .add_inf_max_end_primary_key("id")
             .filter(crate::model::Filter::Single(
                 SingleColumnValueFilter::new()
                     .equal_column(Column::with_string_value("cc_school_id", "A006D67B-4330-1DEF-1354-0DB43F2F5F21"))
@@ -157,5 +160,36 @@ mod test_row {
     #[tokio::test]
     async fn test_get_range_with_single_filter() {
         test_get_range_with_single_filter_impl().await;
+    }
+
+    async fn test_put_row_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let school_id = Uuid::new_v4().to_string();
+
+        let row = Row::default()
+            .add_string_primary_key("school_id", &school_id)
+            .add_auto_increment_primary_key("id")
+            .add_string_column("name", Name(ZH_CN).fake::<String>())
+            .add_string_column("province", Name(ZH_CN).fake::<String>());
+
+        log::debug!("insert row into schools with school_id: {:?}", row.get_primary_key_value("school_id"));
+
+        let response = client.put_row("schools").row(row).return_type(ReturnType::RtPk).send().await.unwrap();
+
+        assert!(response.row.is_some());
+
+        let row = response.row;
+        assert!(row.is_some());
+
+        let row = row.unwrap();
+        assert_eq!(Some(&PrimaryKeyValue::String(school_id)), row.get_primary_key_value("school_id"));
+    }
+
+    #[tokio::test]
+    async fn test_put_row() {
+        test_put_row_impl().await
     }
 }

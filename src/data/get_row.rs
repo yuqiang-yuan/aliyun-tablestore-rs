@@ -1,6 +1,3 @@
-use std::io::Cursor;
-
-use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
 use crate::{
@@ -8,9 +5,10 @@ use crate::{
     error::OtsError,
     model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
-        plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{ConsumedCapacity, GetRowRequest, TimeRange},
     },
+    util::debug_bytes,
 };
 
 /// 根据指定的主键读取单行数据。
@@ -46,29 +44,29 @@ impl GetRowOperation {
     }
 
     /// 添加字符串类型的主键查询值
-    pub fn add_string_pk_value(mut self, pk_name: &str, pk_value: impl Into<String>) -> Self {
+    pub fn add_string_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
-            name: pk_name.to_string(),
-            value: PrimaryKeyValue::String(pk_value.into()),
+            name: name.to_string(),
+            value: PrimaryKeyValue::String(value.into()),
         });
         self
     }
 
     /// 添加整数类型的主键查询值
-    pub fn add_integer_pk_value(mut self, pk_name: &str, pk_value: i64) -> Self {
+    pub fn add_integer_primary_key(mut self, name: &str, value: i64) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
-            name: pk_name.to_string(),
-            value: PrimaryKeyValue::Integer(pk_value),
+            name: name.to_string(),
+            value: PrimaryKeyValue::Integer(value),
         });
 
         self
     }
 
     /// 添加二进制类型的主键查询值
-    pub fn add_binary_pk_value(mut self, pk_name: &str, pk_value: impl Into<Vec<u8>>) -> Self {
+    pub fn add_binary_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
         self.pk_values.push(PrimaryKeyColumn {
-            name: pk_name.to_string(),
-            value: PrimaryKeyValue::Binary(pk_value.into()),
+            name: name.to_string(),
+            value: PrimaryKeyValue::Binary(value.into()),
         });
 
         self
@@ -76,8 +74,8 @@ impl GetRowOperation {
 
     /// 需要返回的全部列的列名。如果为空，则返回指定行的所有列。`columns_to_get` 个数不应超过128个。
     /// 如果指定的列不存在，则不会返回指定列的数据；如果给出了重复的列名，返回结果只会包含一次指定列。
-    pub fn add_column_to_get(mut self, col_name: &str) -> Self {
-        self.columns.push(col_name.to_string());
+    pub fn add_column_to_get(mut self, name: &str) -> Self {
+        self.columns.push(name.to_string());
 
         self
     }
@@ -111,16 +109,16 @@ impl GetRowOperation {
 
     /// 指定读取时的起始列，主要用于宽行读。列的顺序按照列名的字典序排序。返回的结果中**包含**当前起始列。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `start_column` 为 `b` ，则会从 `b` 列开始读，返回 `b`、`c` 两列。
-    pub fn start_column(mut self, col_name: impl Into<String>) -> Self {
-        self.start_column = Some(col_name.into());
+    pub fn start_column(mut self, name: impl Into<String>) -> Self {
+        self.start_column = Some(name.into());
 
         self
     }
 
     /// 返回的结果中**不包含**当前结束列。列的顺序按照列名的字典序排序。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `end_column` 为 `b`，则读到 `b` 列时会结束，返回 `a` 列。
-    pub fn end_column(mut self, col_name: impl Into<String>) -> Self {
-        self.end_column = Some(col_name.into());
+    pub fn end_column(mut self, name: impl Into<String>) -> Self {
+        self.end_column = Some(name.into());
 
         self
     }
@@ -150,6 +148,7 @@ impl GetRowOperation {
         let pk = PrimaryKey { keys: pk_values };
 
         let pk_bytes = pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
+        debug_bytes(&pk_bytes);
 
         let msg = GetRowRequest {
             table_name,
@@ -183,7 +182,9 @@ impl GetRowOperation {
         };
 
         let response = client.send(req).await?;
-        GetRowResponse::decode(response.bytes().await?.to_vec())
+        let response_msg = crate::protos::table_store::GetRowResponse::decode(response.bytes().await?)?;
+
+        response_msg.try_into()
     }
 }
 
@@ -194,24 +195,18 @@ pub struct GetRowResponse {
     pub next_token: Option<Vec<u8>>,
 }
 
-impl GetRowResponse {
-    pub fn decode(bytes: Vec<u8>) -> OtsResult<Self> {
-        let msg = crate::protos::table_store::GetRowResponse::decode(bytes.as_slice())?;
+impl TryFrom<crate::protos::table_store::GetRowResponse> for GetRowResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::table_store::GetRowResponse) -> Result<Self, Self::Error> {
         let crate::protos::table_store::GetRowResponse {
             consumed,
             row: row_bytes,
             next_token,
-        } = msg;
+        } = value;
 
         let row = if !row_bytes.is_empty() {
-            let mut cursor = Cursor::new(row_bytes);
-            let header = cursor.read_u32::<LittleEndian>()?;
-
-            if header != HEADER {
-                return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
-            }
-
-            Some(Row::read_plain_buffer(&mut cursor)?)
+            Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
         } else {
             None
         };

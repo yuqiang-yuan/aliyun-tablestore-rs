@@ -53,7 +53,10 @@ pub(crate) fn hmac_sha1(key_data: &[u8], msg_data: &[u8]) -> Vec<u8> {
 
 #[allow(dead_code)]
 pub(crate) fn debug_bytes(bytes: &[u8]) {
-    for b in bytes {
-        log::debug!("{:02X} ", *b);
+    // Print bytes in a hexadecimal format, 16 bytes per line, comma-separated
+    log::debug!("Bytes dump:");
+    for (i, chunk) in bytes.chunks(16).enumerate() {
+        let hex_strings: Vec<String> = chunk.iter().map(|b| format!("{:02X}", b)).collect();
+        log::debug!("Line {:02}: {}", i, hex_strings.join(", "));
     }
 }

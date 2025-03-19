@@ -60,6 +60,21 @@ impl Row {
         cursor.into_inner()
     }
 
+    /// 解码 plain buffer
+    pub(crate) fn decode_plain_buffer(bytes: Vec<u8>, masks: u32) -> OtsResult<Self> {
+        let mut cursor = Cursor::new(bytes);
+
+        if masks & MASK_HEADER == MASK_HEADER {
+            let header = cursor.read_u32::<LittleEndian>()?;
+
+            if header != HEADER {
+                return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
+            }
+        }
+
+        Row::read_plain_buffer(&mut cursor)
+    }
+
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, _masks: u32) {
         let Self { primary_keys, columns } = self;
 
@@ -171,20 +186,84 @@ impl Row {
         checksum = crc_u8(checksum, 0u8);
         checksum
     }
+
+    /// 添加字符串类型的主键值
+    pub fn add_string_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn::with_string_value(name, value));
+
+        self
+    }
+
+    /// 添加整数类型的主键值
+    pub fn add_integer_primary_key(mut self, name: &str, value: i64) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Integer(value),
+        });
+
+        self
+    }
+
+    /// 添加二进制类型的主键值
+    pub fn add_binary_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Binary(value.into()),
+        });
+
+        self
+    }
+
+    /// 添加自增主键列
+    pub fn add_auto_increment_primary_key(mut self, name: &str) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn::with_auto_increment(name));
+
+        self
+    }
+
+    /// 添加字符串类型的列
+    pub fn add_string_column(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.columns.push(Column::with_string_value(name, value));
+
+        self
+    }
+
+    /// 添加整数列
+    pub fn add_integer_column(mut self, name: &str, value: i64) -> Self {
+        self.columns.push(Column::with_integer_value(name, value));
+
+        self
+    }
+
+    /// 添加双精度列
+    pub fn add_double_column(mut self, name: &str, value: f64) -> Self {
+        self.columns.push(Column::with_double_value(name, value));
+
+        self
+    }
+
+    /// 添加布尔值列
+    pub fn add_boolean_column(mut self, name: &str, value: bool) -> Self {
+        self.columns.push(Column::with_bool_value(name, value));
+
+        self
+    }
+
+    /// 添加二进制列
+    pub fn add_blob_column(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.columns.push(Column::with_blob_value(name, value));
+
+        self
+    }
 }
 
 #[cfg(test)]
 mod test_row {
     use base64::{Engine, prelude::BASE64_STANDARD};
-    use prost::Message;
 
     use crate::{
-        OtsClient, OtsOp, OtsRequest,
-        model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn},
-        protos::{
-            plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-            table_store::{GetRowRequest, GetRowResponse},
-        },
+        model::{Column, ColumnValue, PrimaryKeyColumn},
+        protos::plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
     };
 
     use std::sync::Once;

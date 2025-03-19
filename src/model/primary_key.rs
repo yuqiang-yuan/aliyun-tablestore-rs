@@ -8,7 +8,7 @@ use crate::{
     error::OtsError,
     protos::plain_buffer::{
         self, HEADER, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, MASK_HEADER, MASK_ROW_CHECKSUM, TAG_CELL, TAG_CELL_CHECKSUM, TAG_CELL_NAME, TAG_CELL_VALUE,
-        TAG_ROW_CHECKSUM, VT_BLOB, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_STRING,
+        TAG_ROW_CHECKSUM, VT_AUTO_INCREMENT, VT_BLOB, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_STRING,
     },
 };
 
@@ -78,6 +78,7 @@ impl PrimaryKey {
             c = crc_u8(c, key_col.crc8_checksum());
         }
 
+        c = crc_u8(c, 0u8);
         c
     }
 }
@@ -89,11 +90,14 @@ pub enum PrimaryKeyValue {
     String(String),
     Binary(Vec<u8>),
 
-    /// 主要是用来查询
+    /// 无穷大。主要是用来查询
     InfMax,
 
-    /// 主要是用来查询
+    /// 无穷小。主要是用来查询
     InfMin,
+
+    /// 自增
+    AutoIncrement,
 }
 
 impl Default for PrimaryKeyValue {
@@ -130,7 +134,7 @@ impl PrimaryKeyValue {
             Self::Integer(_) => size + LITTLE_ENDIAN_64_SIZE,
             Self::String(s) => size + plain_buffer::LITTLE_ENDIAN_32_SIZE + s.len() as u32,
             Self::Binary(buf) => size + plain_buffer::LITTLE_ENDIAN_32_SIZE + buf.len() as u32,
-            Self::InfMax | Self::InfMin => size,
+            Self::InfMax | Self::InfMin | Self::AutoIncrement => size,
         }
     }
 
@@ -140,6 +144,7 @@ impl PrimaryKeyValue {
         match self {
             Self::InfMin => crc_u8(checksum, VT_INF_MIN),
             Self::InfMax => crc_u8(checksum, VT_INF_MAX),
+            Self::AutoIncrement => crc_u8(checksum, VT_AUTO_INCREMENT),
             // Self::AutoIncrement => crc_u8(crc, VT_AUTO_INCREMENT),
             Self::Integer(n) => {
                 checksum = crc_u8(checksum, VT_INTEGER);
@@ -192,6 +197,11 @@ impl PrimaryKeyValue {
                 cursor.write_u32::<LittleEndian>(1).unwrap();
                 cursor.write_u8(VT_INF_MAX).unwrap();
             }
+
+            Self::AutoIncrement => {
+                cursor.write_u32::<LittleEndian>(1).unwrap();
+                cursor.write_u8(VT_AUTO_INCREMENT).unwrap();
+            }
         }
     }
 }
@@ -232,7 +242,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建无穷小值的主键列
-    pub fn with_infinite_min(name: &str) -> Self {
+    pub fn with_inf_min(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::InfMin,
@@ -240,10 +250,18 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建无穷大值的主键列
-    pub fn with_infinite_max(name: &str) -> Self {
+    pub fn with_inf_max(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::InfMax,
+        }
+    }
+
+    /// 创建自增主键列，无需填充值
+    pub fn with_auto_increment(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            value: PrimaryKeyValue::AutoIncrement,
         }
     }
 

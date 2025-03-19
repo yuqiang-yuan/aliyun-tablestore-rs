@@ -11,7 +11,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use data::{GetRangeOperation, GetRowOperation};
+use data::{GetRangeOperation, GetRowOperation, PutRowOperation};
 use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -323,52 +323,58 @@ impl OtsClient {
         Ok(response)
     }
 
-    /// List tables in a instance
+    /// 列出实例下的宽表
     pub fn list_table(&self) -> ListTableOperation {
         ListTableOperation::new(self.clone())
     }
 
-    /// Create table
+    /// 创建一个宽表
     pub fn create_table(&self, table_name: &str) -> CreateTableOperation {
         CreateTableOperation::new(self.clone(), table_name)
     }
 
-    /// Update table
+    /// 更新宽表定义
     pub fn update_table(&self, table_name: &str) -> UpdateTableOperation {
         UpdateTableOperation::new(self.clone(), table_name)
     }
 
-    /// Describe table
+    /// 获取宽表定义
     pub fn describe_table(&self, table_name: &str) -> DescribeTableOperation {
         DescribeTableOperation::new(self.clone(), table_name)
     }
 
-    /// Delete table
+    /// 删除宽表
     pub fn delete_table(&self, table_name: &str) -> DeleteTableOperation {
         DeleteTableOperation::new(self.clone(), table_name)
     }
 
-    /// Compute split points by size
+    /// 计算宽表分裂点
     pub fn compute_split_points_by_size(&self, table_name: &str, size: u64) -> ComputeSplitPointsBySizeOperation {
         ComputeSplitPointsBySizeOperation::new(self.clone(), table_name, size)
     }
 
-    /// Add defined column
+    /// 添加预定义列
     pub fn add_defined_column(&self, table_name: &str) -> AddDefinedColumnOperation {
         AddDefinedColumnOperation::new(self.clone(), table_name)
     }
 
-    /// Delete defined column
+    /// 删除预定义列
     pub fn delete_defined_column(&self, table_name: &str) -> DeleteDefinedColumnOperation {
         DeleteDefinedColumnOperation::new(self.clone(), table_name)
     }
 
-    /// Get data by primary key
+    /// 根据主键获取单行数据
     pub fn get_row(&self, table_name: &str) -> GetRowOperation {
         GetRowOperation::new(self.clone(), table_name)
     }
 
+    /// 根据主键获取范围数据
     pub fn get_range(&self, table_name: &str) -> GetRangeOperation {
         GetRangeOperation::new(self.clone(), table_name)
+    }
+
+    /// 插入一行数据
+    pub fn put_row(&self, table_name: &str) -> PutRowOperation {
+        PutRowOperation::new(self.clone(), table_name)
     }
 }

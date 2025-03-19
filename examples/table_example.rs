@@ -4,6 +4,6 @@ use dotenvy::dotenv;
 pub fn main() {
     dotenv().unwrap();
     let client = OtsClient::from_env();
-    let op = client.get_range("table_name");
+    let _op = client.get_range("table_name");
     println!("{:#?}", client);
 }
