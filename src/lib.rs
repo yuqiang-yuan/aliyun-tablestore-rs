@@ -11,7 +11,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use row::{GetRangeOperation, GetRowOperation};
+use data::{GetRangeOperation, GetRowOperation};
 use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -23,7 +23,7 @@ pub mod index;
 pub mod macros;
 pub mod model;
 pub mod protos;
-pub mod row;
+pub mod data;
 pub mod table;
 pub mod util;
 
@@ -361,7 +361,7 @@ impl OtsClient {
         DeleteDefinedColumnOperation::new(self.clone(), table_name)
     }
 
-    /// Get row by primary key
+    /// Get data by primary key
     pub fn get_row(&self, table_name: &str) -> GetRowOperation {
         GetRowOperation::new(self.clone(), table_name)
     }

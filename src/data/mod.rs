@@ -35,7 +35,7 @@ mod test_row {
             .send()
             .await;
 
-        log::debug!("get row response: \n{:#?}", response);
+        log::debug!("get data response: \n{:#?}", response);
         assert!(response.is_ok());
         let response = response.unwrap();
         assert!(response.row.is_some());
@@ -50,17 +50,17 @@ mod test_row {
         );
 
         // let response = response.unwrap();
-        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-row-response-versions.data", response.row).unwrap();
+        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-data-response-versions.data", response.data).unwrap();
         // let response = client.get_row("users")
         //     .add_string_pk_value("user_id", "0005358A-DCAF-665E-EECF-D9935E821B87")
         //     .max_versions(1)
         //     .send().await;
 
-        // log::debug!("get row response: \n{:#?}", response);
+        // log::debug!("get data response: \n{:#?}", response);
         // assert!(response.is_ok());
 
         // let response = response.unwrap();
-        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-row-response.data", response.row).unwrap();
+        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-data-response.data", response.data).unwrap();
     }
 
     #[tokio::test]

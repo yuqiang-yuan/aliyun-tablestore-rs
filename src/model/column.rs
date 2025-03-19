@@ -189,7 +189,7 @@ impl Column {
                             ColumnValue::Blob(buf)
                         }
 
-                        _ => return Err(OtsError::PlainBufferError(format!("unknown data row cell value type: {}", cell_value_type))),
+                        _ => return Err(OtsError::PlainBufferError(format!("unknown data data cell value type: {}", cell_value_type))),
                     };
                 }
 
@@ -214,7 +214,7 @@ impl Column {
 
         if cell_checksum != checksum {
             return Err(OtsError::PlainBufferError(format!(
-                "data row cell checksum validation failed. calculated: {}, received: {}",
+                "data data cell checksum validation failed. calculated: {}, received: {}",
                 cell_checksum, checksum
             )));
         }

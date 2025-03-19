@@ -1,10 +1,10 @@
+use std::io::Cursor;
+
+use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    model::{GetRowResponse, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
-    protos::table_store::{GetRowRequest, TimeRange},
+    add_per_request_options, error::OtsError, model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row}, protos::{plain_buffer::HEADER, table_store::{ConsumedCapacity, GetRowRequest, TimeRange}}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 根据指定的主键读取单行数据。
@@ -178,5 +178,40 @@ impl GetRowOperation {
 
         let response = client.send(req).await?;
         GetRowResponse::decode(response.bytes().await?.to_vec())
+    }
+}
+
+
+
+#[derive(Clone, Default, Debug)]
+pub struct GetRowResponse {
+    pub consumed: ConsumedCapacity,
+    pub row: Option<Row>,
+    pub next_token: Option<Vec<u8>>,
+}
+
+impl GetRowResponse {
+    pub fn decode(bytes: Vec<u8>) -> OtsResult<Self> {
+        let msg = crate::protos::table_store::GetRowResponse::decode(bytes.as_slice())?;
+        let crate::protos::table_store::GetRowResponse {
+            consumed,
+            row: row_bytes,
+            next_token,
+        } = msg;
+
+        let row = if !row_bytes.is_empty() {
+            let mut cursor = Cursor::new(row_bytes);
+            let header = cursor.read_u32::<LittleEndian>()?;
+
+            if header != HEADER {
+                return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
+            }
+
+            Some(Row::from_cursor(&mut cursor)?)
+        } else {
+            None
+        };
+
+        Ok(Self { consumed, row, next_token })
     }
 }

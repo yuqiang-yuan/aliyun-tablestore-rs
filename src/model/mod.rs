@@ -1,15 +1,11 @@
 //! 自定义的类型，主要是将 Protobuf 的类型映射到 Rust 类型
 mod column;
 mod filter;
-mod get_range_response;
-mod get_row_response;
 mod primary_key;
 mod row;
 
 pub use column::*;
 pub use filter::*;
-pub use get_range_response::*;
-pub use get_row_response::*;
 pub use primary_key::*;
 pub use row::*;
 
@@ -35,7 +31,7 @@ mod test_model {
     #[test]
     fn test_decode_plain_buffer() {
         setup();
-        let bytes = std::fs::read("/home/yuanyq/Downloads/aliyun-plainbuffer/get-row-response-versions.data").unwrap();
+        let bytes = std::fs::read("/home/yuanyq/Downloads/aliyun-plainbuffer/get-data-response-versions.data").unwrap();
         let mut cursor = Cursor::new(bytes);
         let header = cursor.read_u32::<LittleEndian>().unwrap();
 

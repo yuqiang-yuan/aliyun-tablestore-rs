@@ -91,7 +91,7 @@ impl Row {
 
                     if row_checksum != checksum {
                         return Err(OtsError::PlainBufferError(format!(
-                            "data row checksum validation failed. calculated: {}, received: {}",
+                            "data data checksum validation failed. calculated: {}, received: {}",
                             row_checksum, checksum
                         )));
                     }

@@ -29,7 +29,7 @@
 //! | `0x07u8` | 1 | TAG_CELL_TIMESTAMP. **optional** |
 //! | `<variant>u64` | 8 | cell timestamp value. **optional** |
 //! | `0x09u8` | 1 | TAG_ROW_CHECKSUM |
-//! | `<variant>u8` | 1 | row checksum |
+//! | `<variant>u8` | 1 | data checksum |
 //!
 //! cell value prefix 实际上是指整个 cell 值（不包含 CRC 校验码部分）占多少字节
 //!
