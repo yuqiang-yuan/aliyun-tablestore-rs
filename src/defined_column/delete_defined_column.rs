@@ -26,11 +26,27 @@ impl DeleteDefinedColumnOperation {
         }
     }
 
-    /// 添加要删除的列
-    pub fn delete_column(mut self, col_name: &str) -> Self {
-        self.columns.push(col_name.to_string());
+    /// 添加一个要删除的列的名字
+    pub fn column(mut self, col_name: &str) -> Self {
+        self.columns.push(col_name.into());
+
         self
     }
+
+    /// 添加多个要删除的列的名字
+    pub fn columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns.extend(col_names.into_iter().map(|s| s.into()));
+
+        self
+    }
+
+    /// 直接设置要删除的列的名字
+    pub fn with_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns = col_names.into_iter().map(|s| s.into()).collect();
+
+        self
+    }
+
 
     pub async fn send(self) -> OtsResult<DeleteDefinedColumnResponse> {
         let Self { client, table_name, columns } = self;

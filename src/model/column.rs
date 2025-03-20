@@ -347,7 +347,7 @@ impl Column {
     }
 
     /// 构造整数列
-    pub fn with_integer_value(name: &str, value: i64) -> Self {
+    pub fn from_integer(name: &str, value: i64) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::Integer(value),
@@ -356,7 +356,7 @@ impl Column {
     }
 
     /// 构造双精度列
-    pub fn with_double_value(name: &str, value: f64) -> Self {
+    pub fn from_double(name: &str, value: f64) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::Double(value),
@@ -365,7 +365,7 @@ impl Column {
     }
 
     /// 构造布尔值列
-    pub fn with_bool_value(name: &str, value: bool) -> Self {
+    pub fn from_bool(name: &str, value: bool) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::Boolean(value),
@@ -374,7 +374,7 @@ impl Column {
     }
 
     /// 构造字符串列
-    pub fn with_string_value(name: &str, value: impl Into<String>) -> Self {
+    pub fn from_string(name: &str, value: impl Into<String>) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::String(value.into()),
@@ -383,7 +383,7 @@ impl Column {
     }
 
     /// 构造二进制列
-    pub fn with_blob_value(name: &str, value: impl Into<Vec<u8>>) -> Self {
+    pub fn from_blob(name: &str, value: impl Into<Vec<u8>>) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::Blob(value.into()),
@@ -392,7 +392,7 @@ impl Column {
     }
 
     /// 构造空值列
-    pub fn with_null(name: &str) -> Self {
+    pub fn null(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::Null,
@@ -401,7 +401,7 @@ impl Column {
     }
 
     /// 构造极小值列
-    pub fn with_infinite_min(name: &str) -> Self {
+    pub fn inf_min(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::InfMin,
@@ -410,7 +410,7 @@ impl Column {
     }
 
     /// 构造极大值列
-    pub fn with_infinite_max(name: &str) -> Self {
+    pub fn inf_max(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: ColumnValue::InfMax,

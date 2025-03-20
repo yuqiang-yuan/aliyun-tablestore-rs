@@ -217,7 +217,7 @@ impl Row {
 
     /// 添加字符串类型的主键值
     pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn::with_string_value(name, value));
+        self.primary_keys.push(PrimaryKeyColumn::from_string(name, value));
 
         self
     }
@@ -244,7 +244,7 @@ impl Row {
 
     /// 添加自增主键列
     pub fn primary_key_auto_increment(mut self, name: &str) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn::with_auto_increment(name));
+        self.primary_keys.push(PrimaryKeyColumn::auto_increment(name));
 
         self
     }
@@ -272,35 +272,35 @@ impl Row {
 
     /// 添加/更新字符串类型的列
     pub fn column_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.columns.push(Column::with_string_value(name, value));
+        self.columns.push(Column::from_string(name, value));
 
         self
     }
 
     /// 添加/更新整数列
     pub fn column_integer(mut self, name: &str, value: i64) -> Self {
-        self.columns.push(Column::with_integer_value(name, value));
+        self.columns.push(Column::from_integer(name, value));
 
         self
     }
 
     /// 添加/更新双精度列
     pub fn column_double(mut self, name: &str, value: f64) -> Self {
-        self.columns.push(Column::with_double_value(name, value));
+        self.columns.push(Column::from_double(name, value));
 
         self
     }
 
     /// 添加/更新布尔值列
     pub fn column_bool(mut self, name: &str, value: bool) -> Self {
-        self.columns.push(Column::with_bool_value(name, value));
+        self.columns.push(Column::from_bool(name, value));
 
         self
     }
 
     /// 添加/更新二进制列
     pub fn column_blob(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.columns.push(Column::with_blob_value(name, value));
+        self.columns.push(Column::from_blob(name, value));
 
         self
     }
@@ -309,7 +309,7 @@ impl Row {
     pub fn column_to_increse(mut self, name: &str, inc: i64) -> Self {
         self.columns.push(Column {
             op: Some(ColumnOp::Increment),
-            ..Column::with_integer_value(name, inc)
+            ..Column::from_integer(name, inc)
         });
 
         self
@@ -457,8 +457,8 @@ mod test_row {
 
         let row = Row {
             primary_keys: vec![
-                PrimaryKeyColumn::with_string_value("school_id", "1"),
-                PrimaryKeyColumn::with_integer_value("id", 1742373697699000),
+                PrimaryKeyColumn::from_string("school_id", "1"),
+                PrimaryKeyColumn::from_integer("id", 1742373697699000),
             ],
             columns: vec![],
         };
@@ -477,8 +477,8 @@ mod test_row {
 
         let row = Row {
             primary_keys: vec![
-                PrimaryKeyColumn::with_string_value("school_id", "2"),
-                PrimaryKeyColumn::with_integer_value("id", 1742378007415000),
+                PrimaryKeyColumn::from_string("school_id", "2"),
+                PrimaryKeyColumn::from_integer("id", 1742378007415000),
             ],
             columns: vec![Column {
                 name: "name".to_string(),

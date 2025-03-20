@@ -31,7 +31,7 @@ impl SingleColumnValueFilter {
     pub fn new() -> Self {
         Self {
             comparator: ComparatorType::CtEqual,
-            column: Column::with_null(""),
+            column: Column::null(""),
             filter_if_missing: false,
             latest_version_only: true,
             value_transfer_rule: None,

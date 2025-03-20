@@ -218,7 +218,7 @@ pub struct PrimaryKeyColumn {
 
 impl PrimaryKeyColumn {
     /// 创建字符串类型的主键列及值
-    pub fn with_string_value(name: &str, value: impl Into<String>) -> Self {
+    pub fn from_string(name: &str, value: impl Into<String>) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::String(value.into()),
@@ -226,7 +226,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建整数类型的主键列及值
-    pub fn with_integer_value(name: &str, value: i64) -> Self {
+    pub fn from_integer(name: &str, value: i64) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::Integer(value),
@@ -234,7 +234,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建二进制类型的主键列及值
-    pub fn with_binary_value(name: &str, value: impl Into<Vec<u8>>) -> Self {
+    pub fn from_binary(name: &str, value: impl Into<Vec<u8>>) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::Binary(value.into()),
@@ -242,7 +242,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建无穷小值的主键列
-    pub fn with_inf_min(name: &str) -> Self {
+    pub fn inf_min(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::InfMin,
@@ -250,7 +250,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建无穷大值的主键列
-    pub fn with_inf_max(name: &str) -> Self {
+    pub fn inf_max(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::InfMax,
@@ -258,7 +258,7 @@ impl PrimaryKeyColumn {
     }
 
     /// 创建自增主键列，无需填充值
-    pub fn with_auto_increment(name: &str) -> Self {
+    pub fn auto_increment(name: &str) -> Self {
         Self {
             name: name.to_string(),
             value: PrimaryKeyValue::AutoIncrement,

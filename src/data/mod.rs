@@ -35,8 +35,8 @@ mod test_row_operations {
         let client = OtsClient::from_env();
         let response = client
             .get_row("schools")
-            .add_string_primary_key("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
-            .add_integer_primary_key("id", 1742203524276000)
+            .primary_key_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+            .primary_key_integer("id", 1742203524276000)
             .max_versions(1)
             .send()
             .await;
@@ -104,17 +104,17 @@ mod test_row_operations {
 
         let mut op = client
             .get_range("ccNgMemberRecord")
-            .add_string_start_primary_key("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
-            .add_string_start_primary_key("stat_date", "2023-12-04")
-            .add_inf_min_start_primary_key("user_id")
-            .add_inf_min_start_primary_key("id")
-            .add_string_end_primary_key("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
-            .add_string_end_primary_key("stat_date", "2023-12-04")
-            .add_inf_max_end_primary_key("user_id")
-            .add_inf_max_end_primary_key("id")
+            .start_primary_key_string("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
+            .start_primary_key_string("stat_date", "2023-12-04")
+            .start_primary_key_inf_min("user_id")
+            .start_primary_key_inf_min("id")
+            .end_primary_key_string("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
+            .end_primary_key_string("stat_date", "2023-12-04")
+            .end_primary_key_inf_max("user_id")
+            .end_primary_key_inf_max("id")
             .filter(crate::model::Filter::Single(
                 SingleColumnValueFilter::new()
-                    .equal_column(Column::with_string_value("cc_school_id", "A006D67B-4330-1DEF-1354-0DB43F2F5F21"))
+                    .equal_column(Column::from_string("cc_school_id", "A006D67B-4330-1DEF-1354-0DB43F2F5F21"))
                     .filter_if_missing(false)
                     .latest_version_only(true),
             ))
@@ -149,7 +149,7 @@ mod test_row_operations {
 
             if let Some(keys) = response.next_start_primary_key {
                 log::debug!("Going to send next query");
-                op.inclusive_start_primary_key = keys;
+                op.inclusive_start_primary_keys = keys;
             } else {
                 break;
             }
@@ -235,7 +235,7 @@ mod test_row_operations {
 
         assert!(response.is_ok());
 
-        let response = client.get_row(table_name).add_string_primary_key("str_id", &id).send().await;
+        let response = client.get_row(table_name).primary_key_string("str_id", &id).send().await;
 
         assert!(response.is_ok());
 

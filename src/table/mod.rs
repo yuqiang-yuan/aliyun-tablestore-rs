@@ -100,23 +100,23 @@ mod test_table {
 
         let response = client
             .create_table("users")
-            .add_string_primary_key("user_id_part")
-            .add_string_primary_key("user_id")
-            .add_string_column("full_name")
-            .add_string_column("phone_number")
-            .add_string_column("pwd_hash")
-            .add_string_column("badge_no")
-            .add_string_column("gender")
-            .add_integer_column("registered_at_ms")
-            .add_boolean_column("deleted")
-            .add_integer_column("deleted_at_ms")
-            .add_double_column("score")
-            .add_blob_column("avatar")
-            .add_index(
+            .primary_key_string("user_id_part")
+            .primary_key_string("user_id")
+            .column_string("full_name")
+            .column_string("phone_number")
+            .column_string("pwd_hash")
+            .column_string("badge_no")
+            .column_string("gender")
+            .column_integer("registered_at_ms")
+            .column_bool("deleted")
+            .column_integer("deleted_at_ms")
+            .column_double("score")
+            .column_blob("avatar")
+            .index(
                 IndexMetaBuilder::new("idx_phone_no")
                     .name("idx_phone_no")
-                    .add_primary_key("user_id_part")
-                    .add_defined_column("phone_number")
+                    .primary_key("user_id_part")
+                    .defined_column("phone_number")
                     .index_type(IndexType::ItGlobalIndex)
                     .build(),
             )
@@ -148,7 +148,7 @@ mod test_table {
         let response = client.create_table("中文").send().await;
         assert!(response.is_err());
 
-        let response = client.create_table("validname").add_string_primary_key("1").send().await;
+        let response = client.create_table("validname").primary_key_string("1").send().await;
 
         assert!(response.is_err());
     }

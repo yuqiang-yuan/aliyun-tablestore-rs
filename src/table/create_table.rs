@@ -101,7 +101,7 @@ impl CreateTableOperation {
     }
 
     /// 添加主键列。一个表格至少包含 1 个主键列，最多包含 4 个主键列
-    pub fn add_primary_key(mut self, name: impl Into<String>, key_type: PrimaryKeyType, auto_inc: Option<bool>) -> Self {
+    fn add_primary_key(mut self, name: impl Into<String>, key_type: PrimaryKeyType, auto_inc: Option<bool>) -> Self {
         let pk = PrimaryKeySchema {
             name: name.into(),
             r#type: key_type as i32,
@@ -112,28 +112,49 @@ impl CreateTableOperation {
         self
     }
 
+    /// 添加一个主键列
+    pub fn primary_key(mut self, pk: PrimaryKeySchema) -> Self {
+        self.primary_keys.push(pk);
+
+        self
+    }
+
+    /// 添加多个主键列
+    pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeySchema>) -> Self {
+        self.primary_keys.extend(pks);
+
+        self
+    }
+
+    /// 直接设置主键列
+    pub fn with_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeySchema>) -> Self {
+        self.primary_keys = pks.into_iter().collect();
+
+        self
+    }
+
     /// 添加字符串类型的主键列
-    pub fn add_string_primary_key(self, name: &str) -> Self {
+    pub fn primary_key_string(self, name: &str) -> Self {
         self.add_primary_key(name, PrimaryKeyType::String, None)
     }
 
     /// 添加整数类型的主键列。只有非分区键支持自增设置（主键集合中的第 1 个元素是分区键）
-    pub fn add_integer_primary_key(self, name: &str, auto_inc: bool) -> Self {
+    pub fn primary_key_integer(self, name: &str, auto_inc: bool) -> Self {
         self.add_primary_key(name, PrimaryKeyType::Integer, Some(auto_inc))
     }
 
     /// 添加二进制类型的主键列
-    pub fn add_binary_primary_key(self, name: &str) -> Self {
+    pub fn primary_key_binary(self, name: &str) -> Self {
         self.add_primary_key(name, PrimaryKeyType::Binary, None)
     }
 
     /// 添加自增主键列
-    pub fn add_auto_increment_primary_key(self, name: &str) -> Self {
-        self.add_integer_primary_key(name, true)
+    pub fn primary_key_auto_increment(self, name: &str) -> Self {
+        self.primary_key_integer(name, true)
     }
 
     /// 添加预定义列
-    pub fn add_column(mut self, name: impl Into<String>, col_type: DefinedColumnType) -> Self {
+    fn add_column(mut self, name: impl Into<String>, col_type: DefinedColumnType) -> Self {
         let col = DefinedColumnSchema {
             name: name.into(),
             r#type: col_type as i32,
@@ -144,40 +165,63 @@ impl CreateTableOperation {
         self
     }
 
+    /// 添加一个预定义列
+    pub fn column(mut self, def_col: DefinedColumnSchema) -> Self {
+        self.defined_columns.push(def_col);
+
+        self
+    }
+
+    /// 添加多个预定义列
+    pub fn columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
+        self.defined_columns.extend(def_cols);
+
+        self
+    }
+
+    /// 直接设置预定义列
+    pub fn with_columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
+        self.defined_columns = def_cols.into_iter().collect();
+
+        self
+    }
+
     /// 添加整数类型预定以列
-    pub fn add_integer_column(self, name: &str) -> Self {
+    pub fn column_integer(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctInteger)
     }
 
     /// 添加字符串类型预定义列
-    pub fn add_string_column(self, name: &str) -> Self {
+    pub fn column_string(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctString)
     }
 
     /// 添加双精度类型预定义列
-    pub fn add_double_column(self, name: &str) -> Self {
+    pub fn column_double(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctDouble)
     }
 
     /// 添加布尔值类型预定义列
-    pub fn add_boolean_column(self, name: &str) -> Self {
+    pub fn column_bool(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBoolean)
     }
 
     /// 添加二进制类型预定义列
-    pub fn add_blob_column(self, name: &str) -> Self {
+    pub fn column_blob(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBlob)
     }
 
     /// 预设读取吞吐量。最大 100000 CU
     pub fn reserved_throughput_read(mut self, read_cu: i32) -> Self {
         self.reserved_throughput_read = Some(read_cu);
+
         self
     }
 
     /// 预设写入吞吐量。最大 100000 CU
     pub fn reserved_throughput_write(mut self, write_cu: i32) -> Self {
         self.reserved_throughput_write = Some(write_cu);
+
         self
     }
 
@@ -185,12 +229,14 @@ impl CreateTableOperation {
     /// 数据生命周期至少为 `86400` 秒（一天）或 `-1`（数据永不过期）。
     pub fn ttl_seconds(mut self, ttl_seconds: i32) -> Self {
         self.ttl_seconds = Some(ttl_seconds);
+
         self
     }
 
     /// 最大版本数，即属性列能够保留数据的最大版本个数。当属性列数据的版本个数超过设置的最大版本数时，系统会自动删除较早版本的数据。
     pub fn max_versions(mut self, max_versions: i32) -> Self {
         self.max_versions = Some(max_versions);
+
         self
     }
 
@@ -199,6 +245,7 @@ impl CreateTableOperation {
     /// 属性列的有效版本范围为 `[max{数据写入时间-有效版本偏差,数据写入时间-数据生命周期}，数据写入时间+有效版本偏差)`。
     pub fn deviation_cell_version_seconds(mut self, dev: i64) -> Self {
         self.deviation_cell_version_in_sec = Some(dev);
+
         self
     }
 
@@ -207,24 +254,42 @@ impl CreateTableOperation {
     /// 当要使用多元索引生命周期功能时，您必须设置此参数为 `false`，即不允许通过 `UpdateRow` 更新写入数据。
     pub fn allow_update(mut self, allow_update: bool) -> Self {
         self.allow_update = Some(allow_update);
+
         self
     }
 
     /// 设置是否启用 stream
     pub fn stream(mut self, enabled: bool) -> Self {
         self.stream_enabled = enabled;
+
         self
     }
 
     /// 设置 stream 过期时间
     pub fn stream_expiration(mut self, exp: i32) -> Self {
         self.stream_expiration_hour = Some(exp);
+
         self
     }
 
-    /// 添加 stream 列
-    pub fn add_stream_column(mut self, col_name: impl Into<String>) -> Self {
+    /// 添加一个 stream 列
+    pub fn stream_column(mut self, col_name: impl Into<String>) -> Self {
         self.stream_columns.insert(col_name.into());
+
+        self
+    }
+
+    /// 添加多个 stream 列
+    pub fn stream_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.stream_columns.extend(col_names.into_iter().map(|s| s.into()));
+
+        self
+    }
+
+    /// 直接设置 stream 列
+    pub fn with_stream_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.stream_columns = col_names.into_iter().map(|s| s.into()).collect();
+
         self
     }
 
@@ -258,9 +323,23 @@ impl CreateTableOperation {
         self
     }
 
-    /// 添加索引。可以使用 [`IndexMetaBuilder`](`crate::index::IndexMetaBuilder`) 建立索引信息
-    pub fn add_index(mut self, idx_meta: IndexMeta) -> Self {
+    /// 添加一个索引。可以使用 [`IndexMetaBuilder`](`crate::index::IndexMetaBuilder`) 建立索引信息
+    pub fn index(mut self, idx_meta: IndexMeta) -> Self {
         self.indexes.push(idx_meta);
+        self
+    }
+
+    /// 添加多个索引
+    pub fn indexes(mut self, indexes: impl IntoIterator<Item = IndexMeta>) -> Self {
+        self.indexes.extend(indexes);
+
+        self
+    }
+
+    /// 直接设置多个索引
+    pub fn with_indexes(mut self, indexes: impl IntoIterator<Item = IndexMeta>) -> Self {
+        self.indexes = indexes.into_iter().collect();
+
         self
     }
 

@@ -81,9 +81,23 @@ impl PutRowOperation {
         self
     }
 
-    /// 添加要返回的列
-    pub fn add_return_columns(mut self, col_name: impl Into<String>) -> Self {
+    /// 添加一个要返回的列
+    pub fn return_column(mut self, col_name: impl Into<String>) -> Self {
         self.return_columns.push(col_name.into());
+
+        self
+    }
+
+    /// 添加多个要返回的列
+    pub fn return_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.return_columns.extend(col_names.into_iter().map(|s| s.into()));
+
+        self
+    }
+
+    /// 直接设置要返回的列
+    pub fn with_return_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.return_columns = col_names.into_iter().map(|s| s.into()).collect();
 
         self
     }

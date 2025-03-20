@@ -23,7 +23,7 @@ pub struct GetRangeOperation {
     pub direction: Direction,
 
     /// 需要返回的全部列的列名。见 [`add_column_to_get`](`Self::add_column_to_get`)
-    pub columns: Vec<String>,
+    pub columns_to_get: Vec<String>,
 
     /// TimeRange 设置。和 `max_versions` 只能存在一个。
     ///
@@ -33,10 +33,10 @@ pub struct GetRangeOperation {
     pub time_range_specific_ms: Option<i64>,
 
     /// 本次范围读取的起始主键，包含
-    pub inclusive_start_primary_key: Vec<PrimaryKeyColumn>,
+    pub inclusive_start_primary_keys: Vec<PrimaryKeyColumn>,
 
     /// 本次范围读取的终止主键，不包含
-    pub exclusive_end_primary_key: Vec<PrimaryKeyColumn>,
+    pub exclusive_end_primary_keys: Vec<PrimaryKeyColumn>,
 
     /// 最多返回的版本个数。
     pub max_versions: Option<i32>,
@@ -79,78 +79,134 @@ impl GetRangeOperation {
         self
     }
 
+    /// 添加一个开始主键列
+    pub fn start_primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
+        self.inclusive_start_primary_keys.push(pk);
+
+        self
+    }
+
+    /// 添加多个开始主键列
+    pub fn start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.inclusive_start_primary_keys.extend(pks);
+
+        self
+    }
+
+    /// 设置开始主键列
+    pub fn with_start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.inclusive_start_primary_keys = pks.into_iter().collect();
+
+        self
+    }
+
     /// 添加字符串类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn add_string_start_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.inclusive_start_primary_key.push(PrimaryKeyColumn::with_string_value(name, value));
+    pub fn start_primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_string(name, value));
         self
     }
 
     /// 添加整数类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn add_integer_start_primary_key(mut self, name: &str, value: i64) -> Self {
-        self.inclusive_start_primary_key.push(PrimaryKeyColumn::with_integer_value(name, value));
+    pub fn start_primary_key_integer(mut self, name: &str, value: i64) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_integer(name, value));
 
         self
     }
 
     /// 添加二进制类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn add_binary_start_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.inclusive_start_primary_key.push(PrimaryKeyColumn::with_binary_value(name, value));
+    pub fn start_primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_binary(name, value));
 
         self
     }
 
     /// 添加无穷小值开始主键
-    pub fn add_inf_min_start_primary_key(mut self, name: &str) -> Self {
-        self.inclusive_start_primary_key.push(PrimaryKeyColumn::with_inf_min(name));
+    pub fn start_primary_key_inf_min(mut self, name: &str) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::inf_min(name));
 
         self
     }
 
     /// 添加无穷大值开始主键
-    pub fn add_inf_max_start_primary_key(mut self, name: &str) -> Self {
-        self.inclusive_start_primary_key.push(PrimaryKeyColumn::with_inf_max(name));
+    pub fn start_primary_key_inf_max(mut self, name: &str) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::inf_max(name));
+
+        self
+    }
+
+    /// 添加一个结束主键列
+    pub fn end_primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
+        self.exclusive_end_primary_keys.push(pk);
+
+        self
+    }
+
+    /// 添加多个结束主键列
+    pub fn end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.exclusive_end_primary_keys.extend(pks);
+
+        self
+    }
+
+    /// 设置结束主键列
+    pub fn with_end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.exclusive_end_primary_keys = pks.into_iter().collect();
 
         self
     }
 
     /// 添加字符串类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn add_string_end_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.exclusive_end_primary_key.push(PrimaryKeyColumn::with_string_value(name, value));
+    pub fn end_primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_string(name, value));
         self
     }
 
     /// 添加整数类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn add_integer_end_primary_key(mut self, name: &str, value: i64) -> Self {
-        self.exclusive_end_primary_key.push(PrimaryKeyColumn::with_integer_value(name, value));
+    pub fn end_primary_key_integer(mut self, name: &str, value: i64) -> Self {
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_integer(name, value));
 
         self
     }
 
     /// 添加二进制类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn add_binary_end_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.exclusive_end_primary_key.push(PrimaryKeyColumn::with_binary_value(name, value));
+    pub fn end_primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_binary(name, value));
 
         self
     }
 
     /// 添加无穷小值结束主键
-    pub fn add_inf_min_end_primary_key(mut self, name: &str) -> Self {
-        self.exclusive_end_primary_key.push(PrimaryKeyColumn::with_inf_min(name));
+    pub fn end_primary_key_inf_min(mut self, name: &str) -> Self {
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::inf_min(name));
 
         self
     }
 
     /// 添加无穷大值结束主键
-    pub fn add_inf_max_end_primary_key(mut self, name: &str) -> Self {
-        self.exclusive_end_primary_key.push(PrimaryKeyColumn::with_inf_max(name));
+    pub fn end_primary_key_inf_max(mut self, name: &str) -> Self {
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::inf_max(name));
 
         self
     }
 
     /// 需要返回的全部列的列名。如果为空，则返回指定行的所有列。`columns_to_get` 个数不应超过128个。
     /// 如果指定的列不存在，则不会返回指定列的数据；如果给出了重复的列名，返回结果只会包含一次指定列。
-    pub fn add_column_to_get(mut self, name: &str) -> Self {
-        self.columns.push(name.to_string());
+    pub fn column_to_get(mut self, name: &str) -> Self {
+        self.columns_to_get.push(name.to_string());
+
+        self
+    }
+
+    /// 一次添加多个需要返回的列名
+    pub fn columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns_to_get.extend(names.into_iter().map(|s| s.into()));
+
+        self
+    }
+
+    /// 直接设置需要返回的列
+    pub fn with_columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns_to_get = names.into_iter().map(|s| s.into()).collect();
 
         self
     }
@@ -225,11 +281,11 @@ impl GetRangeOperation {
     pub async fn send(self) -> OtsResult<GetRangeResponse> {
         let Self {
             client,
-            inclusive_start_primary_key,
-            exclusive_end_primary_key,
+            inclusive_start_primary_keys: inclusive_start_primary_key,
+            exclusive_end_primary_keys: exclusive_end_primary_key,
             max_versions,
             direction,
-            columns,
+            columns_to_get: columns,
             time_range_start_ms,
             time_range_end_ms,
             time_range_specific_ms,

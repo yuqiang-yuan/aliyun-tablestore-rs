@@ -18,8 +18,8 @@ use crate::{
 pub struct GetRowOperation {
     client: OtsClient,
     pub table_name: String,
-    pub pk_values: Vec<PrimaryKeyColumn>,
-    pub columns: Vec<String>,
+    pub primary_keys: Vec<PrimaryKeyColumn>,
+    pub columns_to_get: Vec<String>,
 
     // Time range fields
     pub time_range_start_ms: Option<i64>,
@@ -44,8 +44,8 @@ impl GetRowOperation {
     }
 
     /// 添加字符串类型的主键查询值
-    pub fn add_string_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.pk_values.push(PrimaryKeyColumn {
+    pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::String(value.into()),
         });
@@ -53,8 +53,8 @@ impl GetRowOperation {
     }
 
     /// 添加整数类型的主键查询值
-    pub fn add_integer_primary_key(mut self, name: &str, value: i64) -> Self {
-        self.pk_values.push(PrimaryKeyColumn {
+    pub fn primary_key_integer(mut self, name: &str, value: i64) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Integer(value),
         });
@@ -63,8 +63,8 @@ impl GetRowOperation {
     }
 
     /// 添加二进制类型的主键查询值
-    pub fn add_binary_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.pk_values.push(PrimaryKeyColumn {
+    pub fn primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Binary(value.into()),
         });
@@ -74,8 +74,22 @@ impl GetRowOperation {
 
     /// 需要返回的全部列的列名。如果为空，则返回指定行的所有列。`columns_to_get` 个数不应超过128个。
     /// 如果指定的列不存在，则不会返回指定列的数据；如果给出了重复的列名，返回结果只会包含一次指定列。
-    pub fn add_column_to_get(mut self, name: &str) -> Self {
-        self.columns.push(name.to_string());
+    pub fn column_to_get(mut self, name: &str) -> Self {
+        self.columns_to_get.push(name.to_string());
+
+        self
+    }
+
+    /// 一次添加多个需要返回的列名
+    pub fn columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns_to_get.extend(names.into_iter().map(|s| s.into()));
+
+        self
+    }
+
+    /// 直接设置需要返回的列
+    pub fn with_columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.columns_to_get = names.into_iter().map(|s| s.into()).collect();
 
         self
     }
@@ -135,8 +149,8 @@ impl GetRowOperation {
         let Self {
             client,
             table_name,
-            pk_values,
-            columns,
+            primary_keys: pk_values,
+            columns_to_get: columns,
             time_range_start_ms,
             time_range_end_ms,
             time_range_specific_ms,

@@ -28,37 +28,61 @@ impl AddDefinedColumnOperation {
         }
     }
 
-    /// Add a column to the table.
-    pub fn add_column(mut self, col_name: impl Into<String>, col_type: DefinedColumnType) -> Self {
-        self.columns.push(DefinedColumnSchema {
-            name: col_name.into(),
+    /// 添加预定义列
+    fn add_column(mut self, name: impl Into<String>, col_type: DefinedColumnType) -> Self {
+        let col = DefinedColumnSchema {
+            name: name.into(),
             r#type: col_type as i32,
-        });
+        };
+
+        self.columns.push(col);
+
         self
     }
 
-    /// 添加整数类型预定义列
-    pub fn add_integer_column(self, name: impl Into<String>) -> Self {
+    /// 添加一个预定义列
+    pub fn column(mut self, def_col: DefinedColumnSchema) -> Self {
+        self.columns.push(def_col);
+
+        self
+    }
+
+    /// 添加多个预定义列
+    pub fn columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
+        self.columns.extend(def_cols);
+
+        self
+    }
+
+    /// 直接设置预定义列
+    pub fn with_columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
+        self.columns = def_cols.into_iter().collect();
+
+        self
+    }
+
+    /// 添加整数类型预定以列
+    pub fn column_integer(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctInteger)
     }
 
     /// 添加字符串类型预定义列
-    pub fn add_string_column(self, name: impl Into<String>) -> Self {
+    pub fn column_string(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctString)
     }
 
     /// 添加双精度类型预定义列
-    pub fn add_double_column(self, name: impl Into<String>) -> Self {
+    pub fn column_double(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctDouble)
     }
 
     /// 添加布尔值类型预定义列
-    pub fn add_boolean_column(self, name: impl Into<String>) -> Self {
+    pub fn column_bool(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBoolean)
     }
 
     /// 添加二进制类型预定义列
-    pub fn add_blob_column(self, name: impl Into<String>) -> Self {
+    pub fn column_blob(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBlob)
     }
 
