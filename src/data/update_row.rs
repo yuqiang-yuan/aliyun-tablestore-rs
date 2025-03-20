@@ -93,15 +93,8 @@ impl UpdateRowOperation {
         self
     }
 
-    /// 添加多个要返回的列
+    /// 设置要返回的列
     pub fn return_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.return_columns.extend(col_names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置要返回的列
-    pub fn with_return_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.return_columns = col_names.into_iter().map(|s| s.into()).collect();
 
         self

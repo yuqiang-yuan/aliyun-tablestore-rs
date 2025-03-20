@@ -119,15 +119,8 @@ impl CreateTableOperation {
         self
     }
 
-    /// 添加多个主键列
+    /// 设置主键列
     pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeySchema>) -> Self {
-        self.primary_keys.extend(pks);
-
-        self
-    }
-
-    /// 直接设置主键列
-    pub fn with_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeySchema>) -> Self {
         self.primary_keys = pks.into_iter().collect();
 
         self
@@ -172,15 +165,8 @@ impl CreateTableOperation {
         self
     }
 
-    /// 添加多个预定义列
+    /// 设置预定义列
     pub fn columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
-        self.defined_columns.extend(def_cols);
-
-        self
-    }
-
-    /// 直接设置预定义列
-    pub fn with_columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
         self.defined_columns = def_cols.into_iter().collect();
 
         self
@@ -279,15 +265,8 @@ impl CreateTableOperation {
         self
     }
 
-    /// 添加多个 stream 列
+    /// 设置 stream 列
     pub fn stream_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.stream_columns.extend(col_names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置 stream 列
-    pub fn with_stream_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.stream_columns = col_names.into_iter().map(|s| s.into()).collect();
 
         self
@@ -329,15 +308,8 @@ impl CreateTableOperation {
         self
     }
 
-    /// 添加多个索引
+    /// 设置多个索引
     pub fn indexes(mut self, indexes: impl IntoIterator<Item = IndexMeta>) -> Self {
-        self.indexes.extend(indexes);
-
-        self
-    }
-
-    /// 直接设置多个索引
-    pub fn with_indexes(mut self, indexes: impl IntoIterator<Item = IndexMeta>) -> Self {
         self.indexes = indexes.into_iter().collect();
 
         self

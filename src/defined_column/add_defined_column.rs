@@ -47,15 +47,8 @@ impl AddDefinedColumnOperation {
         self
     }
 
-    /// 添加多个预定义列
+    /// 设置预定义列
     pub fn columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
-        self.columns.extend(def_cols);
-
-        self
-    }
-
-    /// 直接设置预定义列
-    pub fn with_columns(mut self, def_cols: impl IntoIterator<Item = DefinedColumnSchema>) -> Self {
         self.columns = def_cols.into_iter().collect();
 
         self

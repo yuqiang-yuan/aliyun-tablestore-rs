@@ -201,15 +201,8 @@ impl Row {
         self
     }
 
-    /// 添加多个主键列
-    pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.primary_keys.extend(pks);
-
-        self
-    }
-
     /// 用给定的主键列集合替换现有的主键
-    pub fn with_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+    pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
         self.primary_keys = pks.into_iter().collect();
 
         self
@@ -256,15 +249,8 @@ impl Row {
         self
     }
 
-    /// 添加多个列
+    /// 设置列
     pub fn columns(mut self, cols: impl IntoIterator<Item = Column>) -> Self {
-        self.columns.extend(cols);
-
-        self
-    }
-
-    /// 用给定的列值替换现有的列
-    pub fn with_columns(mut self, cols: impl IntoIterator<Item = Column>) -> Self {
         self.columns = cols.into_iter().collect();
 
         self

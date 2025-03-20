@@ -8,7 +8,6 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{ConsumedCapacity, GetRowRequest, TimeRange},
     },
-    util::debug_bytes,
 };
 
 /// 根据指定的主键读取单行数据。
@@ -80,15 +79,8 @@ impl GetRowOperation {
         self
     }
 
-    /// 一次添加多个需要返回的列名
+    /// 设置需要返回的列
     pub fn columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.columns_to_get.extend(names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置需要返回的列
-    pub fn with_columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.columns_to_get = names.into_iter().map(|s| s.into()).collect();
 
         self
@@ -170,7 +162,6 @@ impl GetRowOperation {
         let pk = PrimaryKey { keys: pk_values };
 
         let pk_bytes = pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
-        debug_bytes(&pk_bytes);
 
         let msg = GetRowRequest {
             table_name,

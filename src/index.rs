@@ -33,15 +33,8 @@ impl IndexMetaBuilder {
         self
     }
 
-    /// 添加多个主键列的名字
+    /// 设置索引中包含的主键列名字
     pub fn primary_keys(mut self, pk_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.idx_meta.primary_key.extend(pk_names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置索引中包含的主键列名字
-    pub fn with_primary_keys(mut self, pk_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.idx_meta.primary_key = pk_names.into_iter().map(|s| s.into()).collect();
 
         self
@@ -54,15 +47,8 @@ impl IndexMetaBuilder {
         self
     }
 
-    /// 添加多个预定义列的名字
+    /// 设置预定义列的名字
     pub fn defined_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.idx_meta.defined_column.extend(col_names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置预定义列的名字
-    pub fn with_defined_columns(mut self, col_names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.idx_meta.defined_column = col_names.into_iter().map(|s| s.into()).collect();
 
         self

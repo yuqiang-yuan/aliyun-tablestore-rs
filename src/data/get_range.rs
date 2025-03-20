@@ -86,15 +86,8 @@ impl GetRangeOperation {
         self
     }
 
-    /// 添加多个开始主键列
-    pub fn start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.inclusive_start_primary_keys.extend(pks);
-
-        self
-    }
-
     /// 设置开始主键列
-    pub fn with_start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+    pub fn start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
         self.inclusive_start_primary_keys = pks.into_iter().collect();
 
         self
@@ -141,15 +134,8 @@ impl GetRangeOperation {
         self
     }
 
-    /// 添加多个结束主键列
-    pub fn end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.exclusive_end_primary_keys.extend(pks);
-
-        self
-    }
-
     /// 设置结束主键列
-    pub fn with_end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+    pub fn end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
         self.exclusive_end_primary_keys = pks.into_iter().collect();
 
         self
@@ -197,15 +183,8 @@ impl GetRangeOperation {
         self
     }
 
-    /// 一次添加多个需要返回的列名
+    /// 设置需要返回的列
     pub fn columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.columns_to_get.extend(names.into_iter().map(|s| s.into()));
-
-        self
-    }
-
-    /// 直接设置需要返回的列
-    pub fn with_columns_to_get(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.columns_to_get = names.into_iter().map(|s| s.into()).collect();
 
         self
