@@ -2,9 +2,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{DeleteTableRequest, DeleteTableResponse},
+    add_per_request_options, error::OtsError, protos::table_store::{DeleteTableRequest, DeleteTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
+
+use super::rules::validate_table_name;
 
 /// 删除本实例下指定的表。
 ///
@@ -27,7 +28,17 @@ impl DeleteTableOperation {
 }
 
 impl DeleteTableOperation {
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        Ok(())
+    }
+
     pub async fn send(self) -> OtsResult<DeleteTableResponse> {
+        self.validate()?;
+
         let Self { client, table_name } = self;
 
         let msg = DeleteTableRequest { table_name };

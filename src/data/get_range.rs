@@ -1,6 +1,7 @@
 use crate::model::Row;
 use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
 use crate::protos::table_store::ConsumedCapacity;
+use crate::table::rules::validate_table_name;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
@@ -256,8 +257,31 @@ impl GetRangeOperation {
         self
     }
 
+    /// 验证请求参数
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
+        }
+
+        if self.inclusive_start_primary_keys.is_empty() {
+            return Err(OtsError::ValidationFailed("inclusive start primary key can not be empty".to_string()));
+        }
+
+        if self.exclusive_end_primary_keys.is_empty() {
+            return Err(OtsError::ValidationFailed("exclusive end primary key can not be empty".to_string()));
+        }
+
+        if self.max_versions.is_some() && (self.time_range_start_ms.is_some() || self.time_range_end_ms.is_some() || self.time_range_specific_ms.is_some()) {
+            return Err(OtsError::ValidationFailed("can not set `max_versions` and `time_range` both at the same time".to_string()));
+        }
+
+        Ok(())
+    }
+
     /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRangeResponse> {
+        self.validate()?;
+
         let Self {
             client,
             inclusive_start_primary_keys: inclusive_start_primary_key,
@@ -275,10 +299,6 @@ impl GetRangeOperation {
             transaction_id,
             filter,
         } = self;
-
-        if max_versions.is_some() && (time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some()) {
-            return Err(OtsError::ValidationFailed("不可同时指定 `max_versions` 和 `time_range` ".to_string()));
-        }
 
         // 时间范围和最大版本都未设置的时候，默认设置 max_versions 为 1
         let max_versions = if max_versions.is_none() && time_range_start_ms.is_none() && time_range_end_ms.is_none() && time_range_specific_ms.is_none() {

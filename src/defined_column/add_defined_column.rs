@@ -2,9 +2,7 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType},
+    add_per_request_options, error::OtsError, protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType}, table::rules::{validate_column_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 添加预定义列
@@ -79,13 +77,29 @@ impl AddDefinedColumnOperation {
         self.add_column(name, DefinedColumnType::DctBlob)
     }
 
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        if self.columns.is_empty() {
+            return Err(OtsError::ValidationFailed("Columns to add can not be empty".to_string()));
+        }
+
+        for col in &self.columns {
+            if !validate_column_name(&col.name) {
+                return Err(OtsError::ValidationFailed(format!("Invalid column name: {}", col.name)));
+            }
+        }
+
+        Ok(())
+    }
+
     /// 执行添加预定义列操作
     pub async fn send(self) -> OtsResult<AddDefinedColumnResponse> {
-        let Self { client, table_name, columns } = self;
+        self.validate()?;
 
-        if columns.is_empty() {
-            return Err(OtsError::ValidationFailed("No columns to add".to_string()));
-        }
+        let Self { client, table_name, columns } = self;
 
         let msg = AddDefinedColumnRequest { table_name, columns };
 

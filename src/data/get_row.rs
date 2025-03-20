@@ -1,13 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
-    protos::{
+    add_per_request_options, error::OtsError, model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row}, protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{ConsumedCapacity, GetRowRequest, TimeRange},
-    },
+    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 根据指定的主键读取单行数据。
@@ -136,8 +133,23 @@ impl GetRowOperation {
         self
     }
 
+    /// Validate request parameter
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        if self.primary_keys.is_empty() {
+            return Err(OtsError::ValidationFailed("The row's primary key can not be empty".to_string()));
+        }
+
+        Ok(())
+    }
+
     /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRowResponse> {
+        self.validate()?;
+
         let Self {
             client,
             table_name,
@@ -183,10 +195,6 @@ impl GetRowOperation {
             token: None,
             transaction_id,
         };
-
-        if msg.max_versions.is_none() && msg.time_range.is_none() {
-            return Err(OtsError::ValidationFailed("time_range 和 max_versions 至少指定一个".to_string()));
-        }
 
         let req = OtsRequest {
             operation: OtsOp::GetRow,

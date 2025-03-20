@@ -1,14 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    error::OtsError,
-    model::{Filter, Row},
-    protos::{
+    error::OtsError, model::{Filter, Row}, protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ReturnContent, ReturnType, RowExistenceExpectation, UpdateRowRequest},
-    },
-    table::rules::{validate_column_name, validate_table_name},
+        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation, UpdateRowRequest},
+    }, table::rules::{validate_column_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 更新指定行的数据
@@ -132,7 +128,7 @@ impl UpdateRowOperation {
         Ok(())
     }
 
-    pub async fn send(self) -> OtsResult<()> {
+    pub async fn send(self) -> OtsResult<UpdateRowResponse> {
         self.validate()?;
 
         let Self {
@@ -181,8 +177,35 @@ impl UpdateRowOperation {
 
         let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
 
-        log::debug!("{:?}", response_msg);
 
-        Ok(())
+        response_msg.try_into()
+    }
+}
+
+
+#[derive(Debug, Clone, Default)]
+pub struct UpdateRowResponse {
+    pub consumed: ConsumedCapacity,
+
+    /// 当设置了 return_content 后，返回的数据。
+    pub row: Option<Row>,
+}
+
+impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::table_store::UpdateRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::table_store::UpdateRowResponse {
+            consumed,
+            row,
+        } = value;
+
+        let row = if let Some(row_bytes) = row {
+            Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+        } else {
+            None
+        };
+
+        Ok(Self { consumed, row })
     }
 }

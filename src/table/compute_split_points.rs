@@ -2,9 +2,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse},
+    add_per_request_options, error::OtsError, protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
+
+use super::rules::validate_table_name;
 
 /// 将全表的数据在逻辑上划分成接近指定大小的若干分片，返回这些分片之间的分割点以及分片所在机器的提示。一般用于计算引擎规划并发度等执行计划。
 ///
@@ -49,7 +50,17 @@ impl ComputeSplitPointsBySizeOperation {
         self
     }
 
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        Ok(())
+    }
+
     pub async fn send(self) -> OtsResult<ComputeSplitPointsBySizeResponse> {
+        self.validate()?;
+
         let Self {
             client,
             table_name,

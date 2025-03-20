@@ -2,9 +2,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{DescribeTableRequest, DescribeTableResponse},
+    add_per_request_options, error::OtsError, protos::table_store::{DescribeTableRequest, DescribeTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
+
+use super::rules::validate_table_name;
 
 /// 查询指定表的结构信息以及预留读吞吐量和预留写吞吐量设置信息。
 ///
@@ -25,7 +26,17 @@ impl DescribeTableOperation {
         }
     }
 
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        Ok(())
+    }
+
     pub async fn send(self) -> OtsResult<DescribeTableResponse> {
+        self.validate()?;
+
         let Self { client, table_name } = self;
 
         let body = DescribeTableRequest { table_name }.encode_to_vec();

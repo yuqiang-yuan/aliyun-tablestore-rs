@@ -4,9 +4,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse},
+    add_per_request_options, error::OtsError, protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
+
+use super::rules::validate_table_name;
 
 /// 修改表的配置信息 table_options 和 Stream 配置 StreamSpecification。
 /// 如果表处于 CU 模式（原按量模式）的高性能型实例中，
@@ -107,7 +108,19 @@ impl UpdateTableOperation {
         self
     }
 
+
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        Ok(())
+    }
+
+
     pub async fn send(self) -> OtsResult<UpdateTableResponse> {
+        self.validate()?;
+
         let Self {
             client,
             table_name,

@@ -1,8 +1,7 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse},
+    add_per_request_options, error::OtsError, protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse}, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 删除预定义列
@@ -40,7 +39,21 @@ impl DeleteDefinedColumnOperation {
         self
     }
 
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        if self.columns.is_empty() {
+            return Err(OtsError::ValidationFailed("Columns to delete can not be empty".to_string()));
+        }
+
+        Ok(())
+    }
+
     pub async fn send(self) -> OtsResult<DeleteDefinedColumnResponse> {
+        self.validate()?;
+
         let Self { client, table_name, columns } = self;
 
         let msg = DeleteDefinedColumnRequest { table_name, columns };

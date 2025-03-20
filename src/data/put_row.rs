@@ -122,6 +122,7 @@ impl PutRowOperation {
                 return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", col.name)));
             }
         }
+
         Ok(())
     }
 

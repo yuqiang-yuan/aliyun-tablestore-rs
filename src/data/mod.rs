@@ -230,10 +230,13 @@ mod test_row_operations {
                     .column_bool("bool_col", true)
                     .column_to_delete_all_versions("blob_col"),
             )
+            .return_type(ReturnType::RtPk)
             .send()
             .await;
 
         assert!(response.is_ok());
+
+        log::debug!("update row response: {:#?}", response);
 
         let response = client.get_row(table_name).primary_key_string("str_id", &id).send().await;
 
