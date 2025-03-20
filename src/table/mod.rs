@@ -56,7 +56,7 @@ pub(crate) mod rules {
 mod test_table {
     use std::sync::Once;
 
-    use crate::OtsClient;
+    use crate::{OtsClient, index::IndexMetaBuilder, protos::table_store::IndexType};
 
     static INIT: Once = Once::new();
 
@@ -94,30 +94,44 @@ mod test_table {
         assert_eq!("user_id", &pk.get(0).unwrap().name);
     }
 
-    // async fn test_create_table_impl() {
-    //     setup();
-    //     let client = OtsClient::from_env();
+    async fn test_create_table_impl() {
+        setup();
+        let client = OtsClient::from_env();
 
-    //     let response = client
-    //         .create_table("ccs2")
-    //         .add_primary_key_string("cc_id")
-    //         .add_primary_key_string("school_id")
-    //         .add_primary_key_string("creator_id")
-    //         .add_defined_column("invitation_code", DefinedColumnType::DctString)
-    //         .add_defined_column("course_name", DefinedColumnType::DctString)
-    //         .add_defined_column("status", DefinedColumnType::DctString)
-    //         .send()
-    //         .await;
+        let response = client
+            .create_table("users")
+            .add_string_primary_key("user_id_part")
+            .add_string_primary_key("user_id")
+            .add_string_column("full_name")
+            .add_string_column("phone_number")
+            .add_string_column("pwd_hash")
+            .add_string_column("badge_no")
+            .add_string_column("gender")
+            .add_integer_column("registered_at_ms")
+            .add_boolean_column("deleted")
+            .add_integer_column("deleted_at_ms")
+            .add_double_column("score")
+            .add_blob_column("avatar")
+            .add_index(
+                IndexMetaBuilder::new("idx_phone_no")
+                    .name("idx_phone_no")
+                    .add_primary_key("user_id_part")
+                    .add_defined_column("phone_number")
+                    .index_type(IndexType::ItGlobalIndex)
+                    .build(),
+            )
+            .send()
+            .await;
 
-    //     log::debug!("{:#?}", response);
+        log::debug!("{:#?}", response);
 
-    //     assert!(response.is_ok());
-    // }
+        assert!(response.is_ok());
+    }
 
-    // #[tokio::test]
-    // async fn test_create_table() {
-    //     test_create_table_impl().await;
-    // }
+    #[tokio::test]
+    async fn test_create_table() {
+        test_create_table_impl().await;
+    }
 
     async fn test_validate_create_table_impl() {
         setup();

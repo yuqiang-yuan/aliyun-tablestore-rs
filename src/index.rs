@@ -4,29 +4,32 @@
 use crate::protos::table_store::{IndexMeta, IndexSyncPhase, IndexType, IndexUpdateMode};
 
 /// Builder for [`IndexMeta`]
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct IndexMetaBuilder {
     idx_meta: IndexMeta,
 }
 
 impl IndexMetaBuilder {
-    pub fn new() -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
-            idx_meta: IndexMeta::default(),
+            idx_meta: IndexMeta {
+                name: name.to_string(),
+                ..Default::default()
+            },
         }
     }
 
-    pub fn name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: &str) -> Self {
         self.idx_meta.name = name.into();
         self
     }
 
-    pub fn add_primary_key(mut self, pk_name: impl Into<String>) -> Self {
+    pub fn add_primary_key(mut self, pk_name: &str) -> Self {
         self.idx_meta.primary_key.push(pk_name.into());
         self
     }
 
-    pub fn add_defined_column(mut self, col_name: impl Into<String>) -> Self {
+    pub fn add_defined_column(mut self, col_name: &str) -> Self {
         self.idx_meta.defined_column.push(col_name.into());
         self
     }
@@ -53,7 +56,7 @@ impl IndexMetaBuilder {
 
 /// Add `builder` method to [`IndexMeta`]
 impl IndexMeta {
-    pub fn builder() -> IndexMetaBuilder {
-        IndexMetaBuilder::new()
+    pub fn builder(name: &str) -> IndexMetaBuilder {
+        IndexMetaBuilder::new(name)
     }
 }

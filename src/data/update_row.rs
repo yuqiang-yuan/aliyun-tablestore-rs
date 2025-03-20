@@ -1,23 +1,30 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
     error::OtsError,
     model::{Filter, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, PutRowRequest, ReturnContent, ReturnType, RowExistenceExpectation},
+        table_store::{Condition, ReturnContent, ReturnType, RowExistenceExpectation, UpdateRowRequest},
     },
     table::rules::{validate_column_name, validate_table_name},
 };
 
-/// 插入数据到指定的行
+/// 更新指定行的数据
 ///
-/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/putrow>
-#[derive(Debug, Clone, Default)]
-pub struct PutRowOperation {
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updaterow>
+#[derive(Debug, Default, Clone)]
+pub struct UpdateRowOperation {
     client: OtsClient,
+
+    /// 表名
     pub table_name: String,
+
+    /// 要更新的行。包括主键列和值列。
+    ///
+    /// 该行本次需要更新的全部属性列，表格存储会根据 row_change 中 UpdateType 的内容在该行中新增、修改或者删除指定列的值。
+    /// 该行已存在的且不在 row_change 中的列将不受影响。
     pub row: Row,
 
     /// 在数据写入前是否进行存在性检查。取值范围如下：
@@ -42,9 +49,7 @@ pub struct PutRowOperation {
     pub transaction_id: Option<String>,
 }
 
-add_per_request_options!(PutRowOperation);
-
-impl PutRowOperation {
+impl UpdateRowOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
         Self {
             client,
@@ -53,7 +58,7 @@ impl PutRowOperation {
         }
     }
 
-    /// 设置要写入的行数据
+    /// 设置要更新的行数据
     pub fn row(mut self, row: Row) -> Self {
         self.row = row;
 
@@ -95,6 +100,7 @@ impl PutRowOperation {
         self
     }
 
+    /// 验证请求设置
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
@@ -115,11 +121,11 @@ impl PutRowOperation {
                 return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", col.name)));
             }
         }
+
         Ok(())
     }
 
-    /// 执行写入数据操作
-    pub async fn send(self) -> OtsResult<PutRowResponse> {
+    pub async fn send(self) -> OtsResult<()> {
         self.validate()?;
 
         let Self {
@@ -135,9 +141,9 @@ impl PutRowOperation {
 
         let row_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        let msg = PutRowRequest {
+        let msg = UpdateRowRequest {
             table_name,
-            row: row_bytes,
+            row_change: row_bytes,
             condition: Condition {
                 row_existence: row_condition as i32,
                 column_condition: if let Some(f) = column_condition {
@@ -159,37 +165,17 @@ impl PutRowOperation {
         };
 
         let req = OtsRequest {
-            operation: OtsOp::PutRow,
+            operation: OtsOp::UpdateRow,
             body: msg.encode_to_vec(),
             ..Default::default()
         };
 
         let response = client.send(req).await?;
 
-        let response_msg = crate::protos::table_store::PutRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
 
-        response_msg.try_into()
-    }
-}
+        log::debug!("{:?}", response_msg);
 
-#[derive(Debug, Clone, Default)]
-pub struct PutRowResponse {
-    pub consumed: ConsumedCapacity,
-    pub row: Option<Row>,
-}
-
-impl TryFrom<crate::protos::table_store::PutRowResponse> for PutRowResponse {
-    type Error = OtsError;
-
-    fn try_from(value: crate::protos::table_store::PutRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::PutRowResponse { consumed, row } = value;
-
-        let row = if let Some(row_bytes) = row {
-            Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
-        } else {
-            None
-        };
-
-        Ok(Self { consumed, row })
+        Ok(())
     }
 }

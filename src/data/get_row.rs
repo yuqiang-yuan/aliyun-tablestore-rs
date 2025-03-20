@@ -130,6 +130,7 @@ impl GetRowOperation {
         self
     }
 
+    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRowResponse> {
         let Self {
             client,
@@ -144,6 +145,13 @@ impl GetRowOperation {
             end_column,
             transaction_id,
         } = self;
+
+        // 时间范围和最大版本都未设置的时候，默认设置 max_versions 为 1
+        let max_versions = if max_versions.is_none() && time_range_start_ms.is_none() && time_range_end_ms.is_none() && time_range_specific_ms.is_none() {
+            Some(1)
+        } else {
+            max_versions
+        };
 
         let pk = PrimaryKey { keys: pk_values };
 

@@ -2,17 +2,18 @@
 mod get_range;
 mod get_row;
 mod put_row;
+mod update_row;
 
 pub use get_range::*;
 pub use get_row::*;
 pub use put_row::*;
+pub use update_row::*;
 
 #[cfg(test)]
-mod test_row {
+mod test_row_operations {
     use std::sync::Once;
 
-    use fake::{Fake, faker::name::raw::Name, locales::ZH_CN};
-    use uuid::Uuid;
+    use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
         OtsClient,
@@ -167,13 +168,13 @@ mod test_row {
 
         let client = OtsClient::from_env();
 
-        let school_id = Uuid::new_v4().to_string();
+        let school_id = UUIDv4.fake();
 
         let row = Row::default()
-            .add_string_primary_key("school_id", &school_id)
-            .add_auto_increment_primary_key("id")
-            .add_string_column("name", Name(ZH_CN).fake::<String>())
-            .add_string_column("province", Name(ZH_CN).fake::<String>());
+            .primary_key_string("school_id", &school_id)
+            .primary_key_auto_increment("id")
+            .column_string("name", Name(ZH_CN).fake::<String>())
+            .column_string("province", Name(ZH_CN).fake::<String>());
 
         log::debug!("insert row into schools with school_id: {:?}", row.get_primary_key_value("school_id"));
 
@@ -190,6 +191,68 @@ mod test_row {
 
     #[tokio::test]
     async fn test_put_row() {
-        test_put_row_impl().await
+        test_put_row_impl().await;
+    }
+
+    async fn test_update_row_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let table_name = "data_types";
+        let id: String = UUIDv4.fake();
+
+        log::debug!("insert new data to test update with id: {}", id);
+
+        let response = client
+            .put_row(table_name)
+            .row(
+                Row::new()
+                    .primary_key_string("str_id", &id)
+                    .column_string("str_col", "a")
+                    .column_integer("int_col", 1)
+                    .column_double("double_col", 1.234)
+                    .column_bool("bool_col", false)
+                    .column_blob("blob_col", b"a"),
+            )
+            .send()
+            .await;
+
+        assert!(response.is_ok());
+
+        log::debug!("update row with id: {}", id);
+        let response = client
+            .update_row(table_name)
+            .row(
+                Row::new()
+                    .primary_key_string("str_id", &id)
+                    .column_string("str_col", "b")
+                    .column_to_increse("int_col", 1)
+                    .column_bool("bool_col", true)
+                    .column_to_delete_all_versions("blob_col"),
+            )
+            .send()
+            .await;
+
+        assert!(response.is_ok());
+
+        let response = client.get_row(table_name).add_string_primary_key("str_id", &id).send().await;
+
+        assert!(response.is_ok());
+
+        let response = response.unwrap();
+        let row = response.row;
+        assert!(row.is_some());
+
+        let row = row.unwrap();
+        assert_eq!(Some(&ColumnValue::String("b".to_string())), row.get_column_value("str_col"));
+        assert_eq!(Some(&ColumnValue::Integer(2)), row.get_column_value("int_col"));
+        assert_eq!(Some(&ColumnValue::Double(1.234)), row.get_column_value("double_col"));
+        assert_eq!(Some(&ColumnValue::Boolean(true)), row.get_column_value("bool_col"));
+        assert_eq!(None, row.get_column_value("blob_col"));
+    }
+
+    #[tokio::test]
+    async fn test_update_row() {
+        test_update_row_impl().await;
     }
 }

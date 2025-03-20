@@ -51,7 +51,7 @@ pub const TAG_ROW_DATA: u8 = 0x02;
 pub const TAG_CELL: u8 = 0x03;
 pub const TAG_CELL_NAME: u8 = 0x04;
 pub const TAG_CELL_VALUE: u8 = 0x05;
-pub const TAG_CELL_TYPE: u8 = 0x06;
+pub const TAG_CELL_OP: u8 = 0x06;
 pub const TAG_CELL_TIMESTAMP: u8 = 0x07;
 pub const TAG_DELETE_ROW_MARKER: u8 = 0x08;
 pub const TAG_ROW_CHECKSUM: u8 = 0x09;
@@ -82,9 +82,9 @@ pub const MASK_CELL_DEFAULT: u32 = MASK_CELL_VALUE_PREFIX | MASK_TAG_CELL | MASK
 pub const MASK_ROW_DEFAULT: u32 = MASK_HEADER | MASK_TAG_ROW_PK | MASK_TAG_ROW_DATA | MASK_CELL_DEFAULT | MASK_ROW_CHECKSUM;
 
 // cell operation types
-pub const DELETE_ALL_VERSION: u8 = 0x01;
-pub const DELETE_ONE_VERSION: u8 = 0x03;
-pub const INCREMENT: u8 = 0x04;
+pub const CELL_OP_DELETE_ALL_VERSION: u8 = 0x01;
+pub const CELL_OP_DELETE_ONE_VERSION: u8 = 0x03;
+pub const CELL_OP_INCREMENT: u8 = 0x04;
 
 // variant types
 pub const VT_INTEGER: u8 = 0x00;

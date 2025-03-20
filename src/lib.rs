@@ -11,7 +11,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use data::{GetRangeOperation, GetRowOperation, PutRowOperation};
+use data::{GetRangeOperation, GetRowOperation, PutRowOperation, UpdateRowOperation};
 use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -61,6 +61,10 @@ pub enum OtsOp {
     GetRow,
     GetRange,
     PutRow,
+    UpdateRow,
+    DeleteRow,
+    BatchGetRow,
+    BatchWriteRow,
 }
 
 impl From<OtsOp> for String {
@@ -87,6 +91,10 @@ impl Display for OtsOp {
             OtsOp::GetRow => "GetRow",
             OtsOp::GetRange => "GetRange",
             OtsOp::PutRow => "PutRow",
+            OtsOp::UpdateRow => "UpdateRow",
+            OtsOp::DeleteRow => "DeleteRow",
+            OtsOp::BatchGetRow => "BatchGetRow",
+            OtsOp::BatchWriteRow => "BatchWriteRow",
         };
 
         write!(f, "{}", s)
@@ -376,5 +384,10 @@ impl OtsClient {
     /// 插入一行数据
     pub fn put_row(&self, table_name: &str) -> PutRowOperation {
         PutRowOperation::new(self.clone(), table_name)
+    }
+
+    /// 更新一行数据
+    pub fn update_row(&self, table_name: &str) -> UpdateRowOperation {
+        UpdateRowOperation::new(self.clone(), table_name)
     }
 }

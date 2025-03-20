@@ -9,7 +9,7 @@ use crate::{
     protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK},
 };
 
-use super::{Column, ColumnValue, PrimaryKeyColumn, PrimaryKeyValue};
+use super::{Column, ColumnOp, ColumnValue, PrimaryKeyColumn, PrimaryKeyValue};
 
 /// 宽表模型的行
 #[derive(Debug, Clone, Default)]
@@ -28,6 +28,13 @@ enum RowType {
 }
 
 impl Row {
+    pub fn new() -> Self {
+        Self {
+            primary_keys: vec![],
+            columns: vec![],
+        }
+    }
+
     /// 获取给定名称的主键的值
     pub fn get_primary_key_value(&self, name: &str) -> Option<&PrimaryKeyValue> {
         self.primary_keys.iter().find(|pk| pk.name.as_str() == name).map(|col| &col.value)
@@ -187,15 +194,36 @@ impl Row {
         checksum
     }
 
+    /// 添加一个创建好的主键列
+    pub fn primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
+        self.primary_keys.push(pk);
+
+        self
+    }
+
+    /// 添加多个主键列
+    pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.primary_keys.extend(pks);
+
+        self
+    }
+
+    /// 用给定的主键列集合替换现有的主键
+    pub fn with_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.primary_keys = pks.into_iter().collect();
+
+        self
+    }
+
     /// 添加字符串类型的主键值
-    pub fn add_string_primary_key(mut self, name: &str, value: impl Into<String>) -> Self {
+    pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
         self.primary_keys.push(PrimaryKeyColumn::with_string_value(name, value));
 
         self
     }
 
     /// 添加整数类型的主键值
-    pub fn add_integer_primary_key(mut self, name: &str, value: i64) -> Self {
+    pub fn primary_key_integer(mut self, name: &str, value: i64) -> Self {
         self.primary_keys.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Integer(value),
@@ -205,7 +233,7 @@ impl Row {
     }
 
     /// 添加二进制类型的主键值
-    pub fn add_binary_primary_key(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+    pub fn primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
         self.primary_keys.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Binary(value.into()),
@@ -215,43 +243,98 @@ impl Row {
     }
 
     /// 添加自增主键列
-    pub fn add_auto_increment_primary_key(mut self, name: &str) -> Self {
+    pub fn primary_key_auto_increment(mut self, name: &str) -> Self {
         self.primary_keys.push(PrimaryKeyColumn::with_auto_increment(name));
 
         self
     }
 
-    /// 添加字符串类型的列
-    pub fn add_string_column(mut self, name: &str, value: impl Into<String>) -> Self {
+    /// 添加一个自定义的列
+    pub fn column(mut self, col: Column) -> Self {
+        self.columns.push(col);
+
+        self
+    }
+
+    /// 添加多个列
+    pub fn columns(mut self, cols: impl IntoIterator<Item = Column>) -> Self {
+        self.columns.extend(cols);
+
+        self
+    }
+
+    /// 用给定的列值替换现有的列
+    pub fn with_columns(mut self, cols: impl IntoIterator<Item = Column>) -> Self {
+        self.columns = cols.into_iter().collect();
+
+        self
+    }
+
+    /// 添加/更新字符串类型的列
+    pub fn column_string(mut self, name: &str, value: impl Into<String>) -> Self {
         self.columns.push(Column::with_string_value(name, value));
 
         self
     }
 
-    /// 添加整数列
-    pub fn add_integer_column(mut self, name: &str, value: i64) -> Self {
+    /// 添加/更新整数列
+    pub fn column_integer(mut self, name: &str, value: i64) -> Self {
         self.columns.push(Column::with_integer_value(name, value));
 
         self
     }
 
-    /// 添加双精度列
-    pub fn add_double_column(mut self, name: &str, value: f64) -> Self {
+    /// 添加/更新双精度列
+    pub fn column_double(mut self, name: &str, value: f64) -> Self {
         self.columns.push(Column::with_double_value(name, value));
 
         self
     }
 
-    /// 添加布尔值列
-    pub fn add_boolean_column(mut self, name: &str, value: bool) -> Self {
+    /// 添加/更新布尔值列
+    pub fn column_bool(mut self, name: &str, value: bool) -> Self {
         self.columns.push(Column::with_bool_value(name, value));
 
         self
     }
 
-    /// 添加二进制列
-    pub fn add_blob_column(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+    /// 添加/更新二进制列
+    pub fn column_blob(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
         self.columns.push(Column::with_blob_value(name, value));
+
+        self
+    }
+
+    /// 添加要递增值的列。这个是用在 UpdateRow 的时候使用的
+    pub fn column_to_increse(mut self, name: &str, inc: i64) -> Self {
+        self.columns.push(Column {
+            op: Some(ColumnOp::Increment),
+            ..Column::with_integer_value(name, inc)
+        });
+
+        self
+    }
+
+    /// 添加要删除指定版本值的列
+    pub fn column_to_delete(mut self, name: &str, timestamp: u64) -> Self {
+        self.columns.push(Column {
+            name: name.to_string(),
+            value: ColumnValue::Null,
+            op: Some(ColumnOp::Delete),
+            timestamp: Some(timestamp),
+        });
+
+        self
+    }
+
+    /// 添加要删除全部版本的列
+    pub fn column_to_delete_all_versions(mut self, name: &str) -> Self {
+        self.columns.push(Column {
+            name: name.to_string(),
+            value: ColumnValue::Null,
+            op: Some(ColumnOp::DeleteAll),
+            timestamp: None,
+        });
 
         self
     }
@@ -401,6 +484,7 @@ mod test_row {
                 name: "name".to_string(),
                 value: ColumnValue::String("School-A".to_string()),
                 timestamp: Some(1742378007415),
+                ..Default::default()
             }],
         };
 

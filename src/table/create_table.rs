@@ -113,18 +113,23 @@ impl CreateTableOperation {
     }
 
     /// 添加字符串类型的主键列
-    pub fn add_string_primary_key(self, name: impl Into<String>) -> Self {
+    pub fn add_string_primary_key(self, name: &str) -> Self {
         self.add_primary_key(name, PrimaryKeyType::String, None)
     }
 
     /// 添加整数类型的主键列。只有非分区键支持自增设置（主键集合中的第 1 个元素是分区键）
-    pub fn add_integer_primary_key(self, name: impl Into<String>, auto_inc: bool) -> Self {
+    pub fn add_integer_primary_key(self, name: &str, auto_inc: bool) -> Self {
         self.add_primary_key(name, PrimaryKeyType::Integer, Some(auto_inc))
     }
 
     /// 添加二进制类型的主键列
-    pub fn add_binary_primary_key(self, name: impl Into<String>) -> Self {
+    pub fn add_binary_primary_key(self, name: &str) -> Self {
         self.add_primary_key(name, PrimaryKeyType::Binary, None)
+    }
+
+    /// 添加自增主键列
+    pub fn add_auto_increment_primary_key(self, name: &str) -> Self {
+        self.add_integer_primary_key(name, true)
     }
 
     /// 添加预定义列
@@ -140,27 +145,27 @@ impl CreateTableOperation {
     }
 
     /// 添加整数类型预定以列
-    pub fn add_integer_column(self, name: impl Into<String>) -> Self {
+    pub fn add_integer_column(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctInteger)
     }
 
     /// 添加字符串类型预定义列
-    pub fn add_string_column(self, name: impl Into<String>) -> Self {
+    pub fn add_string_column(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctString)
     }
 
     /// 添加双精度类型预定义列
-    pub fn add_double_column(self, name: impl Into<String>) -> Self {
+    pub fn add_double_column(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctDouble)
     }
 
     /// 添加布尔值类型预定义列
-    pub fn add_boolean_column(self, name: impl Into<String>) -> Self {
+    pub fn add_boolean_column(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBoolean)
     }
 
     /// 添加二进制类型预定义列
-    pub fn add_blob_column(self, name: impl Into<String>) -> Self {
+    pub fn add_blob_column(self, name: &str) -> Self {
         self.add_column(name, DefinedColumnType::DctBlob)
     }
 

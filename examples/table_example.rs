@@ -1,4 +1,4 @@
-use aliyun_tablestore_rs::OtsClient;
+use aliyun_tablestore_rs::{OtsClient, model::ColumnValue};
 use dotenvy::dotenv;
 
 pub fn main() {
@@ -6,4 +6,6 @@ pub fn main() {
     let client = OtsClient::from_env();
     let _op = client.get_range("table_name");
     println!("{:#?}", client);
+
+    let _ = ColumnValue::Null;
 }

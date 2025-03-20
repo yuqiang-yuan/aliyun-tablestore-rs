@@ -147,7 +147,12 @@ impl From<SingleColumnValueFilter> for crate::protos::table_store_filter::Single
             value_transfer_rule,
         } = value;
 
-        let Column { name, value, timestamp: _ } = column;
+        let Column {
+            name,
+            value,
+            op: _,
+            timestamp: _,
+        } = column;
 
         // 这里写出的数据不包含 CELL_VALUE 前缀的 4 个字节，
         let mut cursor = Cursor::new(vec![0u8; value.compute_size() as usize]);

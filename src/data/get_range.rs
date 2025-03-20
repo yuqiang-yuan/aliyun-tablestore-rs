@@ -221,6 +221,7 @@ impl GetRangeOperation {
         self
     }
 
+    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRangeResponse> {
         let Self {
             client,
@@ -241,10 +242,15 @@ impl GetRangeOperation {
         } = self;
 
         if max_versions.is_some() && (time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some()) {
-            return Err(OtsError::ValidationFailed(
-                "`max_versions` and `time_range` can not exist at the same time".to_string(),
-            ));
+            return Err(OtsError::ValidationFailed("不可同时指定 `max_versions` 和 `time_range` ".to_string()));
         }
+
+        // 时间范围和最大版本都未设置的时候，默认设置 max_versions 为 1
+        let max_versions = if max_versions.is_none() && time_range_start_ms.is_none() && time_range_end_ms.is_none() && time_range_specific_ms.is_none() {
+            Some(1)
+        } else {
+            max_versions
+        };
 
         let start_pk = PrimaryKey {
             keys: inclusive_start_primary_key,
