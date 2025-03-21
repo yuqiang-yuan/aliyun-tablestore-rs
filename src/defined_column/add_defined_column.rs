@@ -139,8 +139,7 @@ impl AddDefinedColumnOperation {
         };
 
         let response = client.send(req).await?;
-
-        crate::protos::table_store::AddDefinedColumnResponse::decode(response.bytes().await?)?;
+        response.bytes().await?;
 
         Ok(())
     }

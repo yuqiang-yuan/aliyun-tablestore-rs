@@ -88,7 +88,7 @@ impl DeleteDefinedColumnOperation {
         };
 
         let response = client.send(req).await?;
-        crate::protos::table_store::DeleteDefinedColumnResponse::decode(response.bytes().await?)?;
+        response.bytes().await?;
 
         Ok(())
     }

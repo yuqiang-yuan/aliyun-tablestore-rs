@@ -12,7 +12,10 @@ use reqwest::{
 };
 
 use data::{GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest};
-use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
+use table::{
+    ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
+    UpdateTableOperation,
+};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
@@ -337,8 +340,34 @@ impl OtsClient {
     }
 
     /// 创建一个宽表
-    pub fn create_table(&self, table_name: &str) -> CreateTableOperation {
-        CreateTableOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let req = CreateTableRequest::new("users")
+    ///     .primary_key_string("user_id_part")
+    ///     .primary_key_string("user_id")
+    ///     .column_string("full_name")
+    ///     .column_string("phone_number")
+    ///     .column_string("pwd_hash")
+    ///     .column_string("badge_no")
+    ///     .column_string("gender")
+    ///     .column_integer("registered_at_ms")
+    ///     .column_bool("deleted")
+    ///     .column_integer("deleted_at_ms")
+    ///     .column_double("score")
+    ///     .column_blob("avatar")
+    ///     .index(
+    ///         IndexMetaBuilder::new("idx_phone_no")
+    ///             .primary_key("user_id_part")
+    ///             .defined_column("phone_number")
+    ///             .index_type(IndexType::ItGlobalIndex)
+    ///             .build(),
+    ///     );
+    /// let response = client.create_table(req).send().await;
+    /// ```
+    pub fn create_table(&self, request: CreateTableRequest) -> CreateTableOperation {
+        CreateTableOperation::new(self.clone(), request)
     }
 
     /// 更新宽表定义

@@ -3,11 +3,39 @@ use reqwest::Method;
 
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    protos::table_store::{DeleteTableRequest, DeleteTableResponse},
+    error::OtsError
 };
 
 use super::rules::validate_table_name;
+
+#[derive(Debug, Default, Clone)]
+pub struct DeleteTableRequest {
+    pub table_name: String,
+}
+
+impl DeleteTableRequest {
+    pub fn new(table_name: &str) -> Self {
+        Self {
+            table_name: table_name.to_string()
+        }
+    }
+
+    fn validate(&self) -> OtsResult<()> {
+        if !validate_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        Ok(())
+    }
+}
+
+impl From<DeleteTableRequest> for crate::protos::table_store::DeleteTableRequest {
+    fn from(value: DeleteTableRequest) -> Self {
+        crate::protos::table_store::DeleteTableRequest {
+            table_name: value.table_name
+        }
+    }
+}
 
 /// 删除本实例下指定的表。
 ///
@@ -15,7 +43,7 @@ use super::rules::validate_table_name;
 #[derive(Debug, Clone, Default)]
 pub struct DeleteTableOperation {
     client: OtsClient,
-    pub table_name: String,
+    request: DeleteTableRequest,
 }
 
 add_per_request_options!(DeleteTableOperation);
@@ -24,26 +52,18 @@ impl DeleteTableOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
         Self {
             client,
-            table_name: table_name.to_string(),
+            request: DeleteTableRequest::new(table_name)
         }
     }
 }
 
 impl DeleteTableOperation {
-    fn validate(&self) -> OtsResult<()> {
-        if !validate_table_name(&self.table_name) {
-            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
-        }
+    pub async fn send(self) -> OtsResult<()> {
+        self.request.validate()?;
 
-        Ok(())
-    }
+        let Self { client, request } = self;
 
-    pub async fn send(self) -> OtsResult<DeleteTableResponse> {
-        self.validate()?;
-
-        let Self { client, table_name } = self;
-
-        let msg = DeleteTableRequest { table_name };
+        let msg: crate::protos::table_store::DeleteTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,
@@ -53,6 +73,8 @@ impl DeleteTableOperation {
         };
 
         let response = client.send(req).await?;
-        Ok(DeleteTableResponse::decode(response.bytes().await?)?)
+        response.bytes().await?;
+
+        Ok(())
     }
 }

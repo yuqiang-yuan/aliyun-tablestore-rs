@@ -7,14 +7,14 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
     protos::table_store::{
-        CapacityUnit, CreateTableRequest, CreateTableResponse, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType,
-        ReservedThroughput, SseKeyType, SseSpecification, StreamSpecification, TableMeta, TableOptions,
+        CapacityUnit, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType, ReservedThroughput, SseKeyType, SseSpecification,
+        StreamSpecification, TableMeta, TableOptions,
     },
 };
 
 use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column_name, validate_index_name, validate_table_name};
 
-/// 根据给定的表结构信息创建相应的数据表。
+/// 根据给定的表结构信息创建相应的数据表的请求。
 ///
 /// 根据官方文档 <https://help.aliyun.com/zh/tablestore/table-operations> 2025-03-06 10:05:03 更新的内容，在创建表的时候，支持设置以下内容：
 ///
@@ -26,9 +26,8 @@ use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column
 /// - 本地事务
 ///
 /// 所以，虽然 `table_store.proto` 文件中的 `CreateTableRequest` 包含了分区相关的，但是这里没有放上来。对应的 Java SDK 5.17.5 版本中创建宽表的时候也是没有分区设定的。
-#[derive(Debug, Clone, Default)]
-pub struct CreateTableOperation {
-    client: OtsClient,
+#[derive(Debug, Default, Clone)]
+pub struct CreateTableRequest {
     /// 表名
     pub table_name: String,
 
@@ -83,21 +82,19 @@ pub struct CreateTableOperation {
     pub indexes: Vec<IndexMeta>,
 }
 
-add_per_request_options!(CreateTableOperation);
-
-impl CreateTableOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl CreateTableRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
-            ttl_seconds: Some(-1),
-            max_versions: Some(1),
-            reserved_throughput_read: Some(0),
-            reserved_throughput_write: Some(0),
-            deviation_cell_version_in_sec: Some(86400),
-            enable_local_txn: Some(false),
             ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 添加主键列。一个表格至少包含 1 个主键列，最多包含 4 个主键列
@@ -370,12 +367,11 @@ impl CreateTableOperation {
 
         Ok(())
     }
+}
 
-    pub async fn send(self) -> OtsResult<CreateTableResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<CreateTableRequest> for crate::protos::table_store::CreateTableRequest {
+    fn from(value: CreateTableRequest) -> Self {
+        let CreateTableRequest {
             table_name,
             primary_keys,
             defined_columns,
@@ -394,9 +390,9 @@ impl CreateTableOperation {
             sse_arn,
             enable_local_txn,
             indexes,
-        } = self;
+        } = value;
 
-        let msg = CreateTableRequest {
+        crate::protos::table_store::CreateTableRequest {
             table_meta: TableMeta {
                 table_name,
                 primary_key: primary_keys,
@@ -404,21 +400,17 @@ impl CreateTableOperation {
             },
             reserved_throughput: ReservedThroughput {
                 capacity_unit: CapacityUnit {
-                    read: reserved_throughput_read,
-                    write: reserved_throughput_write,
+                    read: Some(reserved_throughput_read.unwrap_or_default()),
+                    write: Some(reserved_throughput_write.unwrap_or_default()),
                 },
             },
-            table_options: if ttl_seconds.is_some() || max_versions.is_some() || deviation_cell_version_in_sec.is_some() || allow_update.is_some() {
-                Some(TableOptions {
-                    time_to_live: ttl_seconds,
-                    max_versions,
-                    deviation_cell_version_in_sec,
-                    allow_update,
-                    update_full_row: None,
-                })
-            } else {
-                None
-            },
+            table_options: Some(TableOptions {
+                time_to_live: Some(ttl_seconds.unwrap_or(-1)),
+                max_versions: Some(max_versions.unwrap_or(1)),
+                deviation_cell_version_in_sec: Some(deviation_cell_version_in_sec.unwrap_or(86400)),
+                allow_update,
+                update_full_row: None,
+            }),
             partitions: vec![],
             stream_spec: if stream_enabled {
                 Some(StreamSpecification {
@@ -441,14 +433,30 @@ impl CreateTableOperation {
             },
             index_metas: indexes,
             enable_local_txn,
-        };
+        }
+    }
+}
 
-        // let bytes = msg.encode_to_vec();
+/// 创建库表请求
+#[derive(Debug, Clone, Default)]
+pub struct CreateTableOperation {
+    client: OtsClient,
+    request: CreateTableRequest,
+}
 
-        // std::fs::write("/home/yuanyq/Downloads/protobuf-test/create-table.data", bytes).unwrap();
+add_per_request_options!(CreateTableOperation);
 
-        // Err(OtsError::ValidationFailed("".to_string()))
-        log::debug!("create table message: {:#?}", msg);
+impl CreateTableOperation {
+    pub(crate) fn new(client: OtsClient, request: CreateTableRequest) -> Self {
+        Self { client, request }
+    }
+
+    pub async fn send(self) -> OtsResult<()> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::CreateTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,
@@ -459,6 +467,8 @@ impl CreateTableOperation {
 
         let response = client.send(req).await?;
 
-        Ok(CreateTableResponse::decode(response.bytes().await?)?)
+        response.bytes().await?;
+
+        Ok(())
     }
 }

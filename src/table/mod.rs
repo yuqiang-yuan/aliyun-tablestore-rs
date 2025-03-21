@@ -56,7 +56,8 @@ pub(crate) mod rules {
 mod test_table {
     use std::sync::Once;
 
-    use crate::{OtsClient, index::IndexMetaBuilder, protos::table_store::IndexType};
+
+    use crate::{OtsClient, index::IndexMetaBuilder, protos::table_store::IndexType, table::CreateTableRequest};
 
     static INIT: Once = Once::new();
 
@@ -98,8 +99,7 @@ mod test_table {
         setup();
         let client = OtsClient::from_env();
 
-        let response = client
-            .create_table("users")
+        let req = CreateTableRequest::new("users1")
             .primary_key_string("user_id_part")
             .primary_key_string("user_id")
             .column_string("full_name")
@@ -113,15 +113,22 @@ mod test_table {
             .column_double("score")
             .column_blob("avatar")
             .index(
-                IndexMetaBuilder::new("idx_phone_no")
-                    .name("idx_phone_no")
+                IndexMetaBuilder::new("idx_phone_no1")
                     .primary_key("user_id_part")
                     .defined_column("phone_number")
                     .index_type(IndexType::ItGlobalIndex)
                     .build(),
-            )
-            .send()
-            .await;
+            );
+
+        // let msg: crate::protos::table_store::CreateTableRequest = req.into();
+        // let bytes = msg.encode_to_vec();
+
+        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/create-table.data", &bytes).unwrap();
+
+        // let msg = crate::protos::table_store::CreateTableRequest::decode(bytes.as_slice());
+        // log::debug!("{:#?}", msg);
+
+        let response = client.create_table(req).send().await;
 
         log::debug!("{:#?}", response);
 
@@ -136,19 +143,23 @@ mod test_table {
     async fn test_validate_create_table_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.create_table("_invalid_table_name").timeout_ms(1000).send().await;
+        let response = client
+            .create_table(CreateTableRequest::new("_invalid_table_name"))
+            .timeout_ms(1000)
+            .send()
+            .await;
         assert!(response.is_err());
 
-        let response = client.create_table("1dd").send().await;
+        let response = client.create_table(CreateTableRequest::new("1dd")).send().await;
         assert!(response.is_err());
 
-        let response = client.create_table("a,b").send().await;
+        let response = client.create_table(CreateTableRequest::new("a,b")).send().await;
         assert!(response.is_err());
 
-        let response = client.create_table("中文").send().await;
+        let response = client.create_table(CreateTableRequest::new("中文")).send().await;
         assert!(response.is_err());
 
-        let response = client.create_table("validname").primary_key_string("1").send().await;
+        let response = client.create_table(CreateTableRequest::new("validname").primary_key_string("1")).send().await;
 
         assert!(response.is_err());
     }
@@ -179,7 +190,7 @@ mod test_table {
     async fn test_delete_table_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.delete_table("ccs1").send().await;
+        let response = client.delete_table("users1").send().await;
 
         log::debug!("{:#?}", response);
         assert!(response.is_ok());
