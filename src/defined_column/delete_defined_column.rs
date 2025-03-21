@@ -1,31 +1,26 @@
 use prost::Message;
 
-use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse},
-    table::rules::validate_table_name,
-};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, table::rules::validate_table_name};
 
-/// 删除预定义列
-///
-/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletedefinedcolumn>
-#[derive(Default, Debug, Clone)]
-pub struct DeleteDefinedColumnOperation {
-    client: OtsClient,
+#[derive(Debug, Default, Clone)]
+pub struct DeleteDefinedColumnRequest {
     pub table_name: String,
     pub columns: Vec<String>,
 }
 
-add_per_request_options!(DeleteDefinedColumnOperation);
-
-impl DeleteDefinedColumnOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl DeleteDefinedColumnRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
-            columns: Vec::new(),
+            ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 添加一个要删除的列的名字
@@ -53,13 +48,38 @@ impl DeleteDefinedColumnOperation {
 
         Ok(())
     }
+}
 
-    pub async fn send(self) -> OtsResult<DeleteDefinedColumnResponse> {
-        self.validate()?;
+impl From<DeleteDefinedColumnRequest> for crate::protos::table_store::DeleteDefinedColumnRequest {
+    fn from(value: DeleteDefinedColumnRequest) -> crate::protos::table_store::DeleteDefinedColumnRequest {
+        let DeleteDefinedColumnRequest { table_name, columns } = value;
 
-        let Self { client, table_name, columns } = self;
+        crate::protos::table_store::DeleteDefinedColumnRequest { table_name, columns }
+    }
+}
 
-        let msg = DeleteDefinedColumnRequest { table_name, columns };
+/// 删除预定义列
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletedefinedcolumn>
+#[derive(Default, Debug, Clone)]
+pub struct DeleteDefinedColumnOperation {
+    client: OtsClient,
+    request: DeleteDefinedColumnRequest,
+}
+
+add_per_request_options!(DeleteDefinedColumnOperation);
+
+impl DeleteDefinedColumnOperation {
+    pub(crate) fn new(client: OtsClient, request: DeleteDefinedColumnRequest) -> Self {
+        Self { client, request }
+    }
+
+    pub async fn send(self) -> OtsResult<()> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::DeleteDefinedColumnRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::DeleteDefinedColumn,
@@ -68,6 +88,8 @@ impl DeleteDefinedColumnOperation {
         };
 
         let response = client.send(req).await?;
-        Ok(DeleteDefinedColumnResponse::decode(response.bytes().await?)?)
+        crate::protos::table_store::DeleteDefinedColumnResponse::decode(response.bytes().await?)?;
+
+        Ok(())
     }
 }

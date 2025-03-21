@@ -4,29 +4,29 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType},
+    protos::table_store::{DefinedColumnSchema, DefinedColumnType},
     table::rules::{validate_column_name, validate_table_name},
 };
 
-/// 添加预定义列
-///
-/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/adddefinedcolumn>
-#[derive(Default, Debug, Clone)]
-pub struct AddDefinedColumnOperation {
-    client: OtsClient,
+#[derive(Debug, Default, Clone)]
+pub struct AddDefinedColumnRequest {
     pub table_name: String,
     pub columns: Vec<DefinedColumnSchema>,
 }
 
-add_per_request_options!(AddDefinedColumnOperation);
-
-impl AddDefinedColumnOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl AddDefinedColumnRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
-            columns: vec![],
+            ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 添加预定义列
@@ -82,29 +82,54 @@ impl AddDefinedColumnOperation {
 
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
-            return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+            return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
         if self.columns.is_empty() {
-            return Err(OtsError::ValidationFailed("Columns to add can not be empty".to_string()));
+            return Err(OtsError::ValidationFailed("columns to add can not be empty".to_string()));
         }
 
         for col in &self.columns {
             if !validate_column_name(&col.name) {
-                return Err(OtsError::ValidationFailed(format!("Invalid column name: {}", col.name)));
+                return Err(OtsError::ValidationFailed(format!("invalid column name: {}", col.name)));
             }
         }
 
         Ok(())
     }
+}
+
+impl From<AddDefinedColumnRequest> for crate::protos::table_store::AddDefinedColumnRequest {
+    fn from(value: AddDefinedColumnRequest) -> Self {
+        let AddDefinedColumnRequest { table_name, columns } = value;
+
+        crate::protos::table_store::AddDefinedColumnRequest { table_name, columns }
+    }
+}
+
+/// 添加预定义列
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/adddefinedcolumn>
+#[derive(Default, Debug, Clone)]
+pub struct AddDefinedColumnOperation {
+    client: OtsClient,
+    request: AddDefinedColumnRequest,
+}
+
+add_per_request_options!(AddDefinedColumnOperation);
+
+impl AddDefinedColumnOperation {
+    pub(crate) fn new(client: OtsClient, request: AddDefinedColumnRequest) -> Self {
+        Self { client, request }
+    }
 
     /// 执行添加预定义列操作
-    pub async fn send(self) -> OtsResult<AddDefinedColumnResponse> {
-        self.validate()?;
+    pub async fn send(self) -> OtsResult<()> {
+        self.request.validate()?;
 
-        let Self { client, table_name, columns } = self;
+        let Self { client, request } = self;
 
-        let msg = AddDefinedColumnRequest { table_name, columns };
+        let msg: crate::protos::table_store::AddDefinedColumnRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,
@@ -114,6 +139,9 @@ impl AddDefinedColumnOperation {
         };
 
         let response = client.send(req).await?;
-        Ok(AddDefinedColumnResponse::decode(response.bytes().await?)?)
+
+        crate::protos::table_store::AddDefinedColumnResponse::decode(response.bytes().await?)?;
+
+        Ok(())
     }
 }

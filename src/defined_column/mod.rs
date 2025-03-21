@@ -11,7 +11,10 @@ mod test_defined_column {
 
     use std::sync::Once;
 
-    use crate::OtsClient;
+    use crate::{
+        OtsClient,
+        defined_column::{AddDefinedColumnRequest, DeleteDefinedColumnRequest},
+    };
 
     static INIT: Once = Once::new();
 
@@ -26,10 +29,12 @@ mod test_defined_column {
         setup();
         let client = OtsClient::from_env();
         let response = client
-            .add_defined_column("ccs")
-            .column_integer("created_at")
-            .column_string("cover_url")
-            .column_double("avg_score")
+            .add_defined_column(
+                AddDefinedColumnRequest::new("ccs")
+                    .column_integer("created_at")
+                    .column_string("cover_url")
+                    .column_double("avg_score"),
+            )
             .send()
             .await;
 
@@ -47,7 +52,10 @@ mod test_defined_column {
     async fn test_delete_defined_column_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.delete_defined_column("ccs").column("created_at").send().await;
+        let response = client
+            .delete_defined_column(DeleteDefinedColumnRequest::new("ccs").column("created_at"))
+            .send()
+            .await;
 
         log::debug!("{:#?}", response);
         assert!(response.is_ok());

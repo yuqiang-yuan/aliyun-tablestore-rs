@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, str::FromStr, time::Duration};
 
 use base64::{Engine, prelude::BASE64_STANDARD};
 use bytes::Bytes;
-use defined_column::{AddDefinedColumnOperation, DeleteDefinedColumnOperation};
+use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteDefinedColumnOperation, DeleteDefinedColumnRequest};
 use error::OtsError;
 use prost::Message;
 use protos::table_store::{self};
@@ -362,13 +362,36 @@ impl OtsClient {
     }
 
     /// 添加预定义列
-    pub fn add_defined_column(&self, table_name: &str) -> AddDefinedColumnOperation {
-        AddDefinedColumnOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let response = client
+    ///     .add_defined_column(
+    ///         AddDefinedColumnRequest::new("ccs")
+    ///             .column_integer("created_at")
+    ///             .column_string("cover_url")
+    ///             .column_double("avg_score"),
+    ///     )
+    ///     .send()
+    ///     .await;
+    /// ```
+    pub fn add_defined_column(&self, request: AddDefinedColumnRequest) -> AddDefinedColumnOperation {
+        AddDefinedColumnOperation::new(self.clone(), request)
     }
 
     /// 删除预定义列
-    pub fn delete_defined_column(&self, table_name: &str) -> DeleteDefinedColumnOperation {
-        DeleteDefinedColumnOperation::new(self.clone(), table_name)
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let response = client
+    ///     .delete_defined_column(DeleteDefinedColumnRequest::new("ccs").column("created_at"))
+    ///     .send()
+    ///     .await;
+    /// ```
+    pub fn delete_defined_column(&self, request: DeleteDefinedColumnRequest) -> DeleteDefinedColumnOperation {
+        DeleteDefinedColumnOperation::new(self.clone(), request)
     }
 
     /// 根据主键获取单行数据
