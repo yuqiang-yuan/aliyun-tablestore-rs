@@ -400,7 +400,11 @@ impl TryFrom<crate::protos::table_store::GetRangeResponse> for GetRangeResponse 
         } = value;
 
         let next_pk = if let Some(bytes) = next_start_primary_key {
-            let Row { primary_keys, columns: _ } = Row::decode_plain_buffer(bytes, MASK_HEADER)?;
+            let Row {
+                primary_keys,
+                columns: _,
+                deleted: _,
+            } = Row::decode_plain_buffer(bytes, MASK_HEADER)?;
             Some(primary_keys)
         } else {
             None

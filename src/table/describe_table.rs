@@ -9,7 +9,6 @@ use crate::{
 
 use super::rules::validate_table_name;
 
-
 /// 查询指定表的结构信息以及预留读吞吐量和预留写吞吐量设置信息。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/describetable>

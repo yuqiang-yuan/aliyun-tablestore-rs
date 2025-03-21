@@ -1,9 +1,11 @@
 //! 宽表模型数据操作
+mod delete_row;
 mod get_range;
 mod get_row;
 mod put_row;
 mod update_row;
 
+pub use delete_row::*;
 pub use get_range::*;
 pub use get_row::*;
 pub use put_row::*;
@@ -17,7 +19,7 @@ mod test_row_operations {
 
     use crate::{
         OtsClient,
-        data::{GetRowRequest, PutRowRequest, UpdateRowRequest},
+        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
         model::{Column, ColumnValue, PrimaryKeyValue, Row, SingleColumnValueFilter},
         protos::table_store::{Direction, ReturnType},
     };
@@ -232,5 +234,36 @@ mod test_row_operations {
     #[tokio::test]
     async fn test_update_row() {
         test_update_row_impl().await;
+    }
+
+    async fn test_delete_row_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let table_name = "data_types";
+
+        let id: String = UUIDv4.fake();
+        let row = Row::new()
+            .primary_key_string("str_id", &id)
+            .column_string("str_col", "hello, you are inserted to be deleted")
+            .column_bool("bool_col", true);
+
+        let req = PutRowRequest::new(table_name).row(row);
+
+        let res = client.put_row(req).send().await;
+
+        assert!(res.is_ok());
+
+        let res = client
+            .delete_row(DeleteRowRequest::new(table_name).primary_key_string("str_id", &id))
+            .send()
+            .await;
+        log::debug!("{:#?}", res);
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_row() {
+        test_delete_row_impl().await;
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     OtsResult,
     crc8::crc_u8,
     error::OtsError,
-    protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK},
+    protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, TAG_DELETE_ROW_MARKER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK},
 };
 
 use super::{Column, ColumnOp, ColumnValue, PrimaryKeyColumn, PrimaryKeyValue};
@@ -19,6 +19,9 @@ pub struct Row {
 
     /// 数据列
     pub columns: Vec<Column>,
+
+    /// 是否要删除行
+    pub deleted: bool,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -32,6 +35,7 @@ impl Row {
         Self {
             primary_keys: vec![],
             columns: vec![],
+            deleted: false,
         }
     }
 
@@ -47,8 +51,11 @@ impl Row {
 
     /// 计算一个行的 plain buffer
     pub(crate) fn compute_size(&self, masks: u32) -> u32 {
-        let size = if masks & MASK_HEADER == MASK_HEADER { LITTLE_ENDIAN_32_SIZE } else { 0u32 };
+        let mut size = if masks & MASK_HEADER == MASK_HEADER { LITTLE_ENDIAN_32_SIZE } else { 0u32 };
 
+        if self.deleted {
+            size += 1;
+        }
         size + self.primary_keys.iter().map(|k| k.compute_size()).sum::<u32>() + self.columns.iter().map(|c| c.compute_size()).sum::<u32>()
     }
 
@@ -83,7 +90,11 @@ impl Row {
     }
 
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, _masks: u32) {
-        let Self { primary_keys, columns } = self;
+        let Self {
+            primary_keys,
+            columns,
+            deleted,
+        } = self;
 
         cursor.write_u8(TAG_ROW_PK).unwrap();
         for key_col in primary_keys {
@@ -96,6 +107,10 @@ impl Row {
             for col in columns {
                 col.write_plain_buffer(cursor);
             }
+        }
+
+        if *deleted {
+            cursor.write_u8(TAG_DELETE_ROW_MARKER).unwrap();
         }
 
         cursor.write_u8(TAG_ROW_CHECKSUM).unwrap();
@@ -171,7 +186,11 @@ impl Row {
             };
         }
 
-        Ok(Self { primary_keys, columns })
+        Ok(Self {
+            primary_keys,
+            columns,
+            deleted: false,
+        })
     }
 
     /// 计算整行的校验码
@@ -189,8 +208,7 @@ impl Row {
             checksum = crc_u8(checksum, cell_checksum);
         }
 
-        //TODO: set byte according to delete flag
-        checksum = crc_u8(checksum, 0u8);
+        checksum = crc_u8(checksum, if self.deleted { 1u8 } else { 0u8 });
         checksum
     }
 
@@ -324,6 +342,13 @@ impl Row {
 
         self
     }
+
+    /// 添加行删除标记。这个仅在删除行的时候用得到
+    pub fn delete_marker(mut self) -> Self {
+        self.deleted = true;
+
+        self
+    }
 }
 
 #[cfg(test)]
@@ -447,6 +472,7 @@ mod test_row {
                 PrimaryKeyColumn::from_integer("id", 1742373697699000),
             ],
             columns: vec![],
+            deleted: false,
         };
 
         let pb_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
@@ -472,6 +498,7 @@ mod test_row {
                 timestamp: Some(1742378007415),
                 ..Default::default()
             }],
+            deleted: false,
         };
 
         log::debug!("row CRC8 checksum = {:02x}", row.crc8_checksum());

@@ -1,10 +1,7 @@
 use prost::Message;
 use reqwest::Method;
 
-use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError
-};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError};
 
 use super::rules::validate_table_name;
 
@@ -16,7 +13,7 @@ pub struct DeleteTableRequest {
 impl DeleteTableRequest {
     pub fn new(table_name: &str) -> Self {
         Self {
-            table_name: table_name.to_string()
+            table_name: table_name.to_string(),
         }
     }
 
@@ -31,9 +28,7 @@ impl DeleteTableRequest {
 
 impl From<DeleteTableRequest> for crate::protos::table_store::DeleteTableRequest {
     fn from(value: DeleteTableRequest) -> Self {
-        crate::protos::table_store::DeleteTableRequest {
-            table_name: value.table_name
-        }
+        crate::protos::table_store::DeleteTableRequest { table_name: value.table_name }
     }
 }
 
@@ -52,7 +47,7 @@ impl DeleteTableOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
         Self {
             client,
-            request: DeleteTableRequest::new(table_name)
+            request: DeleteTableRequest::new(table_name),
         }
     }
 }

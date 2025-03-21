@@ -1,9 +1,9 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    model::{Filter, Row},
+    model::{Filter, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
@@ -11,25 +11,18 @@ use crate::{
     table::rules::{validate_column_name, validate_table_name},
 };
 
-/// 更新行数据的请求
+/// 删除一行数据。
 ///
-/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updaterow>
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deleterow>
 #[derive(Debug, Default, Clone)]
-pub struct UpdateRowRequest {
-    /// 表名
+pub struct DeleteRowRequest {
     pub table_name: String,
-
-    /// 要更新的行。包括主键列和值列。
-    ///
-    /// 该行本次需要更新的全部属性列，表格存储会根据 row_change 中 UpdateType 的内容在该行中新增、修改或者删除指定列的值。
-    /// 该行已存在的且不在 row_change 中的列将不受影响。
-    pub row: Row,
+    pub primary_keys: Vec<PrimaryKeyColumn>,
 
     /// 在数据写入前是否进行存在性检查。取值范围如下：
     ///
     /// - `Ignore`（默认）：不做行存在性检查。
     /// - `ExpectExist` ：期望行存在。
-    /// - `ExpectNotExist` ：期望行不存在。
     pub row_condition: RowExistenceExpectation,
 
     /// 进行行存在性检查的时候，可以附加列过滤器
@@ -43,11 +36,10 @@ pub struct UpdateRowRequest {
     /// 如果需要返回数据，可以指定要返回的列
     pub return_columns: Vec<String>,
 
-    /// 局部事务ID。当使用局部事务功能写入数据时必须设置此参数。
     pub transaction_id: Option<String>,
 }
 
-impl UpdateRowRequest {
+impl DeleteRowRequest {
     pub fn new(table_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
@@ -62,9 +54,31 @@ impl UpdateRowRequest {
         self
     }
 
-    /// 设置要更新的行数据
-    pub fn row(mut self, row: Row) -> Self {
-        self.row = row;
+    /// 添加字符串类型的主键查询值
+    pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: PrimaryKeyValue::String(value.into()),
+        });
+        self
+    }
+
+    /// 添加整数类型的主键查询值
+    pub fn primary_key_integer(mut self, name: &str, value: i64) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Integer(value),
+        });
+
+        self
+    }
+
+    /// 添加二进制类型的主键查询值
+    pub fn primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: PrimaryKeyValue::Binary(value.into()),
+        });
 
         self
     }
@@ -91,7 +105,7 @@ impl UpdateRowRequest {
     }
 
     /// 添加一个要返回的列
-    pub fn return_column(mut self, col_name: impl Into<String>) -> Self {
+    pub fn return_column(mut self, col_name: &str) -> Self {
         self.return_columns.push(col_name.into());
 
         self
@@ -111,25 +125,24 @@ impl UpdateRowRequest {
         self
     }
 
-    /// 验证请求设置
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
-        if self.row.primary_keys.is_empty() {
+        if self.primary_keys.is_empty() {
             return Err(OtsError::ValidationFailed("invalid primary keys: empty".to_string()));
         }
 
-        for key_col in &self.row.primary_keys {
+        for key_col in &self.primary_keys {
             if !validate_column_name(&key_col.name) {
                 return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", key_col.name)));
             }
         }
 
-        for col in &self.row.columns {
-            if !validate_column_name(&col.name) {
-                return Err(OtsError::ValidationFailed(format!("invalid column name: {}", col.name)));
+        for col in &self.return_columns {
+            if !validate_column_name(col) {
+                return Err(OtsError::ValidationFailed(format!("invalid return column name: {}", col)));
             }
         }
 
@@ -137,11 +150,11 @@ impl UpdateRowRequest {
     }
 }
 
-impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
-    fn from(value: UpdateRowRequest) -> crate::protos::table_store::UpdateRowRequest {
-        let UpdateRowRequest {
+impl From<DeleteRowRequest> for crate::protos::table_store::DeleteRowRequest {
+    fn from(value: DeleteRowRequest) -> Self {
+        let DeleteRowRequest {
             table_name,
-            row,
+            primary_keys,
             row_condition,
             column_condition,
             return_type,
@@ -149,11 +162,9 @@ impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
             transaction_id,
         } = value;
 
-        let row_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
-
-        crate::protos::table_store::UpdateRowRequest {
+        crate::protos::table_store::DeleteRowRequest {
             table_name,
-            row_change: row_bytes,
+            primary_key: (Row::new().primary_keys(primary_keys).delete_marker()).encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             condition: Condition {
                 row_existence: row_condition as i32,
                 column_condition: if let Some(f) = column_condition {
@@ -176,19 +187,20 @@ impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
     }
 }
 
+/// 删除行的响应
 #[derive(Debug, Clone, Default)]
-pub struct UpdateRowResponse {
+pub struct DeleteRowResponse {
     pub consumed: ConsumedCapacity,
 
     /// 当设置了 return_content 后，返回的数据。
     pub row: Option<Row>,
 }
 
-impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowResponse {
+impl TryFrom<crate::protos::table_store::DeleteRowResponse> for DeleteRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::UpdateRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::UpdateRowResponse { consumed, row } = value;
+    fn try_from(value: crate::protos::table_store::DeleteRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::table_store::DeleteRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
             Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
@@ -200,34 +212,35 @@ impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowRespons
     }
 }
 
-/// 更新指定行的数据
+/// 删除行数据操作
 #[derive(Debug, Default, Clone)]
-pub struct UpdateRowOperation {
+pub struct DeleteRowOperation {
     client: OtsClient,
-    request: UpdateRowRequest,
+    request: DeleteRowRequest,
 }
 
-impl UpdateRowOperation {
-    pub(crate) fn new(client: OtsClient, request: UpdateRowRequest) -> Self {
+add_per_request_options!(DeleteRowOperation);
+
+impl DeleteRowOperation {
+    pub(crate) fn new(client: OtsClient, request: DeleteRowRequest) -> Self {
         Self { client, request }
     }
 
-    pub async fn send(self) -> OtsResult<UpdateRowResponse> {
+    pub async fn send(self) -> OtsResult<DeleteRowResponse> {
         self.request.validate()?;
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::UpdateRowRequest = request.into();
+        let msg: crate::protos::table_store::DeleteRowRequest = request.into();
 
         let req = OtsRequest {
-            operation: OtsOp::UpdateRow,
+            operation: OtsOp::DeleteRow,
             body: msg.encode_to_vec(),
             ..Default::default()
         };
 
         let response = client.send(req).await?;
-
-        let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::table_store::DeleteRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

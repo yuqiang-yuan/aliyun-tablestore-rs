@@ -11,7 +11,10 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use data::{GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest};
+use data::{
+    DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest,
+    UpdateRowOperation, UpdateRowRequest,
+};
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
     UpdateTableOperation,
@@ -521,5 +524,18 @@ impl OtsClient {
     /// ```
     pub fn update_row(&self, request: UpdateRowRequest) -> UpdateRowOperation {
         UpdateRowOperation::new(self.clone(), request)
+    }
+
+    /// 根据主键删除数据行
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// client.delete_row(
+    ///     DeleteRowRequest::new(table_name).primary_key_string("str_id", &id)
+    /// ).send().await;
+    /// ```
+    pub fn delete_row(&self, request: DeleteRowRequest) -> DeleteRowOperation {
+        DeleteRowOperation::new(self.clone(), request)
     }
 }

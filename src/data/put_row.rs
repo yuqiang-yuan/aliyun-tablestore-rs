@@ -122,7 +122,7 @@ impl PutRowRequest {
 
         for col in &self.row.columns {
             if !validate_column_name(&col.name) {
-                return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", col.name)));
+                return Err(OtsError::ValidationFailed(format!("invalid column name: {}", col.name)));
             }
         }
 

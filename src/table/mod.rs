@@ -56,7 +56,6 @@ pub(crate) mod rules {
 mod test_table {
     use std::sync::Once;
 
-
     use crate::{OtsClient, index::IndexMetaBuilder, protos::table_store::IndexType, table::CreateTableRequest};
 
     static INIT: Once = Once::new();
