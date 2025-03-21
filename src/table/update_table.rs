@@ -6,7 +6,7 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse},
+    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableResponse},
 };
 
 use super::rules::validate_table_name;
@@ -16,10 +16,8 @@ use super::rules::validate_table_name;
 /// 您还可以为数据表配置预留读/写吞吐量 reserved_throughput，新设定将于更新成功后的一分钟内生效。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updatetable-of-tablestore>
-#[derive(Default)]
-pub struct UpdateTableOperation {
-    client: OtsClient,
-
+#[derive(Debug, Default, Clone)]
+pub struct UpdateTableRequest {
     // table meta
     pub table_name: String,
 
@@ -39,17 +37,19 @@ pub struct UpdateTableOperation {
     pub stream_columns: HashSet<String>,
 }
 
-add_per_request_options!(UpdateTableOperation);
-
-impl UpdateTableOperation {
-    /// Create a new update table operation
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl UpdateTableRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             ..Default::default()
         }
     }
+
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+        self
+    }
+
 
     /// 预设读取吞吐量。最大 100000 CU
     pub fn reserved_throughput_read(mut self, read_cu: i32) -> Self {
@@ -117,12 +117,11 @@ impl UpdateTableOperation {
 
         Ok(())
     }
+}
 
-    pub async fn send(self) -> OtsResult<UpdateTableResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<UpdateTableRequest> for crate::protos::table_store::UpdateTableRequest {
+    fn from(value: UpdateTableRequest) -> Self {
+        let UpdateTableRequest {
             table_name,
             reserved_throughput_read,
             reserved_throughput_write,
@@ -133,9 +132,9 @@ impl UpdateTableOperation {
             stream_enabled,
             stream_expiration_hour,
             stream_columns,
-        } = self;
+        } = value;
 
-        let msg = UpdateTableRequest {
+        crate::protos::table_store::UpdateTableRequest {
             table_name,
             reserved_throughput: if reserved_throughput_read.is_some() || reserved_throughput_write.is_some() {
                 Some(ReservedThroughput {
@@ -167,7 +166,37 @@ impl UpdateTableOperation {
             } else {
                 None
             },
-        };
+        }
+    }
+}
+
+/// 修改表配置信息
+#[derive(Default)]
+pub struct UpdateTableOperation {
+    client: OtsClient,
+    request: UpdateTableRequest
+}
+
+add_per_request_options!(UpdateTableOperation);
+
+impl UpdateTableOperation {
+    /// Create a new update table operation
+    pub(crate) fn new(client: OtsClient, request: UpdateTableRequest) -> Self {
+        Self {
+            client,
+            request,
+        }
+    }
+
+    pub async fn send(self) -> OtsResult<UpdateTableResponse> {
+        self.request.validate()?;
+
+        let Self {
+            client,
+            request,
+        } = self;
+
+        let msg: crate::protos::table_store::UpdateTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,

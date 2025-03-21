@@ -17,7 +17,7 @@ use data::{
 };
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
-    UpdateTableOperation,
+    UpdateTableOperation, UpdateTableRequest,
 };
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -374,8 +374,8 @@ impl OtsClient {
     }
 
     /// 更新宽表定义
-    pub fn update_table(&self, table_name: &str) -> UpdateTableOperation {
-        UpdateTableOperation::new(self.clone(), table_name)
+    pub fn update_table(&self, request: UpdateTableRequest) -> UpdateTableOperation {
+        UpdateTableOperation::new(self.clone(), request)
     }
 
     /// 获取宽表定义
