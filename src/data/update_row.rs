@@ -1,19 +1,21 @@
 use prost::Message;
 
 use crate::{
-    error::OtsError, model::{Filter, Row}, protos::{
+    OtsClient, OtsOp, OtsRequest, OtsResult,
+    error::OtsError,
+    model::{Filter, Row},
+    protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation, UpdateRowRequest},
-    }, table::rules::{validate_column_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
+    },
+    table::rules::{validate_column_name, validate_table_name},
 };
 
-/// 更新指定行的数据
+/// 更新行数据的请求
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updaterow>
 #[derive(Debug, Default, Clone)]
-pub struct UpdateRowOperation {
-    client: OtsClient,
-
+pub struct UpdateRowRequest {
     /// 表名
     pub table_name: String,
 
@@ -45,13 +47,19 @@ pub struct UpdateRowOperation {
     pub transaction_id: Option<String>,
 }
 
-impl UpdateRowOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl UpdateRowRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 设置要更新的行数据
@@ -127,12 +135,11 @@ impl UpdateRowOperation {
 
         Ok(())
     }
+}
 
-    pub async fn send(self) -> OtsResult<UpdateRowResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
+    fn from(value: UpdateRowRequest) -> crate::protos::table_store::UpdateRowRequest {
+        let UpdateRowRequest {
             table_name,
             row,
             row_condition,
@@ -140,11 +147,11 @@ impl UpdateRowOperation {
             return_type,
             return_columns,
             transaction_id,
-        } = self;
+        } = value;
 
         let row_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        let msg = UpdateRowRequest {
+        crate::protos::table_store::UpdateRowRequest {
             table_name,
             row_change: row_bytes,
             condition: Condition {
@@ -165,23 +172,9 @@ impl UpdateRowOperation {
                 None
             },
             transaction_id,
-        };
-
-        let req = OtsRequest {
-            operation: OtsOp::UpdateRow,
-            body: msg.encode_to_vec(),
-            ..Default::default()
-        };
-
-        let response = client.send(req).await?;
-
-        let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
-
-
-        response_msg.try_into()
+        }
     }
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct UpdateRowResponse {
@@ -195,10 +188,7 @@ impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowRespons
     type Error = OtsError;
 
     fn try_from(value: crate::protos::table_store::UpdateRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::UpdateRowResponse {
-            consumed,
-            row,
-        } = value;
+        let crate::protos::table_store::UpdateRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
             Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
@@ -207,5 +197,38 @@ impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowRespons
         };
 
         Ok(Self { consumed, row })
+    }
+}
+
+/// 更新指定行的数据
+#[derive(Debug, Default, Clone)]
+pub struct UpdateRowOperation {
+    client: OtsClient,
+    request: UpdateRowRequest,
+}
+
+impl UpdateRowOperation {
+    pub(crate) fn new(client: OtsClient, request: UpdateRowRequest) -> Self {
+        Self { client, request }
+    }
+
+    pub async fn send(self) -> OtsResult<UpdateRowResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::UpdateRowRequest = request.into();
+
+        let req = OtsRequest {
+            operation: OtsOp::UpdateRow,
+            body: msg.encode_to_vec(),
+            ..Default::default()
+        };
+
+        let response = client.send(req).await?;
+
+        let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
+
+        response_msg.try_into()
     }
 }

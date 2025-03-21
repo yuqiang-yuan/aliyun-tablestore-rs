@@ -2,7 +2,9 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::table_store::{DeleteTableRequest, DeleteTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{DeleteTableRequest, DeleteTableResponse},
 };
 
 use super::rules::validate_table_name;

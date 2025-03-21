@@ -6,17 +6,16 @@ use crate::{
     model::{Filter, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, PutRowRequest, ReturnContent, ReturnType, RowExistenceExpectation},
+        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
     },
     table::rules::{validate_column_name, validate_table_name},
 };
 
-/// 插入数据到指定的行
+/// 写入行数据的请求
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/putrow>
-#[derive(Debug, Clone, Default)]
-pub struct PutRowOperation {
-    client: OtsClient,
+#[derive(Debug, Default, Clone)]
+pub struct PutRowRequest {
     pub table_name: String,
     pub row: Row,
 
@@ -42,15 +41,19 @@ pub struct PutRowOperation {
     pub transaction_id: Option<String>,
 }
 
-add_per_request_options!(PutRowOperation);
-
-impl PutRowOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl PutRowRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 设置要写入的行数据
@@ -82,7 +85,7 @@ impl PutRowOperation {
     }
 
     /// 添加一个要返回的列
-    pub fn return_column(mut self, col_name: impl Into<String>) -> Self {
+    pub fn return_column(mut self, col_name: &str) -> Self {
         self.return_columns.push(col_name.into());
 
         self
@@ -125,13 +128,11 @@ impl PutRowOperation {
 
         Ok(())
     }
+}
 
-    /// 执行写入数据操作
-    pub async fn send(self) -> OtsResult<PutRowResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<PutRowRequest> for crate::protos::table_store::PutRowRequest {
+    fn from(value: PutRowRequest) -> crate::protos::table_store::PutRowRequest {
+        let PutRowRequest {
             table_name,
             row,
             row_condition,
@@ -139,11 +140,11 @@ impl PutRowOperation {
             return_type,
             return_columns,
             transaction_id,
-        } = self;
+        } = value;
 
         let row_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        let msg = PutRowRequest {
+        crate::protos::table_store::PutRowRequest {
             table_name,
             row: row_bytes,
             condition: Condition {
@@ -164,22 +165,11 @@ impl PutRowOperation {
                 None
             },
             transaction_id,
-        };
-
-        let req = OtsRequest {
-            operation: OtsOp::PutRow,
-            body: msg.encode_to_vec(),
-            ..Default::default()
-        };
-
-        let response = client.send(req).await?;
-
-        let response_msg = crate::protos::table_store::PutRowResponse::decode(response.bytes().await?)?;
-
-        response_msg.try_into()
+        }
     }
 }
 
+/// 写入行数据的响应
 #[derive(Debug, Clone, Default)]
 pub struct PutRowResponse {
     pub consumed: ConsumedCapacity,
@@ -199,5 +189,41 @@ impl TryFrom<crate::protos::table_store::PutRowResponse> for PutRowResponse {
         };
 
         Ok(Self { consumed, row })
+    }
+}
+
+/// 插入数据到指定的行
+#[derive(Debug, Clone, Default)]
+pub struct PutRowOperation {
+    client: OtsClient,
+    request: PutRowRequest,
+}
+
+add_per_request_options!(PutRowOperation);
+
+impl PutRowOperation {
+    pub(crate) fn new(client: OtsClient, request: PutRowRequest) -> Self {
+        Self { client, request }
+    }
+
+    /// 执行写入数据操作
+    pub async fn send(self) -> OtsResult<PutRowResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::PutRowRequest = request.into();
+
+        let req = OtsRequest {
+            operation: OtsOp::PutRow,
+            body: msg.encode_to_vec(),
+            ..Default::default()
+        };
+
+        let response = client.send(req).await?;
+
+        let response_msg = crate::protos::table_store::PutRowResponse::decode(response.bytes().await?)?;
+
+        response_msg.try_into()
     }
 }

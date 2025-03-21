@@ -1,4 +1,4 @@
-use crate::model::Row;
+use crate::model::{PrimaryKeyValue, Row};
 use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
 use crate::protos::table_store::ConsumedCapacity;
 use crate::table::rules::validate_table_name;
@@ -6,24 +6,23 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
     model::{Filter, PrimaryKey, PrimaryKeyColumn},
-    protos::table_store::{Direction, GetRangeRequest, TimeRange},
+    protos::table_store::{Direction, TimeRange},
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 use std::io::Cursor;
 
-/// 读取指定主键范围内的数据。
+/// 读取指定主键范围内的数据请求
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/getrange>
 #[derive(Default, Debug, Clone)]
-pub struct GetRangeOperation {
-    client: OtsClient,
+pub struct GetRangeRequest {
     pub table_name: String,
 
     /// 本次查询的顺序。见 [`direction`](`Self::direction`)
     pub direction: Direction,
 
-    /// 需要返回的全部列的列名。见 [`add_column_to_get`](`Self::add_column_to_get`)
+    /// 需要返回的全部列的列名。见 [`columns_to_get`](`Self::columns_to_get`)
     pub columns_to_get: Vec<String>,
 
     /// TimeRange 设置。和 `max_versions` 只能存在一个。
@@ -59,15 +58,19 @@ pub struct GetRangeOperation {
     pub transaction_id: Option<String>,
 }
 
-add_per_request_options!(GetRangeOperation);
-
-impl GetRangeOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl GetRangeRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 本次查询的顺序。
@@ -76,6 +79,21 @@ impl GetRangeOperation {
     /// - 如果设置此项为 `BACKWARD`（逆序），则 `inclusive_start_primary` 必须大于 `exclusive_end_primary`，响应中各行按照主键由大到小的顺序进行排列。
     pub fn direction(mut self, direction: Direction) -> Self {
         self.direction = direction;
+
+        self
+    }
+
+    /// 添加一个主键列的查询范围
+    pub fn primary_key_range(mut self, name: &str, start_value_inclusive: PrimaryKeyValue, end_value_exclusive: PrimaryKeyValue) -> Self {
+        self.inclusive_start_primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: start_value_inclusive,
+        });
+
+        self.exclusive_end_primary_keys.push(PrimaryKeyColumn {
+            name: name.to_string(),
+            value: end_value_exclusive,
+        });
 
         self
     }
@@ -229,7 +247,7 @@ impl GetRangeOperation {
 
     /// 指定读取时的起始列，主要用于宽行读。列的顺序按照列名的字典序排序。返回的结果中**包含**当前起始列。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `start_column` 为 `b` ，则会从 `b` 列开始读，返回 `b`、`c` 两列。
-    pub fn start_column(mut self, name: impl Into<String>) -> Self {
+    pub fn start_column(mut self, name: &str) -> Self {
         self.start_column = Some(name.into());
 
         self
@@ -237,8 +255,16 @@ impl GetRangeOperation {
 
     /// 返回的结果中**不包含**当前结束列。列的顺序按照列名的字典序排序。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `end_column` 为 `b`，则读到 `b` 列时会结束，返回 `a` 列。
-    pub fn end_column(mut self, name: impl Into<String>) -> Self {
+    pub fn end_column(mut self, name: &str) -> Self {
         self.end_column = Some(name.into());
+
+        self
+    }
+
+    /// 设置读取的列范围。包含开始列名，不包含结束列名
+    pub fn column_range(mut self, start_column_inclusive: Option<impl Into<String>>, end_column_exclusive: Option<impl Into<String>>) -> Self {
+        self.start_column = start_column_inclusive.map(|s| s.into());
+        self.end_column = end_column_exclusive.map(|s| s.into());
 
         self
     }
@@ -272,18 +298,18 @@ impl GetRangeOperation {
         }
 
         if self.max_versions.is_some() && (self.time_range_start_ms.is_some() || self.time_range_end_ms.is_some() || self.time_range_specific_ms.is_some()) {
-            return Err(OtsError::ValidationFailed("can not set `max_versions` and `time_range` both at the same time".to_string()));
+            return Err(OtsError::ValidationFailed(
+                "can not set `max_versions` and `time_range` both at the same time".to_string(),
+            ));
         }
 
         Ok(())
     }
+}
 
-    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
-    pub async fn send(self) -> OtsResult<GetRangeResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
+    fn from(value: GetRangeRequest) -> crate::protos::table_store::GetRangeRequest {
+        let GetRangeRequest {
             inclusive_start_primary_keys: inclusive_start_primary_key,
             exclusive_end_primary_keys: exclusive_end_primary_key,
             max_versions,
@@ -298,7 +324,7 @@ impl GetRangeOperation {
             table_name,
             transaction_id,
             filter,
-        } = self;
+        } = value;
 
         // 时间范围和最大版本都未设置的时候，默认设置 max_versions 为 1
         let max_versions = if max_versions.is_none() && time_range_start_ms.is_none() && time_range_end_ms.is_none() && time_range_specific_ms.is_none() {
@@ -318,7 +344,7 @@ impl GetRangeOperation {
         let start_pk_bytes = start_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
         let end_pk_bytes = end_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        let msg = GetRangeRequest {
+        crate::protos::table_store::GetRangeRequest {
             table_name,
             direction: direction as i32,
             columns_to_get: columns,
@@ -343,21 +369,11 @@ impl GetRangeOperation {
             end_column,
             token: None,
             transaction_id,
-        };
-
-        let req = OtsRequest {
-            operation: OtsOp::GetRange,
-            body: msg.encode_to_vec(),
-            ..Default::default()
-        };
-
-        let response = client.send(req).await?;
-        let response_msg = crate::protos::table_store::GetRangeResponse::decode(response.bytes().await?)?;
-
-        response_msg.try_into()
+        }
     }
 }
 
+/// 读取指定主键范围内的数据的响应
 #[derive(Clone, Default, Debug)]
 pub struct GetRangeResponse {
     pub consumed: ConsumedCapacity,
@@ -416,5 +432,40 @@ impl TryFrom<crate::protos::table_store::GetRangeResponse> for GetRangeResponse 
             next_token,
             next_start_primary_key: next_pk,
         })
+    }
+}
+
+/// 读取指定主键范围内的数据。
+#[derive(Default, Debug, Clone)]
+pub struct GetRangeOperation {
+    client: OtsClient,
+    request: GetRangeRequest,
+}
+
+add_per_request_options!(GetRangeOperation);
+
+impl GetRangeOperation {
+    pub(crate) fn new(client: OtsClient, request: GetRangeRequest) -> Self {
+        Self { client, request }
+    }
+
+    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
+    pub async fn send(self) -> OtsResult<GetRangeResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::GetRangeRequest = request.into();
+
+        let req = OtsRequest {
+            operation: OtsOp::GetRange,
+            body: msg.encode_to_vec(),
+            ..Default::default()
+        };
+
+        let response = client.send(req).await?;
+        let response_msg = crate::protos::table_store::GetRangeResponse::decode(response.bytes().await?)?;
+
+        response_msg.try_into()
     }
 }

@@ -2,7 +2,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType}, table::rules::{validate_column_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{AddDefinedColumnRequest, AddDefinedColumnResponse, DefinedColumnSchema, DefinedColumnType},
+    table::rules::{validate_column_name, validate_table_name},
 };
 
 /// 添加预定义列

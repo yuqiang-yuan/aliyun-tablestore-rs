@@ -11,7 +11,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use data::{GetRangeOperation, GetRowOperation, PutRowOperation, UpdateRowOperation};
+use data::{GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest};
 use table::{ComputeSplitPointsBySizeOperation, CreateTableOperation, DeleteTableOperation, DescribeTableOperation, ListTableOperation, UpdateTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -372,22 +372,102 @@ impl OtsClient {
     }
 
     /// 根据主键获取单行数据
-    pub fn get_row(&self, table_name: &str) -> GetRowOperation {
-        GetRowOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let response = client
+    ///     .get_row(
+    ///         GetRowRequest::new("schools")
+    ///             .primary_key_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+    ///             .primary_key_integer("id", 1742203524276000)
+    ///             .max_versions(1),
+    ///     )
+    ///     .send()
+    ///     .await;
+    /// ```
+    pub fn get_row(&self, request: GetRowRequest) -> GetRowOperation {
+        GetRowOperation::new(self.clone(), request)
     }
 
     /// 根据主键获取范围数据
-    pub fn get_range(&self, table_name: &str) -> GetRangeOperation {
-        GetRangeOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ## 依次设置开始主键和结束主键
+    ///
+    /// ```
+    /// let response = client.get_range(
+    ///     GetRangeRequest::new("table_name")
+    ///         .start_primary_key_string("id", "string_id_value")
+    ///         .start_primary_key_inf_min("long_id")
+    ///         .end_primary_key_string("id", "string_id_value")
+    ///         .end_primary_key_inf_max("long_id")
+    ///         .direction(Direction::Forward)
+    /// ).send().await;
+    /// ```
+    ///
+    /// ## 依次设置每个主键的开始和结束值
+    ///
+    /// ```
+    /// let response = client.get_range(
+    ///     GetRangeRequest::new("table_name").primary_key_range(
+    ///         "id",
+    ///         PrimaryKeyValue::String("string_id_value".to_string()),
+    ///         PrimaryKeyValue::String("string_id_value".to_string())
+    ///     ).primary_key_range(
+    ///         "long_id",
+    ///         PrimaryKeyValue::Integer(12345678),
+    ///         PrimaryKeyValue::InfMax
+    ///     ).direction(Direction::Forward)
+    /// ).send().await;
+    /// ```
+    pub fn get_range(&self, request: GetRangeRequest) -> GetRangeOperation {
+        GetRangeOperation::new(self.clone(), request)
     }
 
     /// 插入一行数据
-    pub fn put_row(&self, table_name: &str) -> PutRowOperation {
-        PutRowOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let row = Row::default()
+    ///     .primary_key_string("school_id", &school_id)
+    ///     .primary_key_auto_increment("id")
+    ///     .column_string("name", Name(ZH_CN).fake::<String>())
+    ///     .column_string("province", Name(ZH_CN).fake::<String>());
+    ///
+    /// let response = client
+    ///     .put_row(
+    ///         PutRowRequest::new("schools").row(row).return_type(ReturnType::RtPk)
+    ///     ).send().await.unwrap();
+    /// ```
+    pub fn put_row(&self, request: PutRowRequest) -> PutRowOperation {
+        PutRowOperation::new(self.clone(), request)
     }
 
     /// 更新一行数据
-    pub fn update_row(&self, table_name: &str) -> UpdateRowOperation {
-        UpdateRowOperation::new(self.clone(), table_name)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let response = client
+    ///     .update_row(
+    ///         UpdateRowRequest::new(table_name)
+    ///             .row(
+    ///                 Row::new()
+    ///                     .primary_key_string("str_id", &id)
+    ///                     .column_string("str_col", "b")
+    ///                     .column_to_increse("int_col", 1)
+    ///                     .column_bool("bool_col", true)
+    ///                     .column_to_delete_all_versions("blob_col"),
+    ///             )
+    ///             .return_type(ReturnType::RtPk),
+    ///     )
+    ///     .send()
+    ///     .await;
+    /// ```
+    pub fn update_row(&self, request: UpdateRowRequest) -> UpdateRowOperation {
+        UpdateRowOperation::new(self.clone(), request)
     }
 }

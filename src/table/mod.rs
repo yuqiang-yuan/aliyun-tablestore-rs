@@ -136,7 +136,7 @@ mod test_table {
     async fn test_validate_create_table_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.create_table("_invalid_table_name").request_timeout_ms(1000).send().await;
+        let response = client.create_table("_invalid_table_name").timeout_ms(1000).send().await;
         assert!(response.is_err());
 
         let response = client.create_table("1dd").send().await;

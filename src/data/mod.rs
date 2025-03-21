@@ -17,9 +17,12 @@ mod test_row_operations {
 
     use crate::{
         OtsClient,
+        data::{GetRowRequest, PutRowRequest, UpdateRowRequest},
         model::{Column, ColumnValue, PrimaryKeyValue, Row, SingleColumnValueFilter},
         protos::table_store::{Direction, ReturnType},
     };
+
+    use super::GetRangeRequest;
 
     static INIT: Once = Once::new();
 
@@ -34,10 +37,12 @@ mod test_row_operations {
         setup();
         let client = OtsClient::from_env();
         let response = client
-            .get_row("schools")
-            .primary_key_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
-            .primary_key_integer("id", 1742203524276000)
-            .max_versions(1)
+            .get_row(
+                GetRowRequest::new("schools")
+                    .primary_key_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+                    .primary_key_integer("id", 1742203524276000)
+                    .max_versions(1),
+            )
             .send()
             .await;
 
@@ -54,19 +59,6 @@ mod test_row_operations {
                 .iter()
                 .any(|k| { &k.name == "school_id" && k.value == PrimaryKeyValue::String("00020FFB-BB14-CCAD-0181-A929E71C7312".to_string()) })
         );
-
-        // let response = response.unwrap();
-        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-data-response-versions.data", response.data).unwrap();
-        // let response = client.get_row("users")
-        //     .add_string_pk_value("user_id", "0005358A-DCAF-665E-EECF-D9935E821B87")
-        //     .max_versions(1)
-        //     .send().await;
-
-        // log::debug!("get data response: \n{:#?}", response);
-        // assert!(response.is_ok());
-
-        // let response = response.unwrap();
-        // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/get-data-response.data", response.data).unwrap();
     }
 
     #[tokio::test]
@@ -78,32 +70,7 @@ mod test_row_operations {
         setup();
         let client = OtsClient::from_env();
 
-        // let response = client.get_range("schools")
-        //     .add_inf_min_start_pk_value("school_id")
-        //     .add_inf_min_start_pk_value("id")
-        //     .add_inf_max_end_pk_value("school_id")
-        //     .add_inf_max_end_pk_value("id")
-        //     .max_versions(1)
-        //     .limit(1000)
-        //     .direction(Direction::Forward)
-        //     .send().await;
-
-        // let mut op = client
-        //     .get_range("ccNgMemberRecord")
-        //     .add_inf_min_start_pk_value("cc_id")
-        //     .add_string_start_pk_value("stat_date", "2023-12-04")
-        //     .add_inf_min_start_pk_value("user_id")
-        //     .add_inf_min_start_pk_value("id")
-        //     .add_inf_max_end_pk_value("cc_id")
-        //     .add_string_end_pk_value("stat_date", "2023-12-04")
-        //     .add_inf_max_end_pk_value("user_id")
-        //     .add_inf_max_end_pk_value("id")
-        //     .max_versions(1)
-        //     .limit(1000)
-        //     .direction(Direction::Forward);
-
-        let mut op = client
-            .get_range("ccNgMemberRecord")
+        let mut get_range_req = GetRangeRequest::new("ccNgMemberRecord")
             .start_primary_key_string("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
             .start_primary_key_string("stat_date", "2023-12-04")
             .start_primary_key_inf_min("user_id")
@@ -125,7 +92,7 @@ mod test_row_operations {
         let mut total_row = 0;
 
         loop {
-            let response = op.clone().send().await;
+            let response = client.get_range(get_range_req.clone()).send().await;
 
             assert!(response.is_ok());
             let response = response.unwrap();
@@ -149,7 +116,7 @@ mod test_row_operations {
 
             if let Some(keys) = response.next_start_primary_key {
                 log::debug!("Going to send next query");
-                op.inclusive_start_primary_keys = keys;
+                get_range_req = get_range_req.start_primary_keys(keys);
             } else {
                 break;
             }
@@ -178,7 +145,12 @@ mod test_row_operations {
 
         log::debug!("insert row into schools with school_id: {:?}", row.get_primary_key_value("school_id"));
 
-        let response = client.put_row("schools").row(row).return_type(ReturnType::RtPk).send().await.unwrap();
+        let response = client
+            .put_row(PutRowRequest::new("schools").row(row).return_type(ReturnType::RtPk))
+            .send()
+            .await
+            .unwrap();
+        log::debug!("{:#?}", response);
 
         assert!(response.row.is_some());
 
@@ -204,15 +176,16 @@ mod test_row_operations {
         log::debug!("insert new data to test update with id: {}", id);
 
         let response = client
-            .put_row(table_name)
-            .row(
-                Row::new()
-                    .primary_key_string("str_id", &id)
-                    .column_string("str_col", "a")
-                    .column_integer("int_col", 1)
-                    .column_double("double_col", 1.234)
-                    .column_bool("bool_col", false)
-                    .column_blob("blob_col", b"a"),
+            .put_row(
+                PutRowRequest::new(table_name).row(
+                    Row::new()
+                        .primary_key_string("str_id", &id)
+                        .column_string("str_col", "a")
+                        .column_integer("int_col", 1)
+                        .column_double("double_col", 1.234)
+                        .column_bool("bool_col", false)
+                        .column_blob("blob_col", b"a"),
+                ),
             )
             .send()
             .await;
@@ -221,16 +194,18 @@ mod test_row_operations {
 
         log::debug!("update row with id: {}", id);
         let response = client
-            .update_row(table_name)
-            .row(
-                Row::new()
-                    .primary_key_string("str_id", &id)
-                    .column_string("str_col", "b")
-                    .column_to_increse("int_col", 1)
-                    .column_bool("bool_col", true)
-                    .column_to_delete_all_versions("blob_col"),
+            .update_row(
+                UpdateRowRequest::new(table_name)
+                    .row(
+                        Row::new()
+                            .primary_key_string("str_id", &id)
+                            .column_string("str_col", "b")
+                            .column_to_increse("int_col", 1)
+                            .column_bool("bool_col", true)
+                            .column_to_delete_all_versions("blob_col"),
+                    )
+                    .return_type(ReturnType::RtPk),
             )
-            .return_type(ReturnType::RtPk)
             .send()
             .await;
 
@@ -238,7 +213,7 @@ mod test_row_operations {
 
         log::debug!("update row response: {:#?}", response);
 
-        let response = client.get_row(table_name).primary_key_string("str_id", &id).send().await;
+        let response = client.get_row(GetRowRequest::new(table_name).primary_key_string("str_id", &id)).send().await;
 
         assert!(response.is_ok());
 

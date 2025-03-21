@@ -4,7 +4,9 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableRequest, UpdateTableResponse},
 };
 
 use super::rules::validate_table_name;
@@ -108,7 +110,6 @@ impl UpdateTableOperation {
         self
     }
 
-
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
@@ -116,7 +117,6 @@ impl UpdateTableOperation {
 
         Ok(())
     }
-
 
     pub async fn send(self) -> OtsResult<UpdateTableResponse> {
         self.validate()?;

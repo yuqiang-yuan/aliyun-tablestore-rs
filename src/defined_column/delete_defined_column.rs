@@ -1,7 +1,10 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse}, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::table_store::{DeleteDefinedColumnRequest, DeleteDefinedColumnResponse},
+    table::rules::validate_table_name,
 };
 
 /// 删除预定义列

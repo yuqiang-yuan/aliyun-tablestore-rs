@@ -1,18 +1,21 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row}, protos::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
+    protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{ConsumedCapacity, GetRowRequest, TimeRange},
-    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
+        table_store::{ConsumedCapacity, TimeRange},
+    },
+    table::rules::validate_table_name,
 };
 
-/// 根据指定的主键读取单行数据。
+/// 获取单行数据的请求
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/getrow>
-#[derive(Default, Debug, Clone)]
-pub struct GetRowOperation {
-    client: OtsClient,
+#[derive(Clone, Default, Debug)]
+pub struct GetRowRequest {
     pub table_name: String,
     pub primary_keys: Vec<PrimaryKeyColumn>,
     pub columns_to_get: Vec<String>,
@@ -28,15 +31,19 @@ pub struct GetRowOperation {
     pub transaction_id: Option<String>,
 }
 
-add_per_request_options!(GetRowOperation);
-
-impl GetRowOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str) -> Self {
+impl GetRowRequest {
+    pub fn new(table_name: &str) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 添加字符串类型的主键查询值
@@ -112,7 +119,7 @@ impl GetRowOperation {
 
     /// 指定读取时的起始列，主要用于宽行读。列的顺序按照列名的字典序排序。返回的结果中**包含**当前起始列。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `start_column` 为 `b` ，则会从 `b` 列开始读，返回 `b`、`c` 两列。
-    pub fn start_column(mut self, name: impl Into<String>) -> Self {
+    pub fn start_column(mut self, name: &str) -> Self {
         self.start_column = Some(name.into());
 
         self
@@ -120,8 +127,16 @@ impl GetRowOperation {
 
     /// 返回的结果中**不包含**当前结束列。列的顺序按照列名的字典序排序。
     /// 如果一张表有 `a` 、 `b` 、 `c` 三列，读取时指定 `end_column` 为 `b`，则读到 `b` 列时会结束，返回 `a` 列。
-    pub fn end_column(mut self, name: impl Into<String>) -> Self {
+    pub fn end_column(mut self, name: &str) -> Self {
         self.end_column = Some(name.into());
+
+        self
+    }
+
+    /// 设置读取的列范围。包含开始列名，不包含结束列名
+    pub fn column_range(mut self, start_column_inclusive: Option<impl Into<String>>, end_column_exclusive: Option<impl Into<String>>) -> Self {
+        self.start_column = start_column_inclusive.map(|s| s.into());
+        self.end_column = end_column_exclusive.map(|s| s.into());
 
         self
     }
@@ -145,13 +160,11 @@ impl GetRowOperation {
 
         Ok(())
     }
+}
 
-    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
-    pub async fn send(self) -> OtsResult<GetRowResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<GetRowRequest> for crate::protos::table_store::GetRowRequest {
+    fn from(value: GetRowRequest) -> Self {
+        let GetRowRequest {
             table_name,
             primary_keys: pk_values,
             columns_to_get: columns,
@@ -162,7 +175,7 @@ impl GetRowOperation {
             start_column,
             end_column,
             transaction_id,
-        } = self;
+        } = value;
 
         // 时间范围和最大版本都未设置的时候，默认设置 max_versions 为 1
         let max_versions = if max_versions.is_none() && time_range_start_ms.is_none() && time_range_end_ms.is_none() && time_range_specific_ms.is_none() {
@@ -175,7 +188,7 @@ impl GetRowOperation {
 
         let pk_bytes = pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        let msg = GetRowRequest {
+        crate::protos::table_store::GetRowRequest {
             table_name,
             primary_key: pk_bytes,
             columns_to_get: columns,
@@ -194,21 +207,11 @@ impl GetRowOperation {
             end_column,
             token: None,
             transaction_id,
-        };
-
-        let req = OtsRequest {
-            operation: OtsOp::GetRow,
-            body: msg.encode_to_vec(),
-            ..Default::default()
-        };
-
-        let response = client.send(req).await?;
-        let response_msg = crate::protos::table_store::GetRowResponse::decode(response.bytes().await?)?;
-
-        response_msg.try_into()
+        }
     }
 }
 
+/// 获取单行数据的响应
 #[derive(Clone, Default, Debug)]
 pub struct GetRowResponse {
     pub consumed: ConsumedCapacity,
@@ -233,5 +236,42 @@ impl TryFrom<crate::protos::table_store::GetRowResponse> for GetRowResponse {
         };
 
         Ok(Self { consumed, row, next_token })
+    }
+}
+
+/// 根据指定的主键读取单行数据。
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/getrow>
+#[derive(Default, Debug, Clone)]
+pub struct GetRowOperation {
+    client: OtsClient,
+    request: GetRowRequest,
+}
+
+add_per_request_options!(GetRowOperation);
+
+impl GetRowOperation {
+    pub(crate) fn new(client: OtsClient, request: GetRowRequest) -> Self {
+        Self { client, request }
+    }
+
+    /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
+    pub async fn send(self) -> OtsResult<GetRowResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::GetRowRequest = request.into();
+
+        let req = OtsRequest {
+            operation: OtsOp::GetRow,
+            body: msg.encode_to_vec(),
+            ..Default::default()
+        };
+
+        let response = client.send(req).await?;
+        let response_msg = crate::protos::table_store::GetRowResponse::decode(response.bytes().await?)?;
+
+        response_msg.try_into()
     }
 }
