@@ -278,9 +278,7 @@ pub struct DefaultRetryPolicy {
 
 impl Default for DefaultRetryPolicy {
     fn default() -> Self {
-        Self {
-            max_retry_times: 10,
-        }
+        Self { max_retry_times: 10 }
     }
 }
 
@@ -550,7 +548,6 @@ impl OtsClient {
                 retried += 1;
             }
         }
-
     }
 
     /// 列出实例下的宽表
