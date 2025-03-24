@@ -21,3 +21,4 @@ There operations are implemented:
     - Put row
     - Update row
     - Delete row
+    - Batch get row

@@ -286,6 +286,22 @@ pub struct TableInBatchGetRowResponse {
     pub rows: Vec<RowInBatchGetRowResponse>,
 }
 
+impl TryFrom<crate::protos::table_store::TableInBatchGetRowResponse> for TableInBatchGetRowResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::table_store::TableInBatchGetRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::table_store::TableInBatchGetRowResponse { table_name, rows } = value;
+
+        let mut ret_rows = vec![];
+
+        for r in rows {
+            ret_rows.push(r.try_into()?);
+        }
+
+        Ok(Self { table_name, rows: ret_rows })
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RowInBatchGetRowResponse {
     pub is_ok: bool,
@@ -293,6 +309,36 @@ pub struct RowInBatchGetRowResponse {
     pub consumed: Option<ConsumedCapacity>,
     pub row: Option<Row>,
     pub next_token: Option<Vec<u8>>,
+}
+
+impl TryFrom<crate::protos::table_store::RowInBatchGetRowResponse> for RowInBatchGetRowResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::table_store::RowInBatchGetRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::table_store::RowInBatchGetRowResponse {
+            is_ok,
+            error,
+            consumed,
+            row,
+            next_token,
+        } = value;
+
+        Ok(Self {
+            is_ok,
+            error,
+            consumed,
+            row: if let Some(row_bytes) = row {
+                if !row_bytes.is_empty() {
+                    Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
+            next_token,
+        })
+    }
 }
 
 /// 批量读取一个表或多个表的响应
@@ -308,43 +354,7 @@ impl TryFrom<crate::protos::table_store::BatchGetRowResponse> for BatchGetRowRes
 
         let mut ret_tables = vec![];
         for t in tables {
-            let crate::protos::table_store::TableInBatchGetRowResponse { table_name, rows } = t;
-
-            let mut ret_rows = vec![];
-
-            for r in rows {
-                let crate::protos::table_store::RowInBatchGetRowResponse {
-                    is_ok,
-                    error,
-                    consumed,
-                    row,
-                    next_token,
-                } = r;
-
-                let ret_row = if is_ok {
-                    RowInBatchGetRowResponse {
-                        is_ok,
-                        error,
-                        consumed,
-                        row: if let Some(row_bytes) = row {
-                            if !row_bytes.is_empty() {
-                                Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        },
-                        next_token,
-                    }
-                } else {
-                    RowInBatchGetRowResponse { is_ok, ..Default::default() }
-                };
-
-                ret_rows.push(ret_row);
-            }
-
-            ret_tables.push(TableInBatchGetRowResponse { table_name, rows: ret_rows });
+            ret_tables.push(t.try_into()?);
         }
 
         Ok(Self { tables: ret_tables })

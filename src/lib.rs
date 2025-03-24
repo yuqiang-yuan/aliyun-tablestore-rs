@@ -12,8 +12,8 @@ use reqwest::{
 };
 
 use data::{
-    BatchGetRowOperation, BatchGetRowRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest,
-    PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest,
+    BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation,
+    GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
@@ -566,5 +566,43 @@ impl OtsClient {
     /// ```
     pub fn batch_get_row(&self, request: BatchGetRowRequest) -> BatchGetRowOperation {
         BatchGetRowOperation::new(self.clone(), request)
+    }
+
+    /// 接口批量插入、修改或删除一个或多个表中的若干行数据。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = OtsClient::from_env();
+    ///
+    /// let uuid: String = UUIDv4.fake();
+    ///
+    /// let t1 = TableInBatchWriteRowRequest::new("data_types").rows(vec![
+    ///     RowInBatchWriteRowRequest::put_row(
+    ///         Row::new()
+    ///             .primary_key_column_string("str_id", &uuid)
+    ///             .column_string("str_col", "column is generated from batch writing"),
+    ///     ),
+    ///     RowInBatchWriteRowRequest::delete_row(Row::new().primary_key_column_string("str_id", "266e79aa-eb74-47d8-9658-e17d52fc012d")),
+    ///     RowInBatchWriteRowRequest::update_row(
+    ///         Row::new()
+    ///             .primary_key_column_string("str_id", "975e9e17-f969-4387-9cef-a6ae9849a10d")
+    ///             .column_double("double_col", 11.234),
+    ///     ),
+    /// ]);
+    ///
+    /// let t2 = TableInBatchWriteRowRequest::new("schools").rows(vec![RowInBatchWriteRowRequest::update_row(
+    ///     Row::new()
+    ///         .primary_key_column_string("school_id", "2")
+    ///         .primary_key_column_integer("id", 1742378007415000)
+    ///         .column_string("name", "School-AAAA"),
+    /// )]);
+    ///
+    /// let req = BatchWriteRowRequest::new().table(t1).table(t2);
+    ///
+    /// let res = client.batch_write_row(req).send().await;
+    /// ```
+    pub fn batch_write_row(&self, request: BatchWriteRowRequest) -> BatchWriteRowOperation {
+        BatchWriteRowOperation::new(self.clone(), request)
     }
 }

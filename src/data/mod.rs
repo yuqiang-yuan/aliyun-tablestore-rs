@@ -1,5 +1,6 @@
 //! 宽表模型数据操作
 mod batch_get_row;
+mod batch_write_row;
 mod delete_row;
 mod get_range;
 mod get_row;
@@ -7,6 +8,7 @@ mod put_row;
 mod update_row;
 
 pub use batch_get_row::*;
+pub use batch_write_row::*;
 pub use delete_row::*;
 pub use get_range::*;
 pub use get_row::*;
@@ -26,7 +28,7 @@ mod test_row_operations {
         protos::table_store::{Direction, ReturnType},
     };
 
-    use super::{BatchGetRowRequest, GetRangeRequest, TableInBatchGetRowRequest};
+    use super::{BatchGetRowRequest, BatchWriteRowRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest, TableInBatchWriteRowRequest};
 
     static INIT: Once = Once::new();
 
@@ -321,5 +323,55 @@ mod test_row_operations {
     #[tokio::test]
     async fn test_batch_get_row() {
         test_batch_get_row_impl().await;
+    }
+
+    async fn test_batch_write_row_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let uuid: String = UUIDv4.fake();
+
+        let t1 = TableInBatchWriteRowRequest::new("data_types").rows(vec![
+            RowInBatchWriteRowRequest::put_row(
+                Row::new()
+                    .primary_key_column_string("str_id", &uuid)
+                    .column_string("str_col", "column is generated from batch writing"),
+            ),
+            RowInBatchWriteRowRequest::delete_row(Row::new().primary_key_column_string("str_id", "266e79aa-eb74-47d8-9658-e17d52fc012d")),
+            RowInBatchWriteRowRequest::update_row(
+                Row::new()
+                    .primary_key_column_string("str_id", "975e9e17-f969-4387-9cef-a6ae9849a10d")
+                    .column_double("double_col", 11.234),
+            ),
+        ]);
+
+        let t2 = TableInBatchWriteRowRequest::new("schools").rows(vec![RowInBatchWriteRowRequest::update_row(
+            Row::new()
+                .primary_key_column_string("school_id", "2")
+                .primary_key_column_integer("id", 1742378007415000)
+                .column_string("name", "School-AAAA"),
+        )]);
+
+        let req = BatchWriteRowRequest::new().table(t1).table(t2);
+
+        let res = client.batch_write_row(req).send().await;
+
+        log::debug!("{:#?}", res);
+
+        assert!(res.is_ok());
+
+        let tmp_res = client
+            .get_row(GetRowRequest::new("data_types").primary_key_column_string("str_id", &uuid))
+            .send()
+            .await;
+
+        assert!(tmp_res.is_ok());
+
+        assert!(tmp_res.unwrap().row.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_batch_write_row() {
+        test_batch_write_row_impl().await
     }
 }
