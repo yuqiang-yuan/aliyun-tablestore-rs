@@ -134,9 +134,8 @@ impl From<RowInBatchWriteRowRequest> for crate::protos::table_store::RowInBatchW
             row_change: row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             condition: Condition {
                 row_existence: row_condition as i32,
-                column_condition: column_condition.map(|c| {
-                    let msg: crate::protos::table_store_filter::Filter = c.into();
-                    msg.encode_to_vec()
+                column_condition: column_condition.map(|f| {
+                    f.into_protobuf_bytes()
                 }),
             },
             return_content: if return_type.is_some() || !return_columns.is_empty() {

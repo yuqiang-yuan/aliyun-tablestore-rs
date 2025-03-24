@@ -149,12 +149,9 @@ impl From<PutRowRequest> for crate::protos::table_store::PutRowRequest {
             row: row_bytes,
             condition: Condition {
                 row_existence: row_condition as i32,
-                column_condition: if let Some(f) = column_condition {
-                    let filter_msg: crate::protos::table_store_filter::Filter = f.into();
-                    Some(filter_msg.encode_to_vec())
-                } else {
-                    None
-                },
+                column_condition: column_condition.map(|f| {
+                    f.into_protobuf_bytes()
+                }),
             },
             return_content: if return_type.is_some() || !return_columns.is_empty() {
                 Some(ReturnContent {

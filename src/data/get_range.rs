@@ -364,8 +364,7 @@ impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
             inclusive_start_primary_key: start_pk_bytes,
             exclusive_end_primary_key: end_pk_bytes,
             filter: filter.map(|f| {
-                let proto_filter: crate::protos::table_store_filter::Filter = f.into();
-                proto_filter.encode_to_vec()
+                f.into_protobuf_bytes()
             }),
             start_column,
             end_column,

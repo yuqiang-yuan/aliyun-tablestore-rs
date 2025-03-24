@@ -276,6 +276,13 @@ pub struct PrimaryKeyColumn {
 }
 
 impl PrimaryKeyColumn {
+    pub fn new(name: &str, value: PrimaryKeyValue) -> Self {
+        Self {
+            name: name.to_string(),
+            value
+        }
+    }
+
     /// 创建字符串类型的主键列及值
     pub fn from_string(name: &str, value: impl Into<String>) -> Self {
         Self {

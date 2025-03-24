@@ -157,8 +157,7 @@ impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
             condition: Condition {
                 row_existence: row_condition as i32,
                 column_condition: if let Some(f) = column_condition {
-                    let filter_msg: crate::protos::table_store_filter::Filter = f.into();
-                    Some(filter_msg.encode_to_vec())
+                    Some(f.into_protobuf_bytes())
                 } else {
                     None
                 },
