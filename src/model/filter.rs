@@ -182,10 +182,7 @@ pub struct ColumnPaginationFilter {
 
 impl ColumnPaginationFilter {
     pub fn new(offset: i32, limit: i32) -> Self {
-        Self {
-            offset,
-            limit
-        }
+        Self { offset, limit }
     }
 
     /// 编码成 Protobuf 字节
@@ -199,7 +196,7 @@ impl From<ColumnPaginationFilter> for crate::protos::table_store_filter::ColumnP
     fn from(value: ColumnPaginationFilter) -> Self {
         crate::protos::table_store_filter::ColumnPaginationFilter {
             offset: value.offset,
-            limit: value.limit
+            limit: value.limit,
         }
     }
 }
@@ -211,14 +208,14 @@ pub struct CompositeColumnValueFilter {
     pub combinator: LogicalOperator,
 
     /// 子条件表达式。
-    pub sub_filters: Vec<Filter>
+    pub sub_filters: Vec<Filter>,
 }
 
 impl CompositeColumnValueFilter {
     pub fn new(combinator: LogicalOperator) -> Self {
         Self {
             combinator,
-            sub_filters: vec![]
+            sub_filters: vec![],
         }
     }
 
@@ -246,18 +243,14 @@ impl CompositeColumnValueFilter {
 
 impl From<CompositeColumnValueFilter> for crate::protos::table_store_filter::CompositeColumnValueFilter {
     fn from(value: CompositeColumnValueFilter) -> Self {
-        let CompositeColumnValueFilter {
-            combinator,
-            sub_filters,
-        } = value;
+        let CompositeColumnValueFilter { combinator, sub_filters } = value;
 
         crate::protos::table_store_filter::CompositeColumnValueFilter {
             combinator: combinator as i32,
-            sub_filters: sub_filters.into_iter().map(|f| f.into()).collect()
+            sub_filters: sub_filters.into_iter().map(|f| f.into()).collect(),
         }
     }
 }
-
 
 /// 过滤器枚举
 #[derive(Debug, Clone)]
@@ -277,13 +270,13 @@ impl From<Filter> for crate::protos::table_store_filter::Filter {
 
             Filter::Pagination(f) => crate::protos::table_store_filter::Filter {
                 r#type: FilterType::FtColumnPagination as i32,
-                filter: f.into_protobuf_bytes()
+                filter: f.into_protobuf_bytes(),
             },
 
             Filter::Composite(f) => crate::protos::table_store_filter::Filter {
                 r#type: FilterType::FtCompositeColumnValue as i32,
-                filter: f.into_protobuf_bytes()
-            }
+                filter: f.into_protobuf_bytes(),
+            },
         }
     }
 }

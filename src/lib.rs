@@ -71,6 +71,56 @@ pub enum OtsOp {
     DeleteRow,
     BatchGetRow,
     BatchWriteRow,
+    BulkImport,
+    BulkExport,
+
+    // stream operations
+    ListStream,
+    DescribeStream,
+    GetShardIterator,
+    GetStreamRecord,
+
+    // index operations
+    CreateIndex,
+    DropIndex,
+
+    // timeseries table operations.
+    CreateTimeseriesTable,
+    ListTimeseriesTable,
+    DescribeTimeseriesTable,
+    UpdateTimeseriesTable,
+    DeleteTimeseriesTable,
+
+    // timeseries table data operations
+    PutTimeseriesData,
+    GetTimeseriesData,
+    UpdateTimeseriesMeta,
+    QueryTimeseriesMeta,
+    DeleteTimeseriesMeta,
+    SplitTimeseriesScanTask,
+    ScanTimeseriesData,
+
+    // timeseries table analyzing operations
+    CreateTimeseriesAnalyticalStore,
+    UpdateTimeseriesAnalyticalStore,
+    DescribeTimeseriesAnalyticalStore,
+    DeleteTimeseriesAnalyticalStore,
+
+    // search index operations
+    CreateSearchIndex,
+    UpdateSearchIndex,
+    ListSearchIndex,
+    DescribeSearchIndex,
+    DeleteSearchIndex,
+    Search,
+    ComputeSplits,
+    ParallelScan,
+
+    // tunnel operations
+    CreateTunnel,
+    ListTunnel,
+    DescribeTunnel,
+    DeleteTunnel,
 }
 
 impl From<OtsOp> for String {
@@ -101,9 +151,81 @@ impl Display for OtsOp {
             OtsOp::DeleteRow => "DeleteRow",
             OtsOp::BatchGetRow => "BatchGetRow",
             OtsOp::BatchWriteRow => "BatchWriteRow",
+            OtsOp::BulkImport => "BulkImport",
+            OtsOp::BulkExport => "BulkExport",
+
+            OtsOp::CreateTunnel => "CreateTunnel",
+            OtsOp::ListTunnel => "ListTunnel",
+            OtsOp::DescribeTunnel => "DescribeTunnel",
+            OtsOp::DeleteTunnel => "DeleteTunnel",
+
+            OtsOp::ListStream => "ListStream",
+            OtsOp::DescribeStream => "DescribeStream",
+            OtsOp::GetShardIterator => "GetShardIterator",
+            OtsOp::GetStreamRecord => "GetStreamRecord",
+
+            OtsOp::CreateIndex => "CreateIndex",
+            OtsOp::DropIndex => "DropIndex",
+
+            OtsOp::CreateTimeseriesTable => "CreateTimeseriesTable",
+            OtsOp::ListTimeseriesTable => "ListTimeseriesTable",
+            OtsOp::DescribeTimeseriesTable => "DescribeTimeseriesTable",
+            OtsOp::UpdateTimeseriesTable => "UpdateTimeseriesTable",
+            OtsOp::DeleteTimeseriesTable => "DeleteTimeseriesTable",
+
+            OtsOp::PutTimeseriesData => "PutTimeseriesData",
+            OtsOp::GetTimeseriesData => "GetTimeseriesData",
+            OtsOp::UpdateTimeseriesMeta => "UpdateTimeseriesMeta",
+            OtsOp::QueryTimeseriesMeta => "QueryTimeseriesMeta",
+            OtsOp::DeleteTimeseriesMeta => "DeleteTimeseriesMeta",
+            OtsOp::SplitTimeseriesScanTask => "SplitTimeseriesScanTask",
+            OtsOp::ScanTimeseriesData => "ScanTimeseriesData",
+
+            OtsOp::CreateTimeseriesAnalyticalStore => "CreateTimeseriesAnalyticalStore",
+            OtsOp::UpdateTimeseriesAnalyticalStore => "UpdateTimeseriesAnalyticalStore",
+            OtsOp::DescribeTimeseriesAnalyticalStore => "DescribeTimeseriesAnalyticalStore",
+            OtsOp::DeleteTimeseriesAnalyticalStore => "DeleteTimeseriesAnalyticalStore",
+
+            OtsOp::CreateSearchIndex => "CreateSearchIndex",
+            OtsOp::UpdateSearchIndex => "UpdateSearchIndex",
+            OtsOp::ListSearchIndex => "ListSearchIndex",
+            OtsOp::DescribeSearchIndex => "DescribeSearchIndex",
+            OtsOp::DeleteSearchIndex => "DeleteSearchIndex",
+            OtsOp::Search => "Search",
+            OtsOp::ComputeSplits => "ComputeSplits",
+            OtsOp::ParallelScan => "ParallelScan",
         };
 
         write!(f, "{}", s)
+    }
+}
+
+impl OtsOp {
+    /// 检测一个操作是否是幂等的
+    pub fn is_idempotent(&self) -> bool {
+        match self {
+            Self::ListTable
+            | Self::DescribeTable
+            | Self::GetRow
+            | Self::GetRange
+            | Self::BatchGetRow
+            | Self::BulkExport
+            | Self::ListStream
+            | Self::DescribeStream
+            | Self::GetShardIterator
+            | Self::ComputeSplitPointsBySize
+            | Self::GetTimeseriesData
+            | Self::QueryTimeseriesMeta
+            | Self::ListTimeseriesTable
+            | Self::DescribeTimeseriesTable
+            | Self::ScanTimeseriesData
+            | Self::DescribeTimeseriesAnalyticalStore
+            | Self::ParallelScan
+            | Self::ComputeSplits
+            | Self::ListTunnel
+            | Self::DescribeTunnel => true,
+            _ => false,
+        }
     }
 }
 
@@ -131,7 +253,13 @@ impl Default for OtsRequest {
 }
 
 pub trait RetryPolicy: std::fmt::Debug + Send + Sync {
-    fn should_retry(&self, op: OtsOp, api_error: crate::table_store::Error) -> bool;
+    /// 是否需要重试。参数分别表示重试次数、操作和发生的错误
+    fn should_retry(&self, retried: u32, op: OtsOp, ots_error: &OtsError) -> bool;
+
+    /// 如果需要重试，重试之前让线程等待的时间
+    fn delay_ms(&self) -> u32;
+
+    /// 需要自行实现克隆逻辑。一般来说就是需要重置一些记录参数，为下一次全新的请求做准备
     fn clone_box(&self) -> Box<dyn RetryPolicy>;
 }
 
@@ -141,16 +269,79 @@ impl Clone for Box<dyn RetryPolicy> {
     }
 }
 
-#[derive(Debug)]
-pub struct DefaultRetryPolicy;
+/// 默认重试机制，做多重试 10 次（加上最开始的 1 次，总计就是发送 11 次请求）。
+/// 两次重试之间休眠 10 秒
+#[derive(Debug, Copy, Clone)]
+pub struct DefaultRetryPolicy {
+    pub max_retry_times: u32,
+}
+
+impl Default for DefaultRetryPolicy {
+    fn default() -> Self {
+        Self {
+            max_retry_times: 10,
+        }
+    }
+}
+
+impl DefaultRetryPolicy {
+    /// 无论是什么操作，只要是这些错误码，就重试
+    const RETRY_NO_MATTER_ACTIONS_ERR_CODES: &[&'static str] = &[
+        "OTSRowOperationConflict",
+        "OTSNotEnoughCapacityUnit",
+        "OTSTableNotReady",
+        "OTSPartitionUnavailable",
+        "OTSServerBusy",
+    ];
+
+    const ERR_OTS_QUOTA_EXHAUSTED_MSG: &str = "Too frequent table operations.";
+
+    // 仅针对幂等的操作，如果遇到这些错误码，重试
+    const RETRY_FOR_IDEMPOTENT_ACTIONS_ERR_CODES: &[&'static str] =
+        &["OTSTimeout", "OTSInternalServerError", "OTSServerUnavailable", "OTSTunnelServerUnavailable"];
+
+    fn should_retry_inner(&self, retried: u32, op: OtsOp, ots_error: &OtsError) -> bool {
+        if retried >= self.max_retry_times {
+            log::info!("max retry reached {} times for operation {} with error {}", self.max_retry_times, op, ots_error);
+            return false;
+        }
+
+        match ots_error {
+            // 网络请求错误，重试
+            OtsError::ReqwestError(_) => true,
+
+            // 5xx 的状态码 + 幂等操作，重试
+            OtsError::StatusError(code, _) => code.is_server_error() && op.is_idempotent(),
+
+            // API 错误， OTSQuotaExhausted 错误码 + 固定的错误消息，重试
+            OtsError::ApiError(api_error)
+                if api_error.code == "OTSQuotaExhausted" && api_error.message == Some(Self::ERR_OTS_QUOTA_EXHAUSTED_MSG.to_string()) =>
+            {
+                true
+            }
+
+            // 其他的就是无论什么操作都重试的错误，以及幂等操作对应的错误码
+            OtsError::ApiError(api_error) => {
+                (Self::RETRY_NO_MATTER_ACTIONS_ERR_CODES.contains(&api_error.code.as_str()))
+                    || (op.is_idempotent() && Self::RETRY_FOR_IDEMPOTENT_ACTIONS_ERR_CODES.contains(&api_error.code.as_str()))
+            }
+
+            _ => false,
+        }
+    }
+}
 
 impl RetryPolicy for DefaultRetryPolicy {
-    fn should_retry(&self, _op: OtsOp, _api_error: crate::table_store::Error) -> bool {
-        false
+    fn should_retry(&self, retried: u32, op: OtsOp, ots_error: &OtsError) -> bool {
+        self.should_retry_inner(retried, op, ots_error)
     }
 
     fn clone_box(&self) -> Box<dyn RetryPolicy> {
-        Box::new(DefaultRetryPolicy)
+        Box::new(DefaultRetryPolicy::default())
+    }
+
+    fn delay_ms(&self) -> u32 {
+        10000
     }
 }
 
@@ -163,9 +354,13 @@ pub struct OtsClientOptions {
 impl OtsClientOptions {
     pub fn new() -> Self {
         Self {
-            retry_policy: Box::new(DefaultRetryPolicy),
+            retry_policy: Box::new(DefaultRetryPolicy::default()),
             timeout_ms: None,
         }
+    }
+
+    pub fn retry_policy_mut(&mut self) -> &mut Box<dyn RetryPolicy> {
+        &mut self.retry_policy
     }
 }
 
@@ -305,36 +500,57 @@ impl OtsClient {
         let request_body = Bytes::from_owner(body);
         let url = Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap();
 
-        let mut request_builder = self
-            .http_client
-            .request(method, url.clone())
-            .headers(header_map.clone())
-            .body(request_body.clone());
+        let mut retried = 0u32;
 
-        // Handle per-request options
-        if let Some(ms) = self.options.timeout_ms {
-            request_builder = request_builder.timeout(Duration::from_millis(ms));
-        }
+        loop {
+            let mut request_builder = self
+                .http_client
+                .request(method.clone(), url.clone())
+                .headers(header_map.clone())
+                .body(request_body.clone());
 
-        let response = request_builder.send().await?;
+            // Handle per-request options
+            if let Some(ms) = self.options.timeout_ms {
+                request_builder = request_builder.timeout(Duration::from_millis(ms));
+            }
 
-        response.headers().iter().for_each(|(k, v)| {
-            log::debug!("<< header: {}: {}", k, v.to_str().unwrap());
-        });
+            let response = request_builder.send().await?;
 
-        if !&response.status().is_success() {
-            let status = response.status();
+            response.headers().iter().for_each(|(k, v)| {
+                log::debug!("<< header: {}: {}", k, v.to_str().unwrap());
+            });
 
-            match response.bytes().await {
-                Ok(bytes) => {
-                    let api_error = table_store::Error::decode(bytes)?;
-                    return Err(OtsError::ApiError(Box::new(api_error)));
+            if response.status().is_success() {
+                return Ok(response);
+            }
+
+            if !&response.status().is_success() {
+                let status = response.status();
+
+                let e = match response.bytes().await {
+                    Ok(bytes) => {
+                        let api_error = table_store::Error::decode(bytes)?;
+                        OtsError::ApiError(Box::new(api_error))
+                    }
+                    Err(_) => OtsError::StatusError(status, "".to_string()),
+                };
+
+                log::error!("api call failed, check retry against retry policy for operation {} and error {}", operation, e);
+                let should_retry = self.options.retry_policy.should_retry(retried, operation, &e);
+                log::info!("should retry {} for operation {} with error {}", should_retry, operation, e);
+
+                if !should_retry {
+                    return Err(e);
                 }
-                Err(_) => return Err(OtsError::StatusError(status, "".to_string())),
+
+                let next_delay = self.options.retry_policy.delay_ms();
+                log::info!("delay for {} ms to retry", next_delay);
+                tokio::time::sleep(tokio::time::Duration::from_millis(next_delay as u64)).await;
+
+                retried += 1;
             }
         }
 
-        Ok(response)
     }
 
     /// 列出实例下的宽表

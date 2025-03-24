@@ -210,4 +210,19 @@ mod test_table {
     async fn test_delete_table() {
         test_delete_table_impl().await;
     }
+
+    async fn test_retry_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        for i in 0..100 {
+            let _ = client.list_table().send().await;
+            log::debug!("list table to test retry, round: {}", i + 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry() {
+        test_retry_impl().await;
+    }
 }

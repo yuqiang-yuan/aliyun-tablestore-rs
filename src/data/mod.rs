@@ -22,7 +22,14 @@ mod test_row_operations {
     use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
-        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest}, error::OtsError, model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter}, protos::{table_store::{Direction, ReturnType}, table_store_filter::LogicalOperator}, OtsClient
+        OtsClient,
+        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
+        error::OtsError,
+        model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
+        protos::{
+            table_store::{Direction, ReturnType},
+            table_store_filter::LogicalOperator,
+        },
     };
 
     use super::{BatchGetRowRequest, BatchWriteRowRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest, TableInBatchWriteRowRequest};
@@ -385,9 +392,7 @@ mod test_row_operations {
             .column_string("str_col", "1")
             .column_bool("bool_col", false);
 
-        let res = client.put_row(
-            PutRowRequest::new("data_types").row(new_row)
-        ).send().await;
+        let res = client.put_row(PutRowRequest::new("data_types").row(new_row)).send().await;
 
         assert!(res.is_ok());
 
@@ -396,17 +401,18 @@ mod test_row_operations {
             .column_string("str_col", "2")
             .column_bool("bool_col", false);
 
-        let res = client.update_row(
-            UpdateRowRequest::new("data_types")
-                .row(update_row)
-                .column_condition(
-                    Filter::Composite(
-                        CompositeColumnValueFilter::new(LogicalOperator::LoAnd)
-                            .sub_filter(Filter::Single(SingleColumnValueFilter::new().equal_column(Column::from_string("str_col", "2"))))
-                            .sub_filter(Filter::Single(SingleColumnValueFilter::new().equal_column(Column::from_string("bool_col", "false"))))
-                    )
-                )
-        ).send().await;
+        let res = client
+            .update_row(
+                UpdateRowRequest::new("data_types").row(update_row).column_condition(Filter::Composite(
+                    CompositeColumnValueFilter::new(LogicalOperator::LoAnd)
+                        .sub_filter(Filter::Single(SingleColumnValueFilter::new().equal_column(Column::from_string("str_col", "2"))))
+                        .sub_filter(Filter::Single(
+                            SingleColumnValueFilter::new().equal_column(Column::from_string("bool_col", "false")),
+                        )),
+                )),
+            )
+            .send()
+            .await;
 
         assert!(res.is_err());
 
@@ -414,7 +420,7 @@ mod test_row_operations {
             let crate::protos::table_store::Error {
                 code,
                 message: _,
-                access_denied_detail: _
+                access_denied_detail: _,
             } = *apie;
 
             assert_eq!("OTSConditionCheckFail", code);
