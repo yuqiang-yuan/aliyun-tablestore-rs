@@ -50,7 +50,6 @@ impl UpdateTableRequest {
         self
     }
 
-
     /// 预设读取吞吐量。最大 100000 CU
     pub fn reserved_throughput_read(mut self, read_cu: i32) -> Self {
         self.reserved_throughput_read = Some(read_cu);
@@ -174,7 +173,7 @@ impl From<UpdateTableRequest> for crate::protos::table_store::UpdateTableRequest
 #[derive(Default)]
 pub struct UpdateTableOperation {
     client: OtsClient,
-    request: UpdateTableRequest
+    request: UpdateTableRequest,
 }
 
 add_per_request_options!(UpdateTableOperation);
@@ -182,19 +181,13 @@ add_per_request_options!(UpdateTableOperation);
 impl UpdateTableOperation {
     /// Create a new update table operation
     pub(crate) fn new(client: OtsClient, request: UpdateTableRequest) -> Self {
-        Self {
-            client,
-            request,
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<UpdateTableResponse> {
         self.request.validate()?;
 
-        let Self {
-            client,
-            request,
-        } = self;
+        let Self { client, request } = self;
 
         let msg: crate::protos::table_store::UpdateTableRequest = request.into();
 

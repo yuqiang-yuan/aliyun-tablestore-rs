@@ -17,3 +17,7 @@ There operations are implemented:
     - Delete column
   - Row operations
     - Get row
+    - Get range
+    - Put row
+    - Update row
+    - Delete row

@@ -9,13 +9,13 @@ use crate::{
     protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, TAG_DELETE_ROW_MARKER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK},
 };
 
-use super::{Column, ColumnOp, ColumnValue, PrimaryKeyColumn, PrimaryKeyValue};
+use super::{Column, ColumnOp, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue};
 
 /// 宽表模型的行
 #[derive(Debug, Clone, Default)]
 pub struct Row {
     /// 主键列
-    pub primary_keys: Vec<PrimaryKeyColumn>,
+    pub primary_key: PrimaryKey,
 
     /// 数据列
     pub columns: Vec<Column>,
@@ -33,7 +33,7 @@ enum RowType {
 impl Row {
     pub fn new() -> Self {
         Self {
-            primary_keys: vec![],
+            primary_key: PrimaryKey::default(),
             columns: vec![],
             deleted: false,
         }
@@ -41,7 +41,7 @@ impl Row {
 
     /// 获取给定名称的主键的值
     pub fn get_primary_key_value(&self, name: &str) -> Option<&PrimaryKeyValue> {
-        self.primary_keys.iter().find(|pk| pk.name.as_str() == name).map(|col| &col.value)
+        self.primary_key.columns.iter().find(|pk| pk.name.as_str() == name).map(|col| &col.value)
     }
 
     /// 获取给定名称的列的值, 适用于列在行中只出现一次的情况
@@ -56,7 +56,7 @@ impl Row {
         if self.deleted {
             size += 1;
         }
-        size + self.primary_keys.iter().map(|k| k.compute_size()).sum::<u32>() + self.columns.iter().map(|c| c.compute_size()).sum::<u32>()
+        size + self.primary_key.columns.iter().map(|k| k.compute_size()).sum::<u32>() + self.columns.iter().map(|c| c.compute_size()).sum::<u32>()
     }
 
     /// 输出 plain buffer 的编码
@@ -90,14 +90,10 @@ impl Row {
     }
 
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, _masks: u32) {
-        let Self {
-            primary_keys,
-            columns,
-            deleted,
-        } = self;
+        let Self { primary_key, columns, deleted } = self;
 
         cursor.write_u8(TAG_ROW_PK).unwrap();
-        for key_col in primary_keys {
+        for key_col in &primary_key.columns {
             key_col.write_plain_buffer(cursor);
         }
 
@@ -120,7 +116,7 @@ impl Row {
     /// 从 cursor 构建行
     pub(crate) fn read_plain_buffer(cursor: &mut Cursor<Vec<u8>>) -> OtsResult<Self> {
         let mut row_type: RowType = RowType::PrimaryKey;
-        let mut primary_keys = vec![];
+        let mut pk_columns = vec![];
         let mut columns = vec![];
 
         loop {
@@ -146,7 +142,7 @@ impl Row {
                     RowType::PrimaryKey => {
                         let pkc = PrimaryKeyColumn::read_plain_buffer(cursor)?;
                         // log::debug!("primary key column read: {:#?}", pkc);
-                        primary_keys.push(pkc);
+                        pk_columns.push(pkc);
                     }
 
                     RowType::Column => {
@@ -161,7 +157,7 @@ impl Row {
                     let checksum = cursor.read_u8()?;
 
                     let mut row_checksum = 0u8;
-                    for key_col in &primary_keys {
+                    for key_col in &pk_columns {
                         // log::debug!("primary key: {:#?}", key_col);
                         row_checksum = crc_u8(row_checksum, key_col.crc8_checksum());
                     }
@@ -187,7 +183,7 @@ impl Row {
         }
 
         Ok(Self {
-            primary_keys,
+            primary_key: PrimaryKey { columns: pk_columns },
             columns,
             deleted: false,
         })
@@ -196,7 +192,7 @@ impl Row {
     /// 计算整行的校验码
     pub(crate) fn crc8_checksum(&self) -> u8 {
         let mut checksum = 0u8;
-        for key_col in &self.primary_keys {
+        for key_col in &self.primary_key.columns {
             let cell_checksum = key_col.crc8_checksum();
             // log::debug!("primary key: {} crc8 checksum: {:02x}", key_col.name, cell_checksum);
             checksum = crc_u8(checksum, cell_checksum);
@@ -212,30 +208,37 @@ impl Row {
         checksum
     }
 
-    /// 添加一个创建好的主键列
-    pub fn primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
-        self.primary_keys.push(pk);
+    /// 设置主键
+    pub fn primary_key(mut self, pk: PrimaryKey) -> Self {
+        self.primary_key = pk;
 
         self
     }
 
-    /// 用给定的主键列集合替换现有的主键
-    pub fn primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.primary_keys = pks.into_iter().collect();
+    /// 添加一个主键列
+    pub fn primary_key_column(mut self, pk_col: PrimaryKeyColumn) -> Self {
+        self.primary_key.columns.push(pk_col);
+
+        self
+    }
+
+    /// 设置全部主键列
+    pub fn primary_key_columns(mut self, pk_cols: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.primary_key.columns = pk_cols.into_iter().collect();
 
         self
     }
 
     /// 添加字符串类型的主键值
-    pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn::from_string(name, value));
+    pub fn primary_key_column_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn::from_string(name, value));
 
         self
     }
 
     /// 添加整数类型的主键值
-    pub fn primary_key_integer(mut self, name: &str, value: i64) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn {
+    pub fn primary_key_column_integer(mut self, name: &str, value: i64) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Integer(value),
         });
@@ -244,8 +247,8 @@ impl Row {
     }
 
     /// 添加二进制类型的主键值
-    pub fn primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn {
+    pub fn primary_key_column_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Binary(value.into()),
         });
@@ -254,8 +257,8 @@ impl Row {
     }
 
     /// 添加自增主键列
-    pub fn primary_key_auto_increment(mut self, name: &str) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn::auto_increment(name));
+    pub fn primary_key_column_auto_increment(mut self, name: &str) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn::auto_increment(name));
 
         self
     }
@@ -356,7 +359,7 @@ mod test_row {
     use base64::{Engine, prelude::BASE64_STANDARD};
 
     use crate::{
-        model::{Column, ColumnValue, PrimaryKeyColumn},
+        model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn},
         protos::plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
     };
 
@@ -467,10 +470,12 @@ mod test_row {
         let md5_expected = "gpADtIzJpJRgXgSMKOUHTQ==";
 
         let row = Row {
-            primary_keys: vec![
-                PrimaryKeyColumn::from_string("school_id", "1"),
-                PrimaryKeyColumn::from_integer("id", 1742373697699000),
-            ],
+            primary_key: PrimaryKey {
+                columns: vec![
+                    PrimaryKeyColumn::from_string("school_id", "1"),
+                    PrimaryKeyColumn::from_integer("id", 1742373697699000),
+                ],
+            },
             columns: vec![],
             deleted: false,
         };
@@ -488,10 +493,12 @@ mod test_row {
         let md5_expected = "LkUq5OPGrWhSyrC7qenr2A==";
 
         let row = Row {
-            primary_keys: vec![
-                PrimaryKeyColumn::from_string("school_id", "2"),
-                PrimaryKeyColumn::from_integer("id", 1742378007415000),
-            ],
+            primary_key: PrimaryKey {
+                columns: vec![
+                    PrimaryKeyColumn::from_string("school_id", "1"),
+                    PrimaryKeyColumn::from_integer("id", 1742373697699000),
+                ],
+            },
             columns: vec![Column {
                 name: "name".to_string(),
                 value: ColumnValue::String("School-A".to_string()),

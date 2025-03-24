@@ -1,10 +1,12 @@
 //! 宽表模型数据操作
+mod batch_get_row;
 mod delete_row;
 mod get_range;
 mod get_row;
 mod put_row;
 mod update_row;
 
+pub use batch_get_row::*;
 pub use delete_row::*;
 pub use get_range::*;
 pub use get_row::*;
@@ -20,11 +22,11 @@ mod test_row_operations {
     use crate::{
         OtsClient,
         data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
-        model::{Column, ColumnValue, PrimaryKeyValue, Row, SingleColumnValueFilter},
+        model::{Column, ColumnValue, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
         protos::table_store::{Direction, ReturnType},
     };
 
-    use super::GetRangeRequest;
+    use super::{BatchGetRowRequest, GetRangeRequest, TableInBatchGetRowRequest};
 
     static INIT: Once = Once::new();
 
@@ -41,8 +43,8 @@ mod test_row_operations {
         let response = client
             .get_row(
                 GetRowRequest::new("schools")
-                    .primary_key_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
-                    .primary_key_integer("id", 1742203524276000)
+                    .primary_key_column_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+                    .primary_key_column_integer("id", 1742203524276000)
                     .max_versions(1),
             )
             .send()
@@ -57,7 +59,8 @@ mod test_row_operations {
                 .row
                 .as_ref()
                 .unwrap()
-                .primary_keys
+                .primary_key
+                .columns
                 .iter()
                 .any(|k| { &k.name == "school_id" && k.value == PrimaryKeyValue::String("00020FFB-BB14-CCAD-0181-A929E71C7312".to_string()) })
         );
@@ -73,14 +76,14 @@ mod test_row_operations {
         let client = OtsClient::from_env();
 
         let mut get_range_req = GetRangeRequest::new("ccNgMemberRecord")
-            .start_primary_key_string("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
-            .start_primary_key_string("stat_date", "2023-12-04")
-            .start_primary_key_inf_min("user_id")
-            .start_primary_key_inf_min("id")
-            .end_primary_key_string("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
-            .end_primary_key_string("stat_date", "2023-12-04")
-            .end_primary_key_inf_max("user_id")
-            .end_primary_key_inf_max("id")
+            .start_primary_key_column_string("cc_id", "0080669C-3A83-4B94-8D3A-C4A1FC54EBB1")
+            .start_primary_key_column_string("stat_date", "2023-12-04")
+            .start_primary_key_column_inf_min("user_id")
+            .start_primary_key_column_inf_min("id")
+            .end_primary_key_column_string("cc_id", "0082455B-D5A7-11E8-AF2C-7CD30AC4E9EA")
+            .end_primary_key_column_string("stat_date", "2023-12-04")
+            .end_primary_key_column_inf_max("user_id")
+            .end_primary_key_column_inf_max("id")
             .filter(crate::model::Filter::Single(
                 SingleColumnValueFilter::new()
                     .equal_column(Column::from_string("cc_school_id", "A006D67B-4330-1DEF-1354-0DB43F2F5F21"))
@@ -118,7 +121,7 @@ mod test_row_operations {
 
             if let Some(keys) = response.next_start_primary_key {
                 log::debug!("Going to send next query");
-                get_range_req = get_range_req.start_primary_keys(keys);
+                get_range_req = get_range_req.start_primary_key_columns(keys);
             } else {
                 break;
             }
@@ -140,8 +143,8 @@ mod test_row_operations {
         let school_id = UUIDv4.fake();
 
         let row = Row::default()
-            .primary_key_string("school_id", &school_id)
-            .primary_key_auto_increment("id")
+            .primary_key_column_string("school_id", &school_id)
+            .primary_key_column_auto_increment("id")
             .column_string("name", Name(ZH_CN).fake::<String>())
             .column_string("province", Name(ZH_CN).fake::<String>());
 
@@ -181,7 +184,7 @@ mod test_row_operations {
             .put_row(
                 PutRowRequest::new(table_name).row(
                     Row::new()
-                        .primary_key_string("str_id", &id)
+                        .primary_key_column_string("str_id", &id)
                         .column_string("str_col", "a")
                         .column_integer("int_col", 1)
                         .column_double("double_col", 1.234)
@@ -200,7 +203,7 @@ mod test_row_operations {
                 UpdateRowRequest::new(table_name)
                     .row(
                         Row::new()
-                            .primary_key_string("str_id", &id)
+                            .primary_key_column_string("str_id", &id)
                             .column_string("str_col", "b")
                             .column_to_increse("int_col", 1)
                             .column_bool("bool_col", true)
@@ -215,7 +218,10 @@ mod test_row_operations {
 
         log::debug!("update row response: {:#?}", response);
 
-        let response = client.get_row(GetRowRequest::new(table_name).primary_key_string("str_id", &id)).send().await;
+        let response = client
+            .get_row(GetRowRequest::new(table_name).primary_key_column_string("str_id", &id))
+            .send()
+            .await;
 
         assert!(response.is_ok());
 
@@ -244,7 +250,7 @@ mod test_row_operations {
 
         let id: String = UUIDv4.fake();
         let row = Row::new()
-            .primary_key_string("str_id", &id)
+            .primary_key_column_string("str_id", &id)
             .column_string("str_col", "hello, you are inserted to be deleted")
             .column_bool("bool_col", true);
 
@@ -255,7 +261,7 @@ mod test_row_operations {
         assert!(res.is_ok());
 
         let res = client
-            .delete_row(DeleteRowRequest::new(table_name).primary_key_string("str_id", &id))
+            .delete_row(DeleteRowRequest::new(table_name).primary_key_column_string("str_id", &id))
             .send()
             .await;
         log::debug!("{:#?}", res);
@@ -265,5 +271,55 @@ mod test_row_operations {
     #[tokio::test]
     async fn test_delete_row() {
         test_delete_row_impl().await;
+    }
+
+    async fn test_batch_get_row_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let t1 = TableInBatchGetRowRequest::new("data_types")
+            .primary_key(PrimaryKey::new().column_string("str_id", "1"))
+            .primary_key(PrimaryKey::new().column_string("str_id", "02421870-56d8-4429-a548-27e0e1f42894"));
+
+        let t2 = TableInBatchGetRowRequest::new("schools").primary_key(
+            PrimaryKey::new()
+                .column_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+                .column_integer("id", 1742203524276000),
+        );
+
+        let request = BatchGetRowRequest::new().tables(vec![t1, t2]);
+
+        let res = client.batch_get_row(request).send().await;
+
+        log::debug!("batch get row response: {:#?}", res);
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert_eq!(2, res.tables.len());
+
+        let tables = &res.tables;
+
+        assert_eq!(2, tables.get(0).unwrap().rows.len());
+
+        assert_eq!(
+            &Some(&PrimaryKeyValue::String("02421870-56d8-4429-a548-27e0e1f42894".to_string())),
+            &tables
+                .get(0)
+                .unwrap()
+                .rows
+                .get(1)
+                .unwrap()
+                .row
+                .as_ref()
+                .unwrap()
+                .get_primary_key_value("str_id")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_batch_get_row() {
+        test_batch_get_row_impl().await;
     }
 }

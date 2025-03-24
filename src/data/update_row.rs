@@ -117,11 +117,11 @@ impl UpdateRowRequest {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
-        if self.row.primary_keys.is_empty() {
+        if self.row.primary_key.columns.is_empty() {
             return Err(OtsError::ValidationFailed("invalid primary keys: empty".to_string()));
         }
 
-        for key_col in &self.row.primary_keys {
+        for key_col in &self.row.primary_key.columns {
             if !validate_column_name(&key_col.name) {
                 return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", key_col.name)));
             }

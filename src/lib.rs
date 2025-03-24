@@ -12,8 +12,8 @@ use reqwest::{
 };
 
 use data::{
-    DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest,
-    UpdateRowOperation, UpdateRowRequest,
+    BatchGetRowOperation, BatchGetRowRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest,
+    PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
@@ -537,5 +537,34 @@ impl OtsClient {
     /// ```
     pub fn delete_row(&self, request: DeleteRowRequest) -> DeleteRowOperation {
         DeleteRowOperation::new(self.clone(), request)
+    }
+
+    /// 批量读取一个表或多个表中的若干行数据
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = OtsClient::from_env();
+    ///
+    /// let t1 = TableInBatchGetRowRequest::new("data_types")
+    ///     .primary_key(
+    ///         PrimaryKey::new().column_string("str_id", "1")
+    ///     ).primary_key(
+    ///         PrimaryKey::new().column_string("str_id", "02421870-56d8-4429-a548-27e0e1f42894")
+    ///     );
+    ///
+    /// let t2 = TableInBatchGetRowRequest::new("schools").primary_key(
+    ///     PrimaryKey::new().column_string("school_id", "00020FFB-BB14-CCAD-0181-A929E71C7312")
+    ///         .column_integer("id", 1742203524276000)
+    /// );
+    ///
+    /// let request = BatchGetRowRequest::new().tables(
+    ///     vec![t1, t2]
+    /// );
+    ///
+    /// let res = client.batch_get_row(request).send().await;
+    /// ```
+    pub fn batch_get_row(&self, request: BatchGetRowRequest) -> BatchGetRowOperation {
+        BatchGetRowOperation::new(self.clone(), request)
     }
 }

@@ -56,7 +56,12 @@ pub(crate) mod rules {
 mod test_table {
     use std::sync::Once;
 
-    use crate::{index::IndexMetaBuilder, protos::table_store::IndexType, table::{CreateTableRequest, UpdateTableRequest}, OtsClient};
+    use crate::{
+        OtsClient,
+        index::IndexMetaBuilder,
+        protos::table_store::IndexType,
+        table::{CreateTableRequest, UpdateTableRequest},
+    };
 
     static INIT: Once = Once::new();
 
@@ -171,11 +176,10 @@ mod test_table {
     async fn test_update_table_impl() {
         setup();
         let client = OtsClient::from_env();
-        let response = client.update_table(
-            UpdateTableRequest::new("ccs")
-                .reserved_throughput_read(0)
-                .reserved_throughput_write(0)
-        ).send().await;
+        let response = client
+            .update_table(UpdateTableRequest::new("ccs").reserved_throughput_read(0).reserved_throughput_write(0))
+            .send()
+            .await;
 
         log::debug!("{:#?}", response);
         assert!(response.is_ok());

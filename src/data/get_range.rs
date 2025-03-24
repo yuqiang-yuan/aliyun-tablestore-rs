@@ -1,4 +1,4 @@
-use crate::model::{PrimaryKeyValue, Row};
+use crate::model::Row;
 use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
 use crate::protos::table_store::ConsumedCapacity;
 use crate::table::rules::validate_table_name;
@@ -33,10 +33,10 @@ pub struct GetRangeRequest {
     pub time_range_specific_ms: Option<i64>,
 
     /// 本次范围读取的起始主键，包含
-    pub inclusive_start_primary_keys: Vec<PrimaryKeyColumn>,
+    pub inclusive_start_primary_key: PrimaryKey,
 
     /// 本次范围读取的终止主键，不包含
-    pub exclusive_end_primary_keys: Vec<PrimaryKeyColumn>,
+    pub exclusive_end_primary_key: PrimaryKey,
 
     /// 最多返回的版本个数。
     pub max_versions: Option<i32>,
@@ -83,113 +83,123 @@ impl GetRangeRequest {
         self
     }
 
-    /// 添加一个主键列的查询范围
-    pub fn primary_key_range(mut self, name: &str, start_value_inclusive: PrimaryKeyValue, end_value_exclusive: PrimaryKeyValue) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn {
-            name: name.to_string(),
-            value: start_value_inclusive,
-        });
+    /// 添加主键查询范围
+    pub fn primary_key_range(mut self, start_pk: PrimaryKey, end_pk: PrimaryKey) -> Self {
+        self.inclusive_start_primary_key = start_pk;
+        self.exclusive_end_primary_key = end_pk;
 
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn {
-            name: name.to_string(),
-            value: end_value_exclusive,
-        });
+        self
+    }
+
+    pub fn start_primary_key(mut self, pk: PrimaryKey) -> Self {
+        self.inclusive_start_primary_key = pk;
 
         self
     }
 
     /// 添加一个开始主键列
-    pub fn start_primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
-        self.inclusive_start_primary_keys.push(pk);
+    pub fn start_primary_key_column(mut self, pk_col: PrimaryKeyColumn) -> Self {
+        self.inclusive_start_primary_key.columns.push(pk_col);
 
         self
     }
 
     /// 设置开始主键列
-    pub fn start_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.inclusive_start_primary_keys = pks.into_iter().collect();
+    pub fn start_primary_key_columns(mut self, pk_cols: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.inclusive_start_primary_key = PrimaryKey {
+            columns: pk_cols.into_iter().collect(),
+        };
 
         self
     }
 
     /// 添加字符串类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn start_primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_string(name, value));
+    pub fn start_primary_key_column_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.inclusive_start_primary_key.columns.push(PrimaryKeyColumn::from_string(name, value));
         self
     }
 
     /// 添加整数类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn start_primary_key_integer(mut self, name: &str, value: i64) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_integer(name, value));
+    pub fn start_primary_key_column_integer(mut self, name: &str, value: i64) -> Self {
+        self.inclusive_start_primary_key.columns.push(PrimaryKeyColumn::from_integer(name, value));
 
         self
     }
 
     /// 添加二进制类型的开始主键查询值。本次范围读取的起始主键，如果该行存在，则响应中一定会包含此行。
-    pub fn start_primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::from_binary(name, value));
+    pub fn start_primary_key_column_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.inclusive_start_primary_key.columns.push(PrimaryKeyColumn::from_binary(name, value));
 
         self
     }
 
     /// 添加无穷小值开始主键
-    pub fn start_primary_key_inf_min(mut self, name: &str) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::inf_min(name));
+    pub fn start_primary_key_column_inf_min(mut self, name: &str) -> Self {
+        self.inclusive_start_primary_key.columns.push(PrimaryKeyColumn::inf_min(name));
 
         self
     }
 
     /// 添加无穷大值开始主键
-    pub fn start_primary_key_inf_max(mut self, name: &str) -> Self {
-        self.inclusive_start_primary_keys.push(PrimaryKeyColumn::inf_max(name));
-
-        self
-    }
-
-    /// 添加一个结束主键列
-    pub fn end_primary_key(mut self, pk: PrimaryKeyColumn) -> Self {
-        self.exclusive_end_primary_keys.push(pk);
+    pub fn start_primary_key_column_inf_max(mut self, name: &str) -> Self {
+        self.inclusive_start_primary_key.columns.push(PrimaryKeyColumn::inf_max(name));
 
         self
     }
 
     /// 设置结束主键列
-    pub fn end_primary_keys(mut self, pks: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
-        self.exclusive_end_primary_keys = pks.into_iter().collect();
+    pub fn end_primary_key(mut self, pk: PrimaryKey) -> Self {
+        self.exclusive_end_primary_key = pk;
+
+        self
+    }
+
+    /// 添加一个结束主键列
+    pub fn end_primary_key_column(mut self, pk_col: PrimaryKeyColumn) -> Self {
+        self.exclusive_end_primary_key.columns.push(pk_col);
+
+        self
+    }
+
+    /// 设置结束主键列
+    pub fn end_primary_key_columns(mut self, pk_cols: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.exclusive_end_primary_key = PrimaryKey {
+            columns: pk_cols.into_iter().collect(),
+        };
 
         self
     }
 
     /// 添加字符串类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn end_primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_string(name, value));
+    pub fn end_primary_key_column_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.exclusive_end_primary_key.columns.push(PrimaryKeyColumn::from_string(name, value));
         self
     }
 
     /// 添加整数类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn end_primary_key_integer(mut self, name: &str, value: i64) -> Self {
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_integer(name, value));
+    pub fn end_primary_key_column_integer(mut self, name: &str, value: i64) -> Self {
+        self.exclusive_end_primary_key.columns.push(PrimaryKeyColumn::from_integer(name, value));
 
         self
     }
 
     /// 添加二进制类型的结束主键查询值。无论该行是否存在，则响应中一定不会包含此行。
-    pub fn end_primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::from_binary(name, value));
+    pub fn end_primary_key_column_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.exclusive_end_primary_key.columns.push(PrimaryKeyColumn::from_binary(name, value));
 
         self
     }
 
     /// 添加无穷小值结束主键
-    pub fn end_primary_key_inf_min(mut self, name: &str) -> Self {
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::inf_min(name));
+    pub fn end_primary_key_column_inf_min(mut self, name: &str) -> Self {
+        self.exclusive_end_primary_key.columns.push(PrimaryKeyColumn::inf_min(name));
 
         self
     }
 
     /// 添加无穷大值结束主键
-    pub fn end_primary_key_inf_max(mut self, name: &str) -> Self {
-        self.exclusive_end_primary_keys.push(PrimaryKeyColumn::inf_max(name));
+    pub fn end_primary_key_column_inf_max(mut self, name: &str) -> Self {
+        self.exclusive_end_primary_key.columns.push(PrimaryKeyColumn::inf_max(name));
 
         self
     }
@@ -289,11 +299,11 @@ impl GetRangeRequest {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
-        if self.inclusive_start_primary_keys.is_empty() {
+        if self.inclusive_start_primary_key.columns.is_empty() {
             return Err(OtsError::ValidationFailed("inclusive start primary key can not be empty".to_string()));
         }
 
-        if self.exclusive_end_primary_keys.is_empty() {
+        if self.exclusive_end_primary_key.columns.is_empty() {
             return Err(OtsError::ValidationFailed("exclusive end primary key can not be empty".to_string()));
         }
 
@@ -310,11 +320,11 @@ impl GetRangeRequest {
 impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
     fn from(value: GetRangeRequest) -> crate::protos::table_store::GetRangeRequest {
         let GetRangeRequest {
-            inclusive_start_primary_keys: inclusive_start_primary_key,
-            exclusive_end_primary_keys: exclusive_end_primary_key,
+            inclusive_start_primary_key,
+            exclusive_end_primary_key,
             max_versions,
             direction,
-            columns_to_get: columns,
+            columns_to_get,
             time_range_start_ms,
             time_range_end_ms,
             time_range_specific_ms,
@@ -333,21 +343,13 @@ impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
             max_versions
         };
 
-        let start_pk = PrimaryKey {
-            keys: inclusive_start_primary_key,
-        };
-
-        let end_pk = PrimaryKey {
-            keys: exclusive_end_primary_key,
-        };
-
-        let start_pk_bytes = start_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
-        let end_pk_bytes = end_pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
+        let start_pk_bytes = inclusive_start_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
+        let end_pk_bytes = exclusive_end_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
         crate::protos::table_store::GetRangeRequest {
             table_name,
             direction: direction as i32,
-            columns_to_get: columns,
+            columns_to_get,
             time_range: if time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some() {
                 Some(TimeRange {
                     start_time: time_range_start_ms,
@@ -401,11 +403,11 @@ impl TryFrom<crate::protos::table_store::GetRangeResponse> for GetRangeResponse 
 
         let next_pk = if let Some(bytes) = next_start_primary_key {
             let Row {
-                primary_keys,
+                primary_key,
                 columns: _,
                 deleted: _,
             } = Row::decode_plain_buffer(bytes, MASK_HEADER)?;
-            Some(primary_keys)
+            Some(primary_key)
         } else {
             None
         };
@@ -434,7 +436,7 @@ impl TryFrom<crate::protos::table_store::GetRangeResponse> for GetRangeResponse 
             consumed,
             rows,
             next_token,
-            next_start_primary_key: next_pk,
+            next_start_primary_key: next_pk.map(|pk| pk.columns),
         })
     }
 }

@@ -3,7 +3,7 @@ use prost::Message;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    model::{Filter, PrimaryKeyColumn, PrimaryKeyValue, Row},
+    model::{Filter, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
@@ -17,7 +17,7 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct DeleteRowRequest {
     pub table_name: String,
-    pub primary_keys: Vec<PrimaryKeyColumn>,
+    pub primary_key: PrimaryKey,
 
     /// 在数据写入前是否进行存在性检查。取值范围如下：
     ///
@@ -54,9 +54,30 @@ impl DeleteRowRequest {
         self
     }
 
+    /// 设置主键
+    pub fn primary_key(mut self, pk: PrimaryKey) -> Self {
+        self.primary_key = pk;
+
+        self
+    }
+
+    /// 添加一个主键列
+    pub fn primary_key_column(mut self, pk_col: PrimaryKeyColumn) -> Self {
+        self.primary_key.columns.push(pk_col);
+
+        self
+    }
+
+    /// 设置全部主键列
+    pub fn primary_key_columns(mut self, pk_cols: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.primary_key.columns = pk_cols.into_iter().collect();
+
+        self
+    }
+
     /// 添加字符串类型的主键查询值
-    pub fn primary_key_string(mut self, name: &str, value: impl Into<String>) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn {
+    pub fn primary_key_column_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::String(value.into()),
         });
@@ -64,8 +85,8 @@ impl DeleteRowRequest {
     }
 
     /// 添加整数类型的主键查询值
-    pub fn primary_key_integer(mut self, name: &str, value: i64) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn {
+    pub fn primary_key_column_integer(mut self, name: &str, value: i64) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Integer(value),
         });
@@ -74,8 +95,8 @@ impl DeleteRowRequest {
     }
 
     /// 添加二进制类型的主键查询值
-    pub fn primary_key_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
-        self.primary_keys.push(PrimaryKeyColumn {
+    pub fn primary_key_column_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.primary_key.columns.push(PrimaryKeyColumn {
             name: name.to_string(),
             value: PrimaryKeyValue::Binary(value.into()),
         });
@@ -130,11 +151,11 @@ impl DeleteRowRequest {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
-        if self.primary_keys.is_empty() {
+        if self.primary_key.columns.is_empty() {
             return Err(OtsError::ValidationFailed("invalid primary keys: empty".to_string()));
         }
 
-        for key_col in &self.primary_keys {
+        for key_col in &self.primary_key.columns {
             if !validate_column_name(&key_col.name) {
                 return Err(OtsError::ValidationFailed(format!("invalid primary key name: {}", key_col.name)));
             }
@@ -154,7 +175,7 @@ impl From<DeleteRowRequest> for crate::protos::table_store::DeleteRowRequest {
     fn from(value: DeleteRowRequest) -> Self {
         let DeleteRowRequest {
             table_name,
-            primary_keys,
+            primary_key,
             row_condition,
             column_condition,
             return_type,
@@ -164,7 +185,7 @@ impl From<DeleteRowRequest> for crate::protos::table_store::DeleteRowRequest {
 
         crate::protos::table_store::DeleteRowRequest {
             table_name,
-            primary_key: (Row::new().primary_keys(primary_keys).delete_marker()).encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
+            primary_key: (Row::new().primary_key(primary_key).delete_marker()).encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             condition: Condition {
                 row_existence: row_condition as i32,
                 column_condition: if let Some(f) = column_condition {

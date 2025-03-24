@@ -13,9 +13,9 @@ use crate::{
 };
 
 /// 主键容器
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PrimaryKey {
-    pub keys: Vec<PrimaryKeyColumn>,
+    pub columns: Vec<PrimaryKeyColumn>,
 }
 
 impl PrimaryKey {
@@ -26,7 +26,7 @@ impl PrimaryKey {
     /// 0x01 - TAG_ROW_PK
     /// 0x00 ... Keys size
     pub(crate) fn compute_size(&self, masks: u32) -> u32 {
-        let mut size = 1u32 + self.keys.iter().map(|k| k.compute_size()).sum::<u32>();
+        let mut size = 1u32 + self.columns.iter().map(|k| k.compute_size()).sum::<u32>();
 
         if masks & MASK_ROW_CHECKSUM == MASK_ROW_CHECKSUM {
             size += 2;
@@ -57,7 +57,7 @@ impl PrimaryKey {
 
     /// Write data to cursor
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, masks: u32) {
-        let Self { keys } = self;
+        let Self { columns: keys } = self;
 
         cursor.write_u8(plain_buffer::TAG_ROW_PK).unwrap();
 
@@ -74,12 +74,71 @@ impl PrimaryKey {
     /// 计算主键的一行的校验码
     pub(crate) fn crc8_checksum(&self) -> u8 {
         let mut c = 0u8;
-        for key_col in &self.keys {
+        for key_col in &self.columns {
             c = crc_u8(c, key_col.crc8_checksum());
         }
 
         c = crc_u8(c, 0u8);
         c
+    }
+
+    pub fn new() -> Self {
+        Self { columns: vec![] }
+    }
+
+    /// 添加一个主键列
+    pub fn column(mut self, pk_col: PrimaryKeyColumn) -> Self {
+        self.columns.push(pk_col);
+
+        self
+    }
+
+    /// 设置全部主键列
+    pub fn columns(mut self, pk_cols: impl IntoIterator<Item = PrimaryKeyColumn>) -> Self {
+        self.columns = pk_cols.into_iter().collect();
+
+        self
+    }
+
+    /// 添加字符串类型的主键列
+    pub fn column_string(mut self, name: &str, value: impl Into<String>) -> Self {
+        self.columns.push(PrimaryKeyColumn::from_string(name, value));
+        self
+    }
+
+    /// 添加整数类型的主键列
+    pub fn column_integer(mut self, name: &str, value: i64) -> Self {
+        self.columns.push(PrimaryKeyColumn::from_integer(name, value));
+
+        self
+    }
+
+    /// 添加二进制类型的主键列
+    pub fn column_binary(mut self, name: &str, value: impl Into<Vec<u8>>) -> Self {
+        self.columns.push(PrimaryKeyColumn::from_binary(name, value));
+
+        self
+    }
+
+    /// 添加一个极小值列。范围查询时可以使用
+    pub fn column_inf_min(mut self, name: &str) -> Self {
+        self.columns.push(PrimaryKeyColumn::inf_min(name));
+
+        self
+    }
+
+    /// 添加一个极大值列。范围查询时可以使用
+    pub fn column_info_max(mut self, name: &str) -> Self {
+        self.columns.push(PrimaryKeyColumn::inf_max(name));
+
+        self
+    }
+
+    /// 添加一个自增主键列。这个主要是在写入数据的使用用得到，查询的时候用不上
+    pub fn column_auto_increment(mut self, name: &str) -> Self {
+        self.columns.push(PrimaryKeyColumn::auto_increment(name));
+
+        self
     }
 }
 
@@ -388,7 +447,7 @@ mod test_primary_key {
         ];
 
         let pk = PrimaryKey {
-            keys: vec![PrimaryKeyColumn {
+            columns: vec![PrimaryKeyColumn {
                 name: "user_id".to_string(),
                 value: PrimaryKeyValue::String("0005358A-DCAF-665E-EECF-D9935E821B87".to_string()),
             }],
