@@ -3,14 +3,10 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    error::OtsError,
-    model::{Filter, Row},
-    protos::{
+    add_per_request_options, error::OtsError, model::{Filter, Row}, protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation},
-    },
-    table::rules::validate_table_name,
+    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 在BatchWriteRow操作中，表示要插入、更新和删除的一行信息。
@@ -390,6 +386,8 @@ pub struct BatchWriteRowOperation {
     client: OtsClient,
     request: BatchWriteRowRequest,
 }
+
+add_per_request_options!(BatchWriteRowOperation);
 
 impl BatchWriteRowOperation {
     pub(crate) fn new(client: OtsClient, request: BatchWriteRowRequest) -> Self {

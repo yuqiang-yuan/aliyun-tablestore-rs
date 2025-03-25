@@ -4,8 +4,9 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use bytes::Bytes;
 use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteDefinedColumnOperation, DeleteDefinedColumnRequest};
 use error::OtsError;
+use index::{CreateIndexOperation, DropIndexOperation};
 use prost::Message;
-use protos::table_store::{self};
+use protos::table_store::{self, CreateIndexRequest, DropIndexRequest};
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
@@ -870,5 +871,15 @@ impl OtsClient {
     /// ```
     pub fn bulk_export(&self, request: BulkExportRequest) -> BulkExportOperation {
         BulkExportOperation::new(self.clone(), request)
+    }
+
+    /// 创建二级索引
+    pub fn create_index(&self, request: CreateIndexRequest) -> CreateIndexOperation {
+        CreateIndexOperation::new(self.clone(), request)
+    }
+
+    /// 删除二级索引
+    pub fn drop_index(&self, request: DropIndexRequest) -> DropIndexOperation {
+        DropIndexOperation::new(self.clone(), request)
     }
 }

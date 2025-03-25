@@ -1,14 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    error::OtsError,
-    model::Row,
-    protos::{
+    add_per_request_options, error::OtsError, model::Row, protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::OperationType,
-    },
-    table::rules::validate_table_name,
+    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 #[derive(Debug, Default, Clone)]
@@ -153,6 +149,8 @@ pub struct BulkImportOperation {
     client: OtsClient,
     request: BulkImportRequest,
 }
+
+add_per_request_options!(BulkImportOperation);
 
 impl BulkImportOperation {
     pub(crate) fn new(client: OtsClient, request: BulkImportRequest) -> Self {

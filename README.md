@@ -23,3 +23,5 @@ There operations are implemented:
     - Delete row
     - Batch get row
     - Batch write row
+    - Bulk import
+    - Bulk export

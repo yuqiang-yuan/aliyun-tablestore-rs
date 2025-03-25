@@ -4,15 +4,11 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    error::OtsError,
-    model::{Filter, PrimaryKey, PrimaryKeyColumn, Row},
-    protos::{
+    add_per_request_options, error::OtsError, model::{Filter, PrimaryKey, PrimaryKeyColumn, Row}, protos::{
         plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
         simple_row_matrix::SimpleRowMatrix,
         table_store::{ConsumedCapacity, DataBlockType},
-    },
-    table::rules::validate_table_name,
+    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 接口批量导出数据。
@@ -323,6 +319,8 @@ pub struct BulkExportOperation {
     client: OtsClient,
     request: BulkExportRequest,
 }
+
+add_per_request_options!(BulkExportOperation);
 
 impl BulkExportOperation {
     pub(crate) fn new(client: OtsClient, request: BulkExportRequest) -> Self {
