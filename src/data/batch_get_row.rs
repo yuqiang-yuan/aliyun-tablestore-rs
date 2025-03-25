@@ -3,10 +3,14 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::{PrimaryKey, Row}, protos::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::{PrimaryKey, Row},
+    protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::{ConsumedCapacity, TimeRange},
-    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
+    },
+    table::rules::validate_table_name,
 };
 
 /// 单个表读取数据的配置

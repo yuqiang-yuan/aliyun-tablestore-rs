@@ -25,3 +25,6 @@ There operations are implemented:
     - Batch write row
     - Bulk import
     - Bulk export
+  - Index
+    - Create index
+    - Drop index

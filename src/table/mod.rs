@@ -63,6 +63,8 @@ mod test_table {
         table::{CreateTableRequest, UpdateTableRequest},
     };
 
+    use super::ComputeSplitPointsBySizeRequest;
+
     static INIT: Once = Once::new();
 
     fn setup() {
@@ -224,5 +226,18 @@ mod test_table {
     #[tokio::test]
     async fn test_retry() {
         test_retry_impl().await;
+    }
+
+    #[tokio::test]
+    async fn test_compute_split_size() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let res = client
+            .compute_split_points_by_size(ComputeSplitPointsBySizeRequest::new("schools", 1))
+            .send()
+            .await;
+
+        log::debug!("{:#?}", res);
     }
 }

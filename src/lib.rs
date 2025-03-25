@@ -18,8 +18,8 @@ use data::{
     PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
 use table::{
-    ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
-    UpdateTableOperation, UpdateTableRequest,
+    ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
+    ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -604,8 +604,8 @@ impl OtsClient {
     }
 
     /// 计算宽表分裂点
-    pub fn compute_split_points_by_size(&self, table_name: &str, size: u64) -> ComputeSplitPointsBySizeOperation {
-        ComputeSplitPointsBySizeOperation::new(self.clone(), table_name, size)
+    pub fn compute_split_points_by_size(&self, request: ComputeSplitPointsBySizeRequest) -> ComputeSplitPointsBySizeOperation {
+        ComputeSplitPointsBySizeOperation::new(self.clone(), request)
     }
 
     /// 添加预定义列

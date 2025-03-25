@@ -1,10 +1,14 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::Row, protos::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::Row,
+    protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         table_store::OperationType,
-    }, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult
+    },
+    table::rules::validate_table_name,
 };
 
 #[derive(Debug, Default, Clone)]

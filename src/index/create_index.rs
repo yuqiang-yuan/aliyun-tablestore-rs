@@ -1,7 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, protos::table_store::CreateIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
-
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, protos::table_store::CreateIndexRequest};
 
 /// 创建二级索引。仅 `max_versions = 1` 的表可以创建二级索引
 ///
@@ -16,17 +15,11 @@ add_per_request_options!(CreateIndexOperation);
 
 impl CreateIndexOperation {
     pub(crate) fn new(client: OtsClient, request: CreateIndexRequest) -> Self {
-        Self {
-            client,
-            request
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<()> {
-        let Self {
-            client,
-            request
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::CreateIndex,

@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, protos::table_store::DropIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, protos::table_store::DropIndexRequest};
 
 /// 删除二级索引
 ///
@@ -15,17 +15,11 @@ add_per_request_options!(DropIndexOperation);
 
 impl DropIndexOperation {
     pub(crate) fn new(client: OtsClient, request: DropIndexRequest) -> Self {
-        Self {
-            client,
-            request
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<()> {
-        let Self {
-            client,
-            request
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::DropIndex,

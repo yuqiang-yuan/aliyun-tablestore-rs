@@ -88,12 +88,14 @@ impl IndexMeta {
     }
 }
 
-
 #[cfg(test)]
 mod test_index {
     use std::sync::Once;
 
-    use crate::{protos::table_store::{CreateIndexRequest, DropIndexRequest, IndexMeta}, OtsClient};
+    use crate::{
+        OtsClient,
+        protos::table_store::{CreateIndexRequest, DropIndexRequest, IndexMeta},
+    };
 
     static INIT: Once = Once::new();
 
@@ -108,11 +110,14 @@ mod test_index {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client.create_index(CreateIndexRequest {
-            main_table_name: "ccs2".to_string(),
-            index_meta: IndexMeta::builder("idx_cn").defined_column("course_name").primary_key("cc_id").build(),
-            include_base_data: Some(true),
-        }).send().await;
+        let res = client
+            .create_index(CreateIndexRequest {
+                main_table_name: "ccs2".to_string(),
+                index_meta: IndexMeta::builder("idx_cn").defined_column("course_name").primary_key("cc_id").build(),
+                include_base_data: Some(true),
+            })
+            .send()
+            .await;
 
         assert!(res.is_ok());
     }
@@ -126,10 +131,13 @@ mod test_index {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client.drop_index(DropIndexRequest {
-            main_table_name: "ccs2".to_string(),
-            index_name: "idx_cn".to_string(),
-        }).send().await;
+        let res = client
+            .drop_index(DropIndexRequest {
+                main_table_name: "ccs2".to_string(),
+                index_name: "idx_cn".to_string(),
+            })
+            .send()
+            .await;
 
         assert!(res.is_ok());
     }

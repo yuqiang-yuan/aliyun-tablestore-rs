@@ -1,10 +1,13 @@
 use prost::Message;
-use reqwest::Method;
 
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{ComputeSplitPointsBySizeRequest, ComputeSplitPointsBySizeResponse},
+    model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
+    protos::{
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+        table_store::{ConsumedCapacity, PrimaryKeySchema, compute_split_points_by_size_response::SplitLocation},
+    },
 };
 
 use super::rules::validate_table_name;
@@ -13,25 +16,34 @@ use super::rules::validate_table_name;
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/computesplitpointsbysize>
 #[derive(Default, Clone, Debug)]
-pub struct ComputeSplitPointsBySizeOperation {
-    client: OtsClient,
+pub struct ComputeSplitPointsBySizeRequest {
     pub table_name: String,
+
+    /// 每个分片的近似大小，以百兆为单位。
     pub split_size: u64,
+
+    /// 指定分割大小的单位，以便在分割点计算时使用正确的单位，并确保计算结果的准确性。
     pub split_size_unit_in_byte: Option<u64>,
+
+    /// 指定对分割点数量的限制，以便在进行分割点计算时控制返回的分割点数量。
     pub split_point_limit: Option<u32>,
 }
 
-add_per_request_options!(ComputeSplitPointsBySizeOperation);
-
-impl ComputeSplitPointsBySizeOperation {
-    pub(crate) fn new(client: OtsClient, table_name: &str, split_size: u64) -> Self {
+impl ComputeSplitPointsBySizeRequest {
+    /// `split_size` 百兆为单位
+    pub fn new(table_name: &str, split_size: u64) -> Self {
         Self {
-            client,
             table_name: table_name.to_string(),
             split_size,
-            split_size_unit_in_byte: None,
-            split_point_limit: None,
+            ..Default::default()
         }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
     }
 
     /// 每个分片的近似大小，以百兆为单位。
@@ -59,35 +71,112 @@ impl ComputeSplitPointsBySizeOperation {
 
         Ok(())
     }
+}
 
-    pub async fn send(self) -> OtsResult<ComputeSplitPointsBySizeResponse> {
-        self.validate()?;
-
-        let Self {
-            client,
+impl From<ComputeSplitPointsBySizeRequest> for crate::protos::table_store::ComputeSplitPointsBySizeRequest {
+    fn from(value: ComputeSplitPointsBySizeRequest) -> Self {
+        let ComputeSplitPointsBySizeRequest {
             table_name,
             split_size,
             split_size_unit_in_byte,
             split_point_limit,
-        } = self;
+        } = value;
 
-        let msg = ComputeSplitPointsBySizeRequest {
+        crate::protos::table_store::ComputeSplitPointsBySizeRequest {
             table_name,
             split_size: split_size as i64,
             split_size_unit_in_byte: split_size_unit_in_byte.map(|n| n as i64),
             split_point_limit: split_point_limit.map(|n| n as i32),
-        };
+        }
+    }
+}
 
-        let body = msg.encode_to_vec();
+/// 例如有一张表有三列主键，其中首列主键类型为 `string`。
+/// 调用该 API 后得到 `5` 个分片，分别为
+///
+/// 1. `(-inf,-inf,-inf)` 到 `("a",-inf,-inf)`
+/// 2. `("a",-inf,-inf)` 到 `("b",-inf,-inf)`
+/// 3. `("b",-inf,-inf)` 到 `("c",-inf,-inf)`
+/// 4. `("c",-inf,-inf)` 到 `("d",-inf,-inf)`
+/// 5. `("d",-inf,-inf)` 到 `(+inf,+inf,+inf)`
+///
+/// 前三个落在 "machine-A"，后两个落在 "machine-B"。
+/// 那么，`split_points` 为（示意）`[("a"),("b"),("c"),("d")]`，
+/// 而 `locations` 为（示意）"machine-A" * 3, "machine-B" * 2。
+#[derive(Debug, Default, Clone)]
+pub struct ComputeSplitPointsBySizeResponse {
+    pub consumed: ConsumedCapacity,
+
+    /// 该表的Schema，与建表时的Schema相同。
+    pub schema: Vec<PrimaryKeySchema>,
+
+    /// 分片之间的分割点。每个主键列对应的值
+    pub split_points: Vec<PrimaryKey>,
+
+    /// 分割点所在机器的提示。可以为空
+    pub locations: Vec<SplitLocation>,
+}
+
+impl TryFrom<crate::protos::table_store::ComputeSplitPointsBySizeResponse> for ComputeSplitPointsBySizeResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::table_store::ComputeSplitPointsBySizeResponse) -> Result<Self, Self::Error> {
+        let crate::protos::table_store::ComputeSplitPointsBySizeResponse {
+            consumed,
+            schema,
+            split_points,
+            locations,
+        } = value;
+
+        let mut split_pks = vec![];
+        for row_bytes in split_points {
+            let row = Row::decode_plain_buffer(row_bytes, MASK_HEADER | MASK_ROW_CHECKSUM)?;
+            let mut pk = row.primary_key;
+            // 把每个主键尾部省略的 `-INF` 补充回来
+            for i in pk.columns.len()..schema.len() {
+                pk.columns.push(PrimaryKeyColumn::new(&schema.get(i).unwrap().name, PrimaryKeyValue::InfMin));
+            }
+
+            split_pks.push(pk);
+        }
+
+        Ok(Self {
+            consumed,
+            schema,
+            split_points: split_pks,
+            locations,
+        })
+    }
+}
+#[derive(Default, Clone, Debug)]
+pub struct ComputeSplitPointsBySizeOperation {
+    client: OtsClient,
+    request: ComputeSplitPointsBySizeRequest,
+}
+
+add_per_request_options!(ComputeSplitPointsBySizeOperation);
+
+impl ComputeSplitPointsBySizeOperation {
+    pub(crate) fn new(client: OtsClient, request: ComputeSplitPointsBySizeRequest) -> Self {
+        Self { client, request }
+    }
+
+    pub async fn send(self) -> OtsResult<ComputeSplitPointsBySizeResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg: crate::protos::table_store::ComputeSplitPointsBySizeRequest = request.into();
 
         let req = OtsRequest {
-            method: Method::POST,
             operation: OtsOp::ComputeSplitPointsBySize,
-            body,
+            body: msg.encode_to_vec(),
             ..Default::default()
         };
 
         let response = client.send(req).await?;
-        Ok(ComputeSplitPointsBySizeResponse::decode(response.bytes().await?)?)
+        let msg = crate::protos::table_store::ComputeSplitPointsBySizeResponse::decode(response.bytes().await?)?;
+
+        msg.try_into()
     }
 }
