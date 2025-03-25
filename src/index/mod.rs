@@ -94,7 +94,7 @@ mod test_index {
 
     use crate::{
         OtsClient,
-        protos::table_store::{CreateIndexRequest, DropIndexRequest, IndexMeta},
+        protos::table_store::{CreateIndexRequest, IndexMeta},
     };
 
     static INIT: Once = Once::new();
@@ -132,10 +132,7 @@ mod test_index {
         let client = OtsClient::from_env();
 
         let res = client
-            .drop_index(DropIndexRequest {
-                main_table_name: "ccs2".to_string(),
-                index_name: "idx_cn".to_string(),
-            })
+            .drop_index("ccs2", "idx_cn")
             .send()
             .await;
 

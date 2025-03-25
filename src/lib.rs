@@ -879,7 +879,7 @@ impl OtsClient {
     }
 
     /// 删除二级索引
-    pub fn drop_index(&self, request: DropIndexRequest) -> DropIndexOperation {
-        DropIndexOperation::new(self.clone(), request)
+    pub fn drop_index(&self, table_name: &str, idx_name: &str) -> DropIndexOperation {
+        DropIndexOperation::new(self.clone(), table_name, idx_name)
     }
 }

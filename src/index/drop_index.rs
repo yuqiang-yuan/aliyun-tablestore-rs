@@ -14,8 +14,14 @@ pub struct DropIndexOperation {
 add_per_request_options!(DropIndexOperation);
 
 impl DropIndexOperation {
-    pub(crate) fn new(client: OtsClient, request: DropIndexRequest) -> Self {
-        Self { client, request }
+    pub(crate) fn new(client: OtsClient, table_name: &str, idx_name: &str) -> Self {
+        Self {
+            client,
+            request: DropIndexRequest {
+                main_table_name: table_name.to_string(),
+                index_name: idx_name.to_string()
+            }
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {
