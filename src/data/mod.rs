@@ -6,6 +6,7 @@ mod get_range;
 mod get_row;
 mod put_row;
 mod update_row;
+mod bulk_import;
 
 pub use batch_get_row::*;
 pub use batch_write_row::*;
@@ -14,11 +15,13 @@ pub use get_range::*;
 pub use get_row::*;
 pub use put_row::*;
 pub use update_row::*;
+pub use bulk_import::*;
 
 #[cfg(test)]
 mod test_row_operations {
     use std::sync::Once;
 
+    use base64::{prelude::BASE64_STANDARD, Engine};
     use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
@@ -32,7 +35,7 @@ mod test_row_operations {
         },
     };
 
-    use super::{BatchGetRowRequest, BatchWriteRowRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest, TableInBatchWriteRowRequest};
+    use super::{BatchGetRowRequest, BatchWriteRowRequest, BulkImportRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest, TableInBatchWriteRowRequest};
 
     static INIT: Once = Once::new();
 
@@ -432,5 +435,40 @@ mod test_row_operations {
     #[tokio::test]
     async fn test_update_row_with_filter() {
         test_update_row_with_filter_impl().await;
+    }
+
+    async fn test_bulk_import_impl() {
+        setup();
+        let client = OtsClient::from_env();
+        let mut req = BulkImportRequest::new("data_types");
+        for i in 0..200 {
+            let id: String = UUIDv4.fake();
+            let mut blob_data = [0u8; 16];
+            rand::fill(&mut blob_data);
+            let blob_val = BASE64_STANDARD.encode(&blob_data);
+            let bool_val = i % 2 == 0;
+            let double_val = rand::random_range::<f64, _>(0.0f64..99.99f64);
+            let int_val = rand::random_range::<i64, _>(0..10000);
+            let str_val: String = Name(ZH_CN).fake();
+
+            let row = Row::new()
+                .primary_key_column_string("str_id", &id)
+                .column_blob("blob_col", blob_val)
+                .column_bool("bool_col", bool_val)
+                .column_double("double_col", double_val)
+                .column_integer("int_col", int_val)
+                .column_string("str_col", &str_val);
+
+            req = req.put_row(row);
+        }
+
+        let res = client.bulk_import(req).send().await;
+
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_bulk_import() {
+        test_bulk_import_impl().await
     }
 }

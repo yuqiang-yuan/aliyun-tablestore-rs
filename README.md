@@ -22,3 +22,4 @@ There operations are implemented:
     - Update row
     - Delete row
     - Batch get row
+    - Batch write row

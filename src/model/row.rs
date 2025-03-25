@@ -354,6 +354,24 @@ impl Row {
     }
 }
 
+/// 行操作及行数据
+#[derive(Debug, Clone)]
+pub enum RowOperation {
+    Put(Row),
+    Update(Row),
+    Delete(Row)
+}
+
+impl RowOperation {
+    pub fn as_i32(&self) -> i32 {
+        match self {
+            Self::Put(_) => crate::protos::table_store::OperationType::Put as i32,
+            Self::Update(_) => crate::protos::table_store::OperationType::Update as i32,
+            Self::Delete(_) => crate::protos::table_store::OperationType::Delete as i32,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_row {
     use base64::{Engine, prelude::BASE64_STANDARD};

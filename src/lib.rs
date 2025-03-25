@@ -12,8 +12,7 @@ use reqwest::{
 };
 
 use data::{
-    BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation,
-    GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest,
+    BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, BulkImportOperation, BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest
 };
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
@@ -817,5 +816,36 @@ impl OtsClient {
     /// ```
     pub fn batch_write_row(&self, request: BatchWriteRowRequest) -> BatchWriteRowOperation {
         BatchWriteRowOperation::new(self.clone(), request)
+    }
+
+    /// 批量写入数据。写入数据时支持插入一行数据、修改行数据以及删除行数据。最多一次 200 行
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = OtsClient::from_env();
+    /// let mut req = BulkImportRequest::new("data_types");
+    /// for i in 0..200 {
+    ///     let id: String = UUIDv4.fake();
+    ///     let mut blob_data = [0u8; 16];
+    ///     rand::fill(&mut blob_data);
+    ///     let blob_val = BASE64_STANDARD.encode(&blob_data);
+    ///     let bool_val = i % 2 == 0;
+    ///     let double_val = rand::random_range::<f64, _>(0.0f64..99.99f64);
+    ///     let int_val = rand::random_range::<i64, _>(0..10000);
+    ///     let str_val: String = Name(ZH_CN).fake();
+    ///     let row = Row::new()
+    ///         .primary_key_column_string("str_id", &id)
+    ///         .column_blob("blob_col", blob_val)
+    ///         .column_bool("bool_col", bool_val)
+    ///         .column_double("double_col", double_val)
+    ///         .column_integer("int_col", int_val)
+    ///         .column_string("str_col", &str_val);
+    ///     req = req.put_row(row);
+    /// }
+    /// let res = client.bulk_import(req).send().await;
+    /// ```
+    pub fn bulk_import(&self, request: BulkImportRequest) -> BulkImportOperation {
+        BulkImportOperation::new(self.clone(), request)
     }
 }
