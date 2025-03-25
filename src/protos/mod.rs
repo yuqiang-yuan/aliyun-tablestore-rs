@@ -8,3 +8,4 @@ pub mod table_store_filter {
 }
 
 pub mod plain_buffer;
+pub mod simple_row_matrix;

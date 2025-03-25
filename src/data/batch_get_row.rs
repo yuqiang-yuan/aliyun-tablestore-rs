@@ -18,7 +18,7 @@ use crate::{
 pub struct TableInBatchGetRowRequest {
     pub table_name: String,
     pub primary_keys: Vec<PrimaryKey>,
-    pub columns_to_get: Vec<String>,
+    pub columns_to_get: HashSet<String>,
     // Time range fields
     pub time_range_start_ms: Option<i64>,
     pub time_range_end_ms: Option<i64>,
@@ -61,7 +61,7 @@ impl TableInBatchGetRowRequest {
     /// 需要返回的全部列的列名。如果为空，则返回指定行的所有列。`columns_to_get` 个数不应超过128个。
     /// 如果指定的列不存在，则不会返回指定列的数据；如果给出了重复的列名，返回结果只会包含一次指定列。
     pub fn column_to_get(mut self, name: &str) -> Self {
-        self.columns_to_get.push(name.to_string());
+        self.columns_to_get.insert(name.to_string());
 
         self
     }
@@ -179,7 +179,7 @@ impl From<TableInBatchGetRowRequest> for crate::protos::table_store::TableInBatc
                 .map(|pk| pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM))
                 .collect(),
             token: vec![],
-            columns_to_get,
+            columns_to_get: columns_to_get.into_iter().collect(),
             time_range: if time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some() {
                 Some(TimeRange {
                     start_time: time_range_start_ms,

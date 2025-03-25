@@ -10,6 +10,7 @@ use crate::{
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
+use std::collections::HashSet;
 use std::io::Cursor;
 
 /// 读取指定主键范围内的数据请求
@@ -23,7 +24,7 @@ pub struct GetRangeRequest {
     pub direction: Direction,
 
     /// 需要返回的全部列的列名。见 [`columns_to_get`](`Self::columns_to_get`)
-    pub columns_to_get: Vec<String>,
+    pub columns_to_get: HashSet<String>,
 
     /// TimeRange 设置。和 `max_versions` 只能存在一个。
     ///
@@ -207,7 +208,7 @@ impl GetRangeRequest {
     /// 需要返回的全部列的列名。如果为空，则返回指定行的所有列。`columns_to_get` 个数不应超过128个。
     /// 如果指定的列不存在，则不会返回指定列的数据；如果给出了重复的列名，返回结果只会包含一次指定列。
     pub fn column_to_get(mut self, name: &str) -> Self {
-        self.columns_to_get.push(name.to_string());
+        self.columns_to_get.insert(name.to_string());
 
         self
     }
@@ -349,7 +350,7 @@ impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
         crate::protos::table_store::GetRangeRequest {
             table_name,
             direction: direction as i32,
-            columns_to_get,
+            columns_to_get: columns_to_get.into_iter().collect(),
             time_range: if time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some() {
                 Some(TimeRange {
                     start_time: time_range_start_ms,

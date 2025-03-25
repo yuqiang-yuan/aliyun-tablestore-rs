@@ -27,6 +27,9 @@ pub enum OtsError {
     #[error("{0}")]
     ProtobufDecodeError(#[from] prost::DecodeError),
 
+    #[error("Decode simple row matrix data failed: {0}")]
+    SrmDecodeError(String),
+
     #[error("Validation failed: {0}")]
     ValidationFailed(String),
 

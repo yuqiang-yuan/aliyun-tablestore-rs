@@ -38,7 +38,7 @@ pub struct RowInBatchWriteRowRequest {
     pub return_type: Option<ReturnType>,
 
     /// 如果需要返回数据，可以指定要返回的列
-    pub return_columns: Vec<String>,
+    pub return_columns: HashSet<String>,
 }
 
 impl RowInBatchWriteRowRequest {
@@ -105,7 +105,7 @@ impl RowInBatchWriteRowRequest {
 
     /// 添加一个要返回的列
     pub fn return_column(mut self, col_name: &str) -> Self {
-        self.return_columns.push(col_name.into());
+        self.return_columns.insert(col_name.into());
 
         self
     }
@@ -139,7 +139,7 @@ impl From<RowInBatchWriteRowRequest> for crate::protos::table_store::RowInBatchW
             return_content: if return_type.is_some() || !return_columns.is_empty() {
                 Some(ReturnContent {
                     return_type: return_type.map(|rt| rt as i32),
-                    return_column_names: return_columns,
+                    return_column_names: return_columns.into_iter().collect(),
                 })
             } else {
                 None

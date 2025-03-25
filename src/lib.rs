@@ -12,7 +12,9 @@ use reqwest::{
 };
 
 use data::{
-    BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, BulkImportOperation, BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation, PutRowRequest, UpdateRowOperation, UpdateRowRequest
+    BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, BulkExportOperation, BulkExportRequest, BulkImportOperation,
+    BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
+    PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
 use table::{
     ComputeSplitPointsBySizeOperation, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation, ListTableOperation,
@@ -202,29 +204,29 @@ impl Display for OtsOp {
 impl OtsOp {
     /// 检测一个操作是否是幂等的
     pub fn is_idempotent(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Self::ListTable
-            | Self::DescribeTable
-            | Self::GetRow
-            | Self::GetRange
-            | Self::BatchGetRow
-            | Self::BulkExport
-            | Self::ListStream
-            | Self::DescribeStream
-            | Self::GetShardIterator
-            | Self::ComputeSplitPointsBySize
-            | Self::GetTimeseriesData
-            | Self::QueryTimeseriesMeta
-            | Self::ListTimeseriesTable
-            | Self::DescribeTimeseriesTable
-            | Self::ScanTimeseriesData
-            | Self::DescribeTimeseriesAnalyticalStore
-            | Self::ParallelScan
-            | Self::ComputeSplits
-            | Self::ListTunnel
-            | Self::DescribeTunnel => true,
-            _ => false,
-        }
+                | Self::DescribeTable
+                | Self::GetRow
+                | Self::GetRange
+                | Self::BatchGetRow
+                | Self::BulkExport
+                | Self::ListStream
+                | Self::DescribeStream
+                | Self::GetShardIterator
+                | Self::ComputeSplitPointsBySize
+                | Self::GetTimeseriesData
+                | Self::QueryTimeseriesMeta
+                | Self::ListTimeseriesTable
+                | Self::DescribeTimeseriesTable
+                | Self::ScanTimeseriesData
+                | Self::DescribeTimeseriesAnalyticalStore
+                | Self::ParallelScan
+                | Self::ComputeSplits
+                | Self::ListTunnel
+                | Self::DescribeTunnel
+        )
     }
 }
 
@@ -827,9 +829,8 @@ impl OtsClient {
     /// let mut req = BulkImportRequest::new("data_types");
     /// for i in 0..200 {
     ///     let id: String = UUIDv4.fake();
-    ///     let mut blob_data = [0u8; 16];
-    ///     rand::fill(&mut blob_data);
-    ///     let blob_val = BASE64_STANDARD.encode(&blob_data);
+    ///     let mut blob_val = [0u8; 16];
+    ///     rand::fill(&mut blob_val);
     ///     let bool_val = i % 2 == 0;
     ///     let double_val = rand::random_range::<f64, _>(0.0f64..99.99f64);
     ///     let int_val = rand::random_range::<i64, _>(0..10000);
@@ -847,5 +848,27 @@ impl OtsClient {
     /// ```
     pub fn bulk_import(&self, request: BulkImportRequest) -> BulkImportOperation {
         BulkImportOperation::new(self.clone(), request)
+    }
+
+    /// 接口批量导出数据。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let request = BulkExportRequest::new("data_types")
+    ///     .end_primary_key_column_inf_min("str_id")
+    ///     .end_primary_key_column_inf_max("str_id")
+    ///     .columns_to_get(["str_id", "str_col", "int_col", "double_col", "blob_col", "bool_col"]);
+    ///
+    /// let res = client.bulk_export(request).send().await;
+    /// let res = res.unwrap();
+    /// total_rows += res.rows.len();
+    ///
+    /// res.rows.iter().for_each(|r| {
+    ///     log::debug!("row: {:?}", r.get_primary_key_value("str_id").unwrap());
+    /// });
+    /// ```
+    pub fn bulk_export(&self, request: BulkExportRequest) -> BulkExportOperation {
+        BulkExportOperation::new(self.clone(), request)
     }
 }

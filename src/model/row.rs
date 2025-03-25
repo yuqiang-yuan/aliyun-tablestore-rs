@@ -359,7 +359,7 @@ impl Row {
 pub enum RowOperation {
     Put(Row),
     Update(Row),
-    Delete(Row)
+    Delete(Row),
 }
 
 impl RowOperation {

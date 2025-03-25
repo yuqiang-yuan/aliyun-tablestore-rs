@@ -1,27 +1,28 @@
 //! 宽表模型数据操作
 mod batch_get_row;
 mod batch_write_row;
+mod bulk_export;
+mod bulk_import;
 mod delete_row;
 mod get_range;
 mod get_row;
 mod put_row;
 mod update_row;
-mod bulk_import;
 
 pub use batch_get_row::*;
 pub use batch_write_row::*;
+pub use bulk_export::*;
+pub use bulk_import::*;
 pub use delete_row::*;
 pub use get_range::*;
 pub use get_row::*;
 pub use put_row::*;
 pub use update_row::*;
-pub use bulk_import::*;
 
 #[cfg(test)]
 mod test_row_operations {
     use std::sync::Once;
 
-    use base64::{prelude::BASE64_STANDARD, Engine};
     use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
@@ -35,7 +36,10 @@ mod test_row_operations {
         },
     };
 
-    use super::{BatchGetRowRequest, BatchWriteRowRequest, BulkImportRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest, TableInBatchWriteRowRequest};
+    use super::{
+        BatchGetRowRequest, BatchWriteRowRequest, BulkExportRequest, BulkImportRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest,
+        TableInBatchWriteRowRequest,
+    };
 
     static INIT: Once = Once::new();
 
@@ -443,9 +447,9 @@ mod test_row_operations {
         let mut req = BulkImportRequest::new("data_types");
         for i in 0..200 {
             let id: String = UUIDv4.fake();
-            let mut blob_data = [0u8; 16];
-            rand::fill(&mut blob_data);
-            let blob_val = BASE64_STANDARD.encode(&blob_data);
+            let mut blob_val = [0u8; 16];
+            rand::fill(&mut blob_val);
+
             let bool_val = i % 2 == 0;
             let double_val = rand::random_range::<f64, _>(0.0f64..99.99f64);
             let int_val = rand::random_range::<i64, _>(0..10000);
@@ -470,5 +474,41 @@ mod test_row_operations {
     #[tokio::test]
     async fn test_bulk_import() {
         test_bulk_import_impl().await
+    }
+
+    async fn test_bulk_export_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let mut start_pk = PrimaryKey::new().column_inf_min("str_id");
+
+        let mut total_rows = 0;
+
+        loop {
+            let request = BulkExportRequest::new("data_types")
+                .start_primary_key(start_pk.clone())
+                .end_primary_key_column_inf_max("str_id")
+                .columns_to_get(["str_id", "str_col", "int_col", "double_col", "blob_col", "bool_col"]);
+
+            let res = client.bulk_export(request).send().await;
+            let res = res.unwrap();
+            total_rows += res.rows.len();
+
+            res.rows.iter().for_each(|r| {
+                log::debug!("row: {:?}", r.get_primary_key_value("str_id").unwrap());
+            });
+
+            match res.next_start_primary_key {
+                Some(next_pk) => start_pk = next_pk,
+                None => break,
+            }
+        }
+
+        log::debug!("total read rows: {}", total_rows);
+    }
+
+    #[tokio::test]
+    async fn test_bulk_export() {
+        test_bulk_export_impl().await
     }
 }

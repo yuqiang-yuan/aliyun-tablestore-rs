@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use prost::Message;
 
 use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, table::rules::validate_table_name};
@@ -5,7 +7,7 @@ use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, er
 #[derive(Debug, Default, Clone)]
 pub struct DeleteDefinedColumnRequest {
     pub table_name: String,
-    pub columns: Vec<String>,
+    pub columns: HashSet<String>,
 }
 
 impl DeleteDefinedColumnRequest {
@@ -25,7 +27,7 @@ impl DeleteDefinedColumnRequest {
 
     /// 添加一个要删除的列的名字
     pub fn column(mut self, col_name: &str) -> Self {
-        self.columns.push(col_name.into());
+        self.columns.insert(col_name.into());
 
         self
     }
@@ -54,7 +56,10 @@ impl From<DeleteDefinedColumnRequest> for crate::protos::table_store::DeleteDefi
     fn from(value: DeleteDefinedColumnRequest) -> crate::protos::table_store::DeleteDefinedColumnRequest {
         let DeleteDefinedColumnRequest { table_name, columns } = value;
 
-        crate::protos::table_store::DeleteDefinedColumnRequest { table_name, columns }
+        crate::protos::table_store::DeleteDefinedColumnRequest {
+            table_name,
+            columns: columns.into_iter().collect(),
+        }
     }
 }
 

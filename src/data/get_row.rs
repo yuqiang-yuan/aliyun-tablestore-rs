@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use prost::Message;
 
 use crate::{
@@ -18,7 +20,7 @@ use crate::{
 pub struct GetRowRequest {
     pub table_name: String,
     pub primary_key: PrimaryKey,
-    pub columns_to_get: Vec<String>,
+    pub columns_to_get: HashSet<String>,
 
     // Time range fields
     pub time_range_start_ms: Option<i64>,
@@ -98,7 +100,7 @@ impl GetRowRequest {
 
     /// 添加一个需要返回的列
     pub fn column_to_get(mut self, name: &str) -> Self {
-        self.columns_to_get.push(name.to_string());
+        self.columns_to_get.insert(name.to_string());
 
         self
     }
@@ -212,7 +214,7 @@ impl From<GetRowRequest> for crate::protos::table_store::GetRowRequest {
         crate::protos::table_store::GetRowRequest {
             table_name,
             primary_key: pk_bytes,
-            columns_to_get: columns,
+            columns_to_get: columns.into_iter().collect(),
             time_range: if time_range_start_ms.is_some() || time_range_end_ms.is_some() || time_range_specific_ms.is_some() {
                 Some(TimeRange {
                     start_time: time_range_start_ms,

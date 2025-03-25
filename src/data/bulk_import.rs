@@ -1,7 +1,15 @@
 use prost::Message;
 
-use crate::{error::OtsError, model::Row, protos::{plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM}, table_store::OperationType}, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult};
-
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult,
+    error::OtsError,
+    model::Row,
+    protos::{
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+        table_store::OperationType,
+    },
+    table::rules::validate_table_name,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct RowInBulkImportRequest {
@@ -11,10 +19,7 @@ pub struct RowInBulkImportRequest {
 
 impl RowInBulkImportRequest {
     pub fn new(operation_type: OperationType, row: Row) -> Self {
-        Self {
-            operation_type,
-            row,
-        }
+        Self { operation_type, row }
     }
 
     /// 写入行
@@ -46,10 +51,7 @@ impl RowInBulkImportRequest {
 
 impl From<RowInBulkImportRequest> for crate::protos::table_store::RowInBulkImportRequest {
     fn from(value: RowInBulkImportRequest) -> Self {
-        let RowInBulkImportRequest {
-            operation_type,
-            row,
-        } = value;
+        let RowInBulkImportRequest { operation_type, row } = value;
 
         crate::protos::table_store::RowInBulkImportRequest {
             r#type: operation_type as i32,
@@ -64,14 +66,14 @@ impl From<RowInBulkImportRequest> for crate::protos::table_store::RowInBulkImpor
 #[derive(Debug, Default, Clone)]
 pub struct BulkImportRequest {
     pub table_name: String,
-    pub rows: Vec<RowInBulkImportRequest>
+    pub rows: Vec<RowInBulkImportRequest>,
 }
 
 impl BulkImportRequest {
     pub fn new(table_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
-            rows: vec![]
+            rows: vec![],
         }
     }
 
@@ -136,14 +138,11 @@ impl BulkImportRequest {
 
 impl From<BulkImportRequest> for crate::protos::table_store::BulkImportRequest {
     fn from(value: BulkImportRequest) -> Self {
-        let BulkImportRequest {
-            table_name,
-            rows
-        } = value;
+        let BulkImportRequest { table_name, rows } = value;
 
         crate::protos::table_store::BulkImportRequest {
             table_name,
-            rows: rows.into_iter().map(|r| r.into()).collect()
+            rows: rows.into_iter().map(|r| r.into()).collect(),
         }
     }
 }
@@ -157,19 +156,13 @@ pub struct BulkImportOperation {
 
 impl BulkImportOperation {
     pub(crate) fn new(client: OtsClient, request: BulkImportRequest) -> Self {
-        Self {
-            client,
-            request,
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::table_store::BulkImportResponse> {
         self.request.validate()?;
 
-        let Self {
-            client,
-            request,
-        } = self;
+        let Self { client, request } = self;
 
         let msg: crate::protos::table_store::BulkImportRequest = request.into();
 
