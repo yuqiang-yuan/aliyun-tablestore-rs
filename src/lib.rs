@@ -6,7 +6,7 @@ use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteD
 use error::OtsError;
 use index::{CreateIndexOperation, DropIndexOperation};
 use prost::Message;
-use protos::table_store::{self, CreateIndexRequest, DropIndexRequest};
+use protos::table_store::{self, CreateIndexRequest};
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},

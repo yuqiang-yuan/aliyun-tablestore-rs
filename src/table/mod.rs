@@ -82,7 +82,7 @@ mod test_table {
         let list_table_response = client.list_table().send().await;
         log::debug!("{:#?}", list_table_response);
         assert!(list_table_response.is_ok());
-        let tables = list_table_response.unwrap().table_names;
+        let tables = list_table_response.unwrap();
         assert!(tables.len() > 0);
     }
 
@@ -204,7 +204,7 @@ mod test_table {
         log::debug!("{:#?}", response);
         assert!(response.is_ok());
 
-        let tables = client.list_table().send().await.unwrap().table_names;
+        let tables = client.list_table().send().await.unwrap();
         assert!(!tables.contains(&"ccs1".to_string()));
     }
 

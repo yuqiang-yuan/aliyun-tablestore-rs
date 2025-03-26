@@ -20,7 +20,7 @@ impl ListTableOperation {
     }
 
     /// Consume the builder and send request
-    pub async fn send(self) -> OtsResult<ListTableResponse> {
+    pub async fn send(self) -> OtsResult<Vec<String>> {
         let msg = ListTableRequest {};
         let req = OtsRequest {
             method: Method::POST,
@@ -32,6 +32,6 @@ impl ListTableOperation {
         let Self { client } = self;
 
         let response = client.send(req).await?;
-        Ok(ListTableResponse::decode(response.bytes().await?)?)
+        Ok(ListTableResponse::decode(response.bytes().await?)?.table_names)
     }
 }
