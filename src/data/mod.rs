@@ -21,19 +21,13 @@ pub use update_row::*;
 
 #[cfg(test)]
 mod test_row_operations {
-    use std::sync::Once;
 
     use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
-        OtsClient,
-        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
-        error::OtsError,
-        model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
-        protos::{
-            Direction, ReturnType,
-            filter::LogicalOperator,
-        },
+        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest}, error::OtsError, model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter}, protos::{
+            filter::LogicalOperator, Direction, ReturnType
+        }, test_util::setup, OtsClient
     };
 
     use super::{
@@ -41,14 +35,6 @@ mod test_row_operations {
         TableInBatchWriteRowRequest,
     };
 
-    static INIT: Once = Once::new();
-
-    fn setup() {
-        INIT.call_once(|| {
-            simple_logger::init_with_level(log::Level::Debug).unwrap();
-            dotenvy::dotenv().unwrap();
-        });
-    }
 
     async fn test_get_row_impl() {
         setup();

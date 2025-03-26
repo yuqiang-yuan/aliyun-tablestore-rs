@@ -54,25 +54,11 @@ pub(crate) mod rules {
 
 #[cfg(test)]
 mod test_table {
-    use std::sync::Once;
-
     use crate::{
-        OtsClient,
-        index::IndexMetaBuilder,
-        protos::IndexType,
-        table::{CreateTableRequest, UpdateTableRequest},
+        index::IndexMetaBuilder, protos::IndexType, table::{CreateTableRequest, UpdateTableRequest}, test_util::setup, OtsClient
     };
 
     use super::ComputeSplitPointsBySizeRequest;
-
-    static INIT: Once = Once::new();
-
-    fn setup() {
-        INIT.call_once(|| {
-            simple_logger::init_with_level(log::Level::Debug).unwrap();
-            dotenvy::dotenv().unwrap();
-        });
-    }
 
     #[tokio::test]
     async fn test_list_table() {

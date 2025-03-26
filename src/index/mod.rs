@@ -90,21 +90,9 @@ impl IndexMeta {
 
 #[cfg(test)]
 mod test_index {
-    use std::sync::Once;
-
     use crate::{
-        OtsClient,
-        protos::{CreateIndexRequest, IndexMeta},
+        protos::{CreateIndexRequest, IndexMeta}, test_util::setup, OtsClient
     };
-
-    static INIT: Once = Once::new();
-
-    fn setup() {
-        INIT.call_once(|| {
-            simple_logger::init_with_level(log::Level::Debug).unwrap();
-            dotenvy::dotenv().unwrap();
-        });
-    }
 
     async fn test_create_index_impl() {
         setup();

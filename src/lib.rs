@@ -6,7 +6,7 @@ use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteD
 use error::OtsError;
 use index::{CreateIndexOperation, DropIndexOperation};
 use prost::Message;
-use protos::CreateIndexRequest;
+use protos::{search::{CreateSearchIndexRequest, UpdateSearchIndexRequest}, CreateIndexRequest};
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
@@ -17,6 +17,7 @@ use data::{
     BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
     PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
+use search_index::{CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, UpdateSearchIndexOperation};
 use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
@@ -35,6 +36,9 @@ pub mod protos;
 pub mod table;
 pub mod util;
 pub mod search_index;
+
+#[cfg(test)]
+pub mod test_util;
 
 const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
 const HEADER_API_VERSION: &str = "x-ots-apiversion";
@@ -883,4 +887,30 @@ impl OtsClient {
     pub fn drop_index(&self, table_name: &str, idx_name: &str) -> DropIndexOperation {
         DropIndexOperation::new(self.clone(), table_name, idx_name)
     }
+
+    /// 列出多元索引
+    pub fn list_search_index(&self, table_name: Option<&str>) -> ListSearchIndexOperation {
+        ListSearchIndexOperation::new(self.clone(), table_name)
+    }
+
+    /// 创建多元索引
+    pub fn create_search_index(&self, request: CreateSearchIndexRequest) -> CreateSearchIndexOperation {
+        CreateSearchIndexOperation::new(self.clone(), request)
+    }
+
+    /// 查询多元索引描述信息
+    pub fn describe_search_index(&self, table_name: &str, index_name: &str) -> DescribeSearchIndexOperation {
+        DescribeSearchIndexOperation::new(self.clone(), table_name, index_name)
+    }
+
+    /// 修改多元索引
+    pub fn update_search_index(&self, request: UpdateSearchIndexRequest) -> UpdateSearchIndexOperation {
+        UpdateSearchIndexOperation::new(self.clone(), request)
+    }
+
+    /// 删除多元索引
+    pub fn delete_search_index(&self, table_name: &str, index_name: &str) -> DeleteSearchIndexOperation {
+        DeleteSearchIndexOperation::new(self.clone(), table_name, index_name)
+    }
+
 }

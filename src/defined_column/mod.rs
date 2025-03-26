@@ -9,21 +9,9 @@ pub use delete_defined_column::*;
 #[cfg(test)]
 mod test_defined_column {
 
-    use std::sync::Once;
-
     use crate::{
-        OtsClient,
-        defined_column::{AddDefinedColumnRequest, DeleteDefinedColumnRequest},
+        defined_column::{AddDefinedColumnRequest, DeleteDefinedColumnRequest}, test_util::setup, OtsClient
     };
-
-    static INIT: Once = Once::new();
-
-    fn setup() {
-        INIT.call_once(|| {
-            simple_logger::init_with_level(log::Level::Debug).unwrap();
-            dotenvy::dotenv().unwrap();
-        });
-    }
 
     async fn test_add_defined_column_impl() {
         setup();

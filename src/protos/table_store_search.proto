@@ -996,8 +996,8 @@ message SearchResponse {
     optional bytes next_token = 6;
     optional bytes aggs = 7;
     optional bytes group_bys = 8;
-    optional ConsumedCapacity consumed = 9;
-    optional ConsumedCapacity reserved_consumed = 10;
+    optional table_store.ConsumedCapacity consumed = 9;
+    optional table_store.ConsumedCapacity reserved_consumed = 10;
 }
 
 message SearchHit {
