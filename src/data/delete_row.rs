@@ -8,7 +8,7 @@ use crate::{
     model::{Filter, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
+        Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation,
     },
     table::rules::{validate_column_name, validate_table_name},
 };
@@ -32,7 +32,7 @@ pub struct DeleteRowRequest {
 
     /// 返回数据设置。目前仅支持返回主键，主要用于主键列自增功能。
     ///
-    /// 见 [`ReturnType`](`crate::protos::table_store::ReturnType`)
+    /// 见 [`ReturnType`](`crate::protos::ReturnType`)
     pub return_type: Option<ReturnType>,
 
     /// 如果需要返回数据，可以指定要返回的列
@@ -173,7 +173,7 @@ impl DeleteRowRequest {
     }
 }
 
-impl From<DeleteRowRequest> for crate::protos::table_store::DeleteRowRequest {
+impl From<DeleteRowRequest> for crate::protos::DeleteRowRequest {
     fn from(value: DeleteRowRequest) -> Self {
         let DeleteRowRequest {
             table_name,
@@ -185,7 +185,7 @@ impl From<DeleteRowRequest> for crate::protos::table_store::DeleteRowRequest {
             transaction_id,
         } = value;
 
-        crate::protos::table_store::DeleteRowRequest {
+        crate::protos::DeleteRowRequest {
             table_name,
             primary_key: (Row::new().primary_key(primary_key).delete_marker()).encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             condition: Condition {
@@ -214,11 +214,11 @@ pub struct DeleteRowResponse {
     pub row: Option<Row>,
 }
 
-impl TryFrom<crate::protos::table_store::DeleteRowResponse> for DeleteRowResponse {
+impl TryFrom<crate::protos::DeleteRowResponse> for DeleteRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::DeleteRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::DeleteRowResponse { consumed, row } = value;
+    fn try_from(value: crate::protos::DeleteRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::DeleteRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
             Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
@@ -249,7 +249,7 @@ impl DeleteRowOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::DeleteRowRequest = request.into();
+        let msg: crate::protos::DeleteRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::DeleteRow,
@@ -258,7 +258,7 @@ impl DeleteRowOperation {
         };
 
         let response = client.send(req).await?;
-        let response_msg = crate::protos::table_store::DeleteRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::DeleteRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

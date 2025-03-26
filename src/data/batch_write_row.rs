@@ -8,7 +8,7 @@ use crate::{
     model::{Filter, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation},
+        Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation,
     },
     table::rules::validate_table_name,
 };
@@ -34,7 +34,7 @@ pub struct RowInBatchWriteRowRequest {
 
     /// 返回数据设置。目前仅支持返回主键，主要用于主键列自增功能。
     ///
-    /// 见 [`ReturnType`](`crate::protos::table_store::ReturnType`)
+    /// 见 [`ReturnType`](`crate::protos::ReturnType`)
     pub return_type: Option<ReturnType>,
 
     /// 如果需要返回数据，可以指定要返回的列
@@ -118,7 +118,7 @@ impl RowInBatchWriteRowRequest {
     }
 }
 
-impl From<RowInBatchWriteRowRequest> for crate::protos::table_store::RowInBatchWriteRowRequest {
+impl From<RowInBatchWriteRowRequest> for crate::protos::RowInBatchWriteRowRequest {
     fn from(value: RowInBatchWriteRowRequest) -> Self {
         let RowInBatchWriteRowRequest {
             operation_type,
@@ -196,7 +196,7 @@ impl TableInBatchWriteRowRequest {
     }
 }
 
-impl From<TableInBatchWriteRowRequest> for crate::protos::table_store::TableInBatchWriteRowRequest {
+impl From<TableInBatchWriteRowRequest> for crate::protos::TableInBatchWriteRowRequest {
     fn from(value: TableInBatchWriteRowRequest) -> Self {
         let TableInBatchWriteRowRequest { table_name, rows } = value;
 
@@ -298,7 +298,7 @@ impl BatchWriteRowRequest {
     }
 }
 
-impl From<BatchWriteRowRequest> for crate::protos::table_store::BatchWriteRowRequest {
+impl From<BatchWriteRowRequest> for crate::protos::BatchWriteRowRequest {
     fn from(value: BatchWriteRowRequest) -> Self {
         let BatchWriteRowRequest {
             tables,
@@ -319,16 +319,16 @@ impl From<BatchWriteRowRequest> for crate::protos::table_store::BatchWriteRowReq
 #[derive(Debug, Clone, Default)]
 pub struct RowInBatchWriteRowResponse {
     pub is_ok: bool,
-    pub error: Option<crate::protos::table_store::Error>,
+    pub error: Option<crate::protos::Error>,
     pub consumed: Option<ConsumedCapacity>,
     pub row: Option<Row>,
 }
 
-impl TryFrom<crate::protos::table_store::RowInBatchWriteRowResponse> for RowInBatchWriteRowResponse {
+impl TryFrom<crate::protos::RowInBatchWriteRowResponse> for RowInBatchWriteRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::RowInBatchWriteRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::RowInBatchWriteRowResponse { is_ok, error, consumed, row } = value;
+    fn try_from(value: crate::protos::RowInBatchWriteRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::RowInBatchWriteRowResponse { is_ok, error, consumed, row } = value;
 
         Ok(Self {
             is_ok,
@@ -349,11 +349,11 @@ pub struct TableInBatchWriteRowResponse {
     pub rows: Vec<RowInBatchWriteRowResponse>,
 }
 
-impl TryFrom<crate::protos::table_store::TableInBatchWriteRowResponse> for TableInBatchWriteRowResponse {
+impl TryFrom<crate::protos::TableInBatchWriteRowResponse> for TableInBatchWriteRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::TableInBatchWriteRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::TableInBatchWriteRowResponse { table_name, rows } = value;
+    fn try_from(value: crate::protos::TableInBatchWriteRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::TableInBatchWriteRowResponse { table_name, rows } = value;
 
         let mut ret_rows = vec![];
         for r in rows {
@@ -369,11 +369,11 @@ pub struct BatchWriteRowResponse {
     pub tables: Vec<TableInBatchWriteRowResponse>,
 }
 
-impl TryFrom<crate::protos::table_store::BatchWriteRowResponse> for BatchWriteRowResponse {
+impl TryFrom<crate::protos::BatchWriteRowResponse> for BatchWriteRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::BatchWriteRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::BatchWriteRowResponse { tables } = value;
+    fn try_from(value: crate::protos::BatchWriteRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::BatchWriteRowResponse { tables } = value;
 
         let mut ret_tables = vec![];
 
@@ -403,7 +403,7 @@ impl BatchWriteRowOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::BatchWriteRowRequest = request.into();
+        let msg: crate::protos::BatchWriteRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BatchWriteRow,
@@ -413,7 +413,7 @@ impl BatchWriteRowOperation {
 
         let response = client.send(req).await?;
 
-        let response_msg = crate::protos::table_store::BatchWriteRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::BatchWriteRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

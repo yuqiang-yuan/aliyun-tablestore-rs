@@ -6,7 +6,7 @@ use crate::{
     model::Row,
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::OperationType,
+        OperationType,
     },
     table::rules::validate_table_name,
 };
@@ -49,11 +49,11 @@ impl RowInBulkImportRequest {
     }
 }
 
-impl From<RowInBulkImportRequest> for crate::protos::table_store::RowInBulkImportRequest {
+impl From<RowInBulkImportRequest> for crate::protos::RowInBulkImportRequest {
     fn from(value: RowInBulkImportRequest) -> Self {
         let RowInBulkImportRequest { operation_type, row } = value;
 
-        crate::protos::table_store::RowInBulkImportRequest {
+        crate::protos::RowInBulkImportRequest {
             r#type: operation_type as i32,
             row_change: row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
         }
@@ -136,11 +136,11 @@ impl BulkImportRequest {
     }
 }
 
-impl From<BulkImportRequest> for crate::protos::table_store::BulkImportRequest {
+impl From<BulkImportRequest> for crate::protos::BulkImportRequest {
     fn from(value: BulkImportRequest) -> Self {
         let BulkImportRequest { table_name, rows } = value;
 
-        crate::protos::table_store::BulkImportRequest {
+        crate::protos::BulkImportRequest {
             table_name,
             rows: rows.into_iter().map(|r| r.into()).collect(),
         }
@@ -161,12 +161,12 @@ impl BulkImportOperation {
         Self { client, request }
     }
 
-    pub async fn send(self) -> OtsResult<crate::protos::table_store::BulkImportResponse> {
+    pub async fn send(self) -> OtsResult<crate::protos::BulkImportResponse> {
         self.request.validate()?;
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::BulkImportRequest = request.into();
+        let msg: crate::protos::BulkImportRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BulkImport,
@@ -176,6 +176,6 @@ impl BulkImportOperation {
 
         let response = client.send(req).await?;
 
-        Ok(crate::protos::table_store::BulkImportResponse::decode(response.bytes().await?)?)
+        Ok(crate::protos::BulkImportResponse::decode(response.bytes().await?)?)
     }
 }

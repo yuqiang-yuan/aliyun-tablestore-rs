@@ -59,7 +59,7 @@ mod test_table {
     use crate::{
         OtsClient,
         index::IndexMetaBuilder,
-        protos::table_store::IndexType,
+        protos::IndexType,
         table::{CreateTableRequest, UpdateTableRequest},
     };
 
@@ -126,12 +126,12 @@ mod test_table {
                     .build(),
             );
 
-        // let msg: crate::protos::table_store::CreateTableRequest = req.into();
+        // let msg: crate::protos::CreateTableRequest = req.into();
         // let bytes = msg.encode_to_vec();
 
         // std::fs::write("/home/yuanyq/Downloads/aliyun-plainbuffer/create-table.data", &bytes).unwrap();
 
-        // let msg = crate::protos::table_store::CreateTableRequest::decode(bytes.as_slice());
+        // let msg = crate::protos::CreateTableRequest::decode(bytes.as_slice());
         // log::debug!("{:#?}", msg);
 
         let response = client.create_table(req).send().await;

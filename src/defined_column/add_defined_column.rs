@@ -4,7 +4,7 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{DefinedColumnSchema, DefinedColumnType},
+    protos::{DefinedColumnSchema, DefinedColumnType},
     table::rules::{validate_column_name, validate_table_name},
 };
 
@@ -99,11 +99,11 @@ impl AddDefinedColumnRequest {
     }
 }
 
-impl From<AddDefinedColumnRequest> for crate::protos::table_store::AddDefinedColumnRequest {
+impl From<AddDefinedColumnRequest> for crate::protos::AddDefinedColumnRequest {
     fn from(value: AddDefinedColumnRequest) -> Self {
         let AddDefinedColumnRequest { table_name, columns } = value;
 
-        crate::protos::table_store::AddDefinedColumnRequest { table_name, columns }
+        crate::protos::AddDefinedColumnRequest { table_name, columns }
     }
 }
 
@@ -129,7 +129,7 @@ impl AddDefinedColumnOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::AddDefinedColumnRequest = request.into();
+        let msg: crate::protos::AddDefinedColumnRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,

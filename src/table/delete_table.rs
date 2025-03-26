@@ -26,9 +26,9 @@ impl DeleteTableRequest {
     }
 }
 
-impl From<DeleteTableRequest> for crate::protos::table_store::DeleteTableRequest {
+impl From<DeleteTableRequest> for crate::protos::DeleteTableRequest {
     fn from(value: DeleteTableRequest) -> Self {
-        crate::protos::table_store::DeleteTableRequest { table_name: value.table_name }
+        crate::protos::DeleteTableRequest { table_name: value.table_name }
     }
 }
 
@@ -58,7 +58,7 @@ impl DeleteTableOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::DeleteTableRequest = request.into();
+        let msg: crate::protos::DeleteTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,

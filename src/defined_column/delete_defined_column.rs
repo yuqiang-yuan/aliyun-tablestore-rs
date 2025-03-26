@@ -52,11 +52,11 @@ impl DeleteDefinedColumnRequest {
     }
 }
 
-impl From<DeleteDefinedColumnRequest> for crate::protos::table_store::DeleteDefinedColumnRequest {
-    fn from(value: DeleteDefinedColumnRequest) -> crate::protos::table_store::DeleteDefinedColumnRequest {
+impl From<DeleteDefinedColumnRequest> for crate::protos::DeleteDefinedColumnRequest {
+    fn from(value: DeleteDefinedColumnRequest) -> crate::protos::DeleteDefinedColumnRequest {
         let DeleteDefinedColumnRequest { table_name, columns } = value;
 
-        crate::protos::table_store::DeleteDefinedColumnRequest {
+        crate::protos::DeleteDefinedColumnRequest {
             table_name,
             columns: columns.into_iter().collect(),
         }
@@ -84,7 +84,7 @@ impl DeleteDefinedColumnOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::DeleteDefinedColumnRequest = request.into();
+        let msg: crate::protos::DeleteDefinedColumnRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::DeleteDefinedColumn,

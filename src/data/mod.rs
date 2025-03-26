@@ -31,8 +31,8 @@ mod test_row_operations {
         error::OtsError,
         model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
         protos::{
-            table_store::{Direction, ReturnType},
-            table_store_filter::LogicalOperator,
+            Direction, ReturnType,
+            filter::LogicalOperator,
         },
     };
 
@@ -424,7 +424,7 @@ mod test_row_operations {
         assert!(res.is_err());
 
         if let Err(OtsError::ApiError(apie)) = res {
-            let crate::protos::table_store::Error {
+            let crate::protos::Error {
                 code,
                 message: _,
                 access_denied_detail: _,

@@ -6,7 +6,7 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableResponse},
+    protos::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableResponse},
 };
 
 use super::rules::validate_table_name;
@@ -118,7 +118,7 @@ impl UpdateTableRequest {
     }
 }
 
-impl From<UpdateTableRequest> for crate::protos::table_store::UpdateTableRequest {
+impl From<UpdateTableRequest> for crate::protos::UpdateTableRequest {
     fn from(value: UpdateTableRequest) -> Self {
         let UpdateTableRequest {
             table_name,
@@ -133,7 +133,7 @@ impl From<UpdateTableRequest> for crate::protos::table_store::UpdateTableRequest
             stream_columns,
         } = value;
 
-        crate::protos::table_store::UpdateTableRequest {
+        crate::protos::UpdateTableRequest {
             table_name,
             reserved_throughput: if reserved_throughput_read.is_some() || reserved_throughput_write.is_some() {
                 Some(ReservedThroughput {
@@ -189,7 +189,7 @@ impl UpdateTableOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::UpdateTableRequest = request.into();
+        let msg: crate::protos::UpdateTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,

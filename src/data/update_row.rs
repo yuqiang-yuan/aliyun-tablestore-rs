@@ -8,7 +8,7 @@ use crate::{
     model::{Filter, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
+        {Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
     },
     table::rules::{validate_column_name, validate_table_name},
 };
@@ -39,7 +39,7 @@ pub struct UpdateRowRequest {
 
     /// 返回数据设置。目前仅支持返回主键，主要用于主键列自增功能。
     ///
-    /// 见 [`ReturnType`](`crate::protos::table_store::ReturnType`)
+    /// 见 [`ReturnType`](`crate::protos::ReturnType`)
     pub return_type: Option<ReturnType>,
 
     /// 如果需要返回数据，可以指定要返回的列
@@ -139,8 +139,8 @@ impl UpdateRowRequest {
     }
 }
 
-impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
-    fn from(value: UpdateRowRequest) -> crate::protos::table_store::UpdateRowRequest {
+impl From<UpdateRowRequest> for crate::protos::UpdateRowRequest {
+    fn from(value: UpdateRowRequest) -> crate::protos::UpdateRowRequest {
         let UpdateRowRequest {
             table_name,
             row,
@@ -153,7 +153,7 @@ impl From<UpdateRowRequest> for crate::protos::table_store::UpdateRowRequest {
 
         let row_bytes = row.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        crate::protos::table_store::UpdateRowRequest {
+        crate::protos::UpdateRowRequest {
             table_name,
             row_change: row_bytes,
             condition: Condition {
@@ -181,11 +181,11 @@ pub struct UpdateRowResponse {
     pub row: Option<Row>,
 }
 
-impl TryFrom<crate::protos::table_store::UpdateRowResponse> for UpdateRowResponse {
+impl TryFrom<crate::protos::UpdateRowResponse> for UpdateRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::UpdateRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::UpdateRowResponse { consumed, row } = value;
+    fn try_from(value: crate::protos::UpdateRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::UpdateRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
             Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
@@ -216,7 +216,7 @@ impl UpdateRowOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::UpdateRowRequest = request.into();
+        let msg: crate::protos::UpdateRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::UpdateRow,
@@ -226,7 +226,7 @@ impl UpdateRowOperation {
 
         let response = client.send(req).await?;
 
-        let response_msg = crate::protos::table_store::UpdateRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::UpdateRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

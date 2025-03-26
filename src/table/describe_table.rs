@@ -4,7 +4,7 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{DescribeTableRequest, DescribeTableResponse},
+    protos::{DescribeTableRequest, DescribeTableResponse},
 };
 
 use super::rules::validate_table_name;

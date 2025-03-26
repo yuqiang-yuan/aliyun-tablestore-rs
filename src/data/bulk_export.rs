@@ -10,7 +10,7 @@ use crate::{
     protos::{
         plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
         simple_row_matrix::SimpleRowMatrix,
-        table_store::{ConsumedCapacity, DataBlockType},
+        ConsumedCapacity, DataBlockType,
     },
     table::rules::validate_table_name,
 };
@@ -229,7 +229,7 @@ impl BulkExportRequest {
     }
 }
 
-impl From<BulkExportRequest> for crate::protos::table_store::BulkExportRequest {
+impl From<BulkExportRequest> for crate::protos::BulkExportRequest {
     fn from(value: BulkExportRequest) -> Self {
         let BulkExportRequest {
             table_name,
@@ -240,7 +240,7 @@ impl From<BulkExportRequest> for crate::protos::table_store::BulkExportRequest {
             data_block_type,
         } = value;
 
-        crate::protos::table_store::BulkExportRequest {
+        crate::protos::BulkExportRequest {
             table_name,
             columns_to_get: columns_to_get.into_iter().collect(),
             inclusive_start_primary_key: inclusive_start_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
@@ -259,11 +259,11 @@ pub struct BulkExportResponse {
     pub data_block_type: DataBlockType,
 }
 
-impl TryFrom<crate::protos::table_store::BulkExportResponse> for BulkExportResponse {
+impl TryFrom<crate::protos::BulkExportResponse> for BulkExportResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::BulkExportResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::BulkExportResponse {
+    fn try_from(value: crate::protos::BulkExportResponse) -> Result<Self, Self::Error> {
+        let crate::protos::BulkExportResponse {
             consumed,
             rows: rows_bytes,
             next_start_primary_key,
@@ -336,7 +336,7 @@ impl BulkExportOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::BulkExportRequest = request.into();
+        let msg: crate::protos::BulkExportRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BulkExport,
@@ -345,7 +345,7 @@ impl BulkExportOperation {
         };
 
         let res = client.send(req).await?;
-        let res_msg = crate::protos::table_store::BulkExportResponse::decode(res.bytes().await?)?;
+        let res_msg = crate::protos::BulkExportResponse::decode(res.bytes().await?)?;
 
         res_msg.try_into()
     }

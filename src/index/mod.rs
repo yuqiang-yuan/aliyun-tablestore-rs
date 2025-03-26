@@ -1,7 +1,7 @@
 //! 二级索引
 //!
 
-use crate::protos::table_store::{IndexMeta, IndexSyncPhase, IndexType, IndexUpdateMode};
+use crate::protos::{IndexMeta, IndexSyncPhase, IndexType, IndexUpdateMode};
 
 mod create_index;
 mod drop_index;
@@ -94,7 +94,7 @@ mod test_index {
 
     use crate::{
         OtsClient,
-        protos::table_store::{CreateIndexRequest, IndexMeta},
+        protos::{CreateIndexRequest, IndexMeta},
     };
 
     static INIT: Once = Once::new();

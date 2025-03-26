@@ -6,7 +6,7 @@ use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteD
 use error::OtsError;
 use index::{CreateIndexOperation, DropIndexOperation};
 use prost::Message;
-use protos::table_store::{self, CreateIndexRequest};
+use protos::CreateIndexRequest;
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
@@ -34,6 +34,7 @@ pub mod model;
 pub mod protos;
 pub mod table;
 pub mod util;
+pub mod search_index;
 
 const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
 const HEADER_API_VERSION: &str = "x-ots-apiversion";
@@ -529,7 +530,7 @@ impl OtsClient {
 
                 let e = match response.bytes().await {
                     Ok(bytes) => {
-                        let api_error = table_store::Error::decode(bytes)?;
+                        let api_error = protos::Error::decode(bytes)?;
                         OtsError::ApiError(Box::new(api_error))
                     }
                     Err(_) => OtsError::StatusError(status, "".to_string()),

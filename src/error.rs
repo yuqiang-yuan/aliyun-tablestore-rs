@@ -6,9 +6,9 @@ use std::{
 use reqwest::StatusCode;
 use thiserror::Error;
 
-use crate::protos::table_store;
+use crate::protos;
 
-impl Display for table_store::Error {
+impl Display for protos::Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -35,7 +35,7 @@ pub enum OtsError {
 
     /// This is error for OTS API response.
     #[error("{0}")]
-    ApiError(Box<table_store::Error>),
+    ApiError(Box<protos::Error>),
 
     #[error("{0}")]
     FromUtf8Error(#[from] FromUtf8Error),

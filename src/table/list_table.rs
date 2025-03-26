@@ -3,7 +3,7 @@ use reqwest::Method;
 
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    protos::table_store::{ListTableRequest, ListTableResponse},
+    protos::{ListTableRequest, ListTableResponse},
 };
 
 /// 获取当前实例下已创建的所有表的表名。

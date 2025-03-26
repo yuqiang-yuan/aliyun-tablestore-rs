@@ -6,7 +6,7 @@ use reqwest::Method;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    protos::table_store::{
+    protos::{
         CapacityUnit, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType, ReservedThroughput, SseKeyType, SseSpecification,
         StreamSpecification, TableMeta, TableOptions,
     },
@@ -369,7 +369,7 @@ impl CreateTableRequest {
     }
 }
 
-impl From<CreateTableRequest> for crate::protos::table_store::CreateTableRequest {
+impl From<CreateTableRequest> for crate::protos::CreateTableRequest {
     fn from(value: CreateTableRequest) -> Self {
         let CreateTableRequest {
             table_name,
@@ -392,7 +392,7 @@ impl From<CreateTableRequest> for crate::protos::table_store::CreateTableRequest
             indexes,
         } = value;
 
-        crate::protos::table_store::CreateTableRequest {
+        crate::protos::CreateTableRequest {
             table_meta: TableMeta {
                 table_name,
                 primary_key: primary_keys,
@@ -456,7 +456,7 @@ impl CreateTableOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::CreateTableRequest = request.into();
+        let msg: crate::protos::CreateTableRequest = request.into();
 
         let req = OtsRequest {
             method: Method::POST,

@@ -1,12 +1,12 @@
 use crate::model::Row;
 use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
-use crate::protos::table_store::ConsumedCapacity;
+use crate::protos::ConsumedCapacity;
 use crate::table::rules::validate_table_name;
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
     model::{Filter, PrimaryKey, PrimaryKeyColumn},
-    protos::table_store::{Direction, TimeRange},
+    protos::{Direction, TimeRange},
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
@@ -318,8 +318,8 @@ impl GetRangeRequest {
     }
 }
 
-impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
-    fn from(value: GetRangeRequest) -> crate::protos::table_store::GetRangeRequest {
+impl From<GetRangeRequest> for crate::protos::GetRangeRequest {
+    fn from(value: GetRangeRequest) -> crate::protos::GetRangeRequest {
         let GetRangeRequest {
             inclusive_start_primary_key,
             exclusive_end_primary_key,
@@ -347,7 +347,7 @@ impl From<GetRangeRequest> for crate::protos::table_store::GetRangeRequest {
         let start_pk_bytes = inclusive_start_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
         let end_pk_bytes = exclusive_end_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        crate::protos::table_store::GetRangeRequest {
+        crate::protos::GetRangeRequest {
             table_name,
             direction: direction as i32,
             columns_to_get: columns_to_get.into_iter().collect(),
@@ -388,11 +388,11 @@ pub struct GetRangeResponse {
     pub next_start_primary_key: Option<Vec<PrimaryKeyColumn>>,
 }
 
-impl TryFrom<crate::protos::table_store::GetRangeResponse> for GetRangeResponse {
+impl TryFrom<crate::protos::GetRangeResponse> for GetRangeResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::GetRangeResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::GetRangeResponse {
+    fn try_from(value: crate::protos::GetRangeResponse) -> Result<Self, Self::Error> {
+        let crate::protos::GetRangeResponse {
             consumed,
             rows: rows_bytes,
             next_start_primary_key,
@@ -459,7 +459,7 @@ impl GetRangeOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::GetRangeRequest = request.into();
+        let msg: crate::protos::GetRangeRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::GetRange,
@@ -468,7 +468,7 @@ impl GetRangeOperation {
         };
 
         let response = client.send(req).await?;
-        let response_msg = crate::protos::table_store::GetRangeResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::GetRangeResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

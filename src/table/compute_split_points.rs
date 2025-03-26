@@ -6,7 +6,7 @@ use crate::{
     model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{ConsumedCapacity, PrimaryKeySchema, compute_split_points_by_size_response::SplitLocation},
+        {ConsumedCapacity, PrimaryKeySchema, compute_split_points_by_size_response::SplitLocation},
     },
 };
 
@@ -73,7 +73,7 @@ impl ComputeSplitPointsBySizeRequest {
     }
 }
 
-impl From<ComputeSplitPointsBySizeRequest> for crate::protos::table_store::ComputeSplitPointsBySizeRequest {
+impl From<ComputeSplitPointsBySizeRequest> for crate::protos::ComputeSplitPointsBySizeRequest {
     fn from(value: ComputeSplitPointsBySizeRequest) -> Self {
         let ComputeSplitPointsBySizeRequest {
             table_name,
@@ -82,7 +82,7 @@ impl From<ComputeSplitPointsBySizeRequest> for crate::protos::table_store::Compu
             split_point_limit,
         } = value;
 
-        crate::protos::table_store::ComputeSplitPointsBySizeRequest {
+        crate::protos::ComputeSplitPointsBySizeRequest {
             table_name,
             split_size: split_size as i64,
             split_size_unit_in_byte: split_size_unit_in_byte.map(|n| n as i64),
@@ -117,11 +117,11 @@ pub struct ComputeSplitPointsBySizeResponse {
     pub locations: Vec<SplitLocation>,
 }
 
-impl TryFrom<crate::protos::table_store::ComputeSplitPointsBySizeResponse> for ComputeSplitPointsBySizeResponse {
+impl TryFrom<crate::protos::ComputeSplitPointsBySizeResponse> for ComputeSplitPointsBySizeResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::ComputeSplitPointsBySizeResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::ComputeSplitPointsBySizeResponse {
+    fn try_from(value: crate::protos::ComputeSplitPointsBySizeResponse) -> Result<Self, Self::Error> {
+        let crate::protos::ComputeSplitPointsBySizeResponse {
             consumed,
             schema,
             split_points,
@@ -166,7 +166,7 @@ impl ComputeSplitPointsBySizeOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::ComputeSplitPointsBySizeRequest = request.into();
+        let msg: crate::protos::ComputeSplitPointsBySizeRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::ComputeSplitPointsBySize,
@@ -175,7 +175,7 @@ impl ComputeSplitPointsBySizeOperation {
         };
 
         let response = client.send(req).await?;
-        let msg = crate::protos::table_store::ComputeSplitPointsBySizeResponse::decode(response.bytes().await?)?;
+        let msg = crate::protos::ComputeSplitPointsBySizeResponse::decode(response.bytes().await?)?;
 
         msg.try_into()
     }

@@ -365,9 +365,9 @@ pub enum RowOperation {
 impl RowOperation {
     pub fn as_i32(&self) -> i32 {
         match self {
-            Self::Put(_) => crate::protos::table_store::OperationType::Put as i32,
-            Self::Update(_) => crate::protos::table_store::OperationType::Update as i32,
-            Self::Delete(_) => crate::protos::table_store::OperationType::Delete as i32,
+            Self::Put(_) => crate::protos::OperationType::Put as i32,
+            Self::Update(_) => crate::protos::OperationType::Update as i32,
+            Self::Delete(_) => crate::protos::OperationType::Delete as i32,
         }
     }
 }

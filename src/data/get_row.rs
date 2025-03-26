@@ -8,7 +8,7 @@ use crate::{
     model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{ConsumedCapacity, TimeRange},
+        {ConsumedCapacity, TimeRange},
     },
     table::rules::validate_table_name,
 };
@@ -187,7 +187,7 @@ impl GetRowRequest {
     }
 }
 
-impl From<GetRowRequest> for crate::protos::table_store::GetRowRequest {
+impl From<GetRowRequest> for crate::protos::GetRowRequest {
     fn from(value: GetRowRequest) -> Self {
         let GetRowRequest {
             table_name,
@@ -211,7 +211,7 @@ impl From<GetRowRequest> for crate::protos::table_store::GetRowRequest {
 
         let pk_bytes = primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM);
 
-        crate::protos::table_store::GetRowRequest {
+        crate::protos::GetRowRequest {
             table_name,
             primary_key: pk_bytes,
             columns_to_get: columns.into_iter().collect(),
@@ -242,11 +242,11 @@ pub struct GetRowResponse {
     pub next_token: Option<Vec<u8>>,
 }
 
-impl TryFrom<crate::protos::table_store::GetRowResponse> for GetRowResponse {
+impl TryFrom<crate::protos::GetRowResponse> for GetRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::GetRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::GetRowResponse {
+    fn try_from(value: crate::protos::GetRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::GetRowResponse {
             consumed,
             row: row_bytes,
             next_token,
@@ -284,7 +284,7 @@ impl GetRowOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::GetRowRequest = request.into();
+        let msg: crate::protos::GetRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::GetRow,
@@ -293,7 +293,7 @@ impl GetRowOperation {
         };
 
         let response = client.send(req).await?;
-        let response_msg = crate::protos::table_store::GetRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::GetRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

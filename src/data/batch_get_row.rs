@@ -8,7 +8,7 @@ use crate::{
     model::{PrimaryKey, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        table_store::{ConsumedCapacity, TimeRange},
+        ConsumedCapacity, TimeRange,
     },
     table::rules::validate_table_name,
 };
@@ -151,7 +151,7 @@ impl TableInBatchGetRowRequest {
     }
 }
 
-impl From<TableInBatchGetRowRequest> for crate::protos::table_store::TableInBatchGetRowRequest {
+impl From<TableInBatchGetRowRequest> for crate::protos::TableInBatchGetRowRequest {
     fn from(value: TableInBatchGetRowRequest) -> Self {
         let TableInBatchGetRowRequest {
             table_name,
@@ -268,7 +268,7 @@ impl BatchGetRowRequest {
     }
 }
 
-impl From<BatchGetRowRequest> for crate::protos::table_store::BatchGetRowRequest {
+impl From<BatchGetRowRequest> for crate::protos::BatchGetRowRequest {
     fn from(request: BatchGetRowRequest) -> Self {
         let mut tables = Vec::new();
         for table in request.tables {
@@ -286,11 +286,11 @@ pub struct TableInBatchGetRowResponse {
     pub rows: Vec<RowInBatchGetRowResponse>,
 }
 
-impl TryFrom<crate::protos::table_store::TableInBatchGetRowResponse> for TableInBatchGetRowResponse {
+impl TryFrom<crate::protos::TableInBatchGetRowResponse> for TableInBatchGetRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::TableInBatchGetRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::TableInBatchGetRowResponse { table_name, rows } = value;
+    fn try_from(value: crate::protos::TableInBatchGetRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::TableInBatchGetRowResponse { table_name, rows } = value;
 
         let mut ret_rows = vec![];
 
@@ -305,17 +305,17 @@ impl TryFrom<crate::protos::table_store::TableInBatchGetRowResponse> for TableIn
 #[derive(Debug, Default, Clone)]
 pub struct RowInBatchGetRowResponse {
     pub is_ok: bool,
-    pub error: Option<crate::protos::table_store::Error>,
+    pub error: Option<crate::protos::Error>,
     pub consumed: Option<ConsumedCapacity>,
     pub row: Option<Row>,
     pub next_token: Option<Vec<u8>>,
 }
 
-impl TryFrom<crate::protos::table_store::RowInBatchGetRowResponse> for RowInBatchGetRowResponse {
+impl TryFrom<crate::protos::RowInBatchGetRowResponse> for RowInBatchGetRowResponse {
     type Error = OtsError;
 
-    fn try_from(value: crate::protos::table_store::RowInBatchGetRowResponse) -> Result<Self, Self::Error> {
-        let crate::protos::table_store::RowInBatchGetRowResponse {
+    fn try_from(value: crate::protos::RowInBatchGetRowResponse) -> Result<Self, Self::Error> {
+        let crate::protos::RowInBatchGetRowResponse {
             is_ok,
             error,
             consumed,
@@ -347,10 +347,10 @@ pub struct BatchGetRowResponse {
     pub tables: Vec<TableInBatchGetRowResponse>,
 }
 
-impl TryFrom<crate::protos::table_store::BatchGetRowResponse> for BatchGetRowResponse {
+impl TryFrom<crate::protos::BatchGetRowResponse> for BatchGetRowResponse {
     type Error = OtsError;
-    fn try_from(value: crate::protos::table_store::BatchGetRowResponse) -> OtsResult<Self> {
-        let crate::protos::table_store::BatchGetRowResponse { tables } = value;
+    fn try_from(value: crate::protos::BatchGetRowResponse) -> OtsResult<Self> {
+        let crate::protos::BatchGetRowResponse { tables } = value;
 
         let mut ret_tables = vec![];
         for t in tables {
@@ -380,7 +380,7 @@ impl BatchGetRowOperation {
 
         let Self { client, request } = self;
 
-        let msg: crate::protos::table_store::BatchGetRowRequest = request.into();
+        let msg: crate::protos::BatchGetRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BatchGetRow,
@@ -390,7 +390,7 @@ impl BatchGetRowOperation {
 
         let response = client.send(req).await?;
 
-        let response_msg = crate::protos::table_store::BatchGetRowResponse::decode(response.bytes().await?)?;
+        let response_msg = crate::protos::BatchGetRowResponse::decode(response.bytes().await?)?;
 
         response_msg.try_into()
     }

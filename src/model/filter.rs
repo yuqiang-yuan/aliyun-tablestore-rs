@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use prost::Message;
 
-use crate::protos::table_store_filter::{ComparatorType, FilterType, LogicalOperator, ValueTransferRule};
+use crate::protos::filter::{ComparatorType, FilterType, LogicalOperator, ValueTransferRule};
 
 use super::Column;
 
@@ -125,7 +125,7 @@ impl SingleColumnValueFilter {
 
     /// Convert to protobuf bytes
     pub fn into_protobuf_bytes(self) -> Vec<u8> {
-        let msg: crate::protos::table_store_filter::SingleColumnValueFilter = self.into();
+        let msg: crate::protos::filter::SingleColumnValueFilter = self.into();
         msg.encode_to_vec()
     }
 }
@@ -137,7 +137,7 @@ impl Default for SingleColumnValueFilter {
 }
 
 /// 将自定义的 SingleColumnFilter 转换成 protobuf 的 SingleColumnFilter
-impl From<SingleColumnValueFilter> for crate::protos::table_store_filter::SingleColumnValueFilter {
+impl From<SingleColumnValueFilter> for crate::protos::filter::SingleColumnValueFilter {
     fn from(value: SingleColumnValueFilter) -> Self {
         let SingleColumnValueFilter {
             comparator,
@@ -159,7 +159,7 @@ impl From<SingleColumnValueFilter> for crate::protos::table_store_filter::Single
         value.write_plain_buffer(&mut cursor);
         let filter_bytes = cursor.into_inner()[4..].into();
 
-        crate::protos::table_store_filter::SingleColumnValueFilter {
+        crate::protos::filter::SingleColumnValueFilter {
             comparator: comparator as i32,
             column_name: name,
             column_value: filter_bytes,
@@ -187,14 +187,14 @@ impl ColumnPaginationFilter {
 
     /// 编码成 Protobuf 字节
     pub fn into_protobuf_bytes(self) -> Vec<u8> {
-        let msg: crate::protos::table_store_filter::ColumnPaginationFilter = self.into();
+        let msg: crate::protos::filter::ColumnPaginationFilter = self.into();
         msg.encode_to_vec()
     }
 }
 
-impl From<ColumnPaginationFilter> for crate::protos::table_store_filter::ColumnPaginationFilter {
+impl From<ColumnPaginationFilter> for crate::protos::filter::ColumnPaginationFilter {
     fn from(value: ColumnPaginationFilter) -> Self {
-        crate::protos::table_store_filter::ColumnPaginationFilter {
+        crate::protos::filter::ColumnPaginationFilter {
             offset: value.offset,
             limit: value.limit,
         }
@@ -235,17 +235,17 @@ impl CompositeColumnValueFilter {
 
     /// 编码到 protobuf 字节
     pub fn into_protobuf_bytes(self) -> Vec<u8> {
-        let msg: crate::protos::table_store_filter::CompositeColumnValueFilter = self.into();
+        let msg: crate::protos::filter::CompositeColumnValueFilter = self.into();
 
         msg.encode_to_vec()
     }
 }
 
-impl From<CompositeColumnValueFilter> for crate::protos::table_store_filter::CompositeColumnValueFilter {
+impl From<CompositeColumnValueFilter> for crate::protos::filter::CompositeColumnValueFilter {
     fn from(value: CompositeColumnValueFilter) -> Self {
         let CompositeColumnValueFilter { combinator, sub_filters } = value;
 
-        crate::protos::table_store_filter::CompositeColumnValueFilter {
+        crate::protos::filter::CompositeColumnValueFilter {
             combinator: combinator as i32,
             sub_filters: sub_filters.into_iter().map(|f| f.into()).collect(),
         }
@@ -260,20 +260,20 @@ pub enum Filter {
     Composite(CompositeColumnValueFilter),
 }
 
-impl From<Filter> for crate::protos::table_store_filter::Filter {
+impl From<Filter> for crate::protos::filter::Filter {
     fn from(value: Filter) -> Self {
         match value {
-            Filter::Single(f) => crate::protos::table_store_filter::Filter {
+            Filter::Single(f) => crate::protos::filter::Filter {
                 r#type: FilterType::FtSingleColumnValue as i32,
                 filter: f.into_protobuf_bytes(),
             },
 
-            Filter::Pagination(f) => crate::protos::table_store_filter::Filter {
+            Filter::Pagination(f) => crate::protos::filter::Filter {
                 r#type: FilterType::FtColumnPagination as i32,
                 filter: f.into_protobuf_bytes(),
             },
 
-            Filter::Composite(f) => crate::protos::table_store_filter::Filter {
+            Filter::Composite(f) => crate::protos::filter::Filter {
                 r#type: FilterType::FtCompositeColumnValue as i32,
                 filter: f.into_protobuf_bytes(),
             },
@@ -284,7 +284,7 @@ impl From<Filter> for crate::protos::table_store_filter::Filter {
 impl Filter {
     /// 编码到 protobuf 字节
     pub fn into_protobuf_bytes(self) -> Vec<u8> {
-        let msg: crate::protos::table_store_filter::Filter = self.into();
+        let msg: crate::protos::filter::Filter = self.into();
 
         msg.encode_to_vec()
     }
