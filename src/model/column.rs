@@ -94,6 +94,17 @@ impl ColumnValue {
         }
     }
 
+    /// 仅编码列值部分。返回的数据不包含列值前缀的 4 字节。
+    /// 这个方法仅适用于只写出列值的场景
+    pub(crate) fn encode_plain_buffer(&self) -> Vec<u8> {
+        let size = self.compute_size();
+        let buf = vec![0u8; size as usize];
+        let mut cursor = Cursor::new(buf);
+        self.write_plain_buffer(&mut cursor);
+        // 去掉前缀的 4 字节，也就是从类型字节开始
+        cursor.into_inner()[4..].into()
+    }
+
     /// Consume self values and write to cursor *WITHOUT* TAG_CELL_VALUE byte.
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>) {
         // 空值不写出

@@ -17,7 +17,7 @@ use data::{
     BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
     PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
-use search_index::{CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, UpdateSearchIndexOperation};
+use search::{CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, UpdateSearchIndexOperation};
 use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
@@ -35,7 +35,7 @@ pub mod model;
 pub mod protos;
 pub mod table;
 pub mod util;
-pub mod search_index;
+pub mod search;
 
 #[cfg(test)]
 pub mod test_util;
