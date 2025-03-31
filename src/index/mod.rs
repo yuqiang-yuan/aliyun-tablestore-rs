@@ -91,7 +91,9 @@ impl IndexMeta {
 #[cfg(test)]
 mod test_index {
     use crate::{
-        protos::{CreateIndexRequest, IndexMeta}, test_util::setup, OtsClient
+        OtsClient,
+        protos::{CreateIndexRequest, IndexMeta},
+        test_util::setup,
     };
 
     async fn test_create_index_impl() {
@@ -119,10 +121,7 @@ mod test_index {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client
-            .drop_index("ccs2", "idx_cn")
-            .send()
-            .await;
+        let res = client.drop_index("ccs2", "idx_cn").send().await;
 
         assert!(res.is_ok());
     }

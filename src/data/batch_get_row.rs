@@ -7,8 +7,8 @@ use crate::{
     error::OtsError,
     model::{PrimaryKey, Row},
     protos::{
-        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         ConsumedCapacity, TimeRange,
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
     },
     table::rules::validate_table_name,
 };

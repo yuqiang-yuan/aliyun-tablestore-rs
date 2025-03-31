@@ -1,35 +1,12 @@
-use std::fmt::Display;
+use crate::{
+    OtsResult,
+    error::OtsError,
+    model::ColumnValue,
+    protos::search::{DocSort, GeoDistanceType, PrimaryKeySort, ScoreSort, SortMode, SortOrder},
+    table::rules::validate_column_name,
+};
 
-use crate::{model::ColumnValue, protos::search::{DocSort, GeoDistanceType, PrimaryKeySort, ScoreSort, SortMode, SortOrder}};
-
-use super::NestedFilter;
-
-
-
-/// 坐标点，是一个经纬度值。
-#[derive(Debug, Default, Clone, Copy)]
-pub struct GeoPoint {
-    /// 纬度
-    pub latitude: i64,
-
-    /// 经度
-    pub longitude: i64,
-}
-
-impl GeoPoint {
-    pub fn new(lat: i64, lng: i64) -> Self {
-        Self {
-            latitude: lat,
-            longitude: lng
-        }
-    }
-}
-
-impl Display for GeoPoint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{},{}", self.latitude, self.longitude)
-    }
-}
+use super::{GeoPoint, NestedFilter};
 
 /// 多元索引中字段排序方式的配置。
 #[derive(Debug, Default, Clone)]
@@ -101,6 +78,14 @@ impl FieldSort {
         self.missing_field = Some(missing_field.into());
 
         self
+    }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_column_name(&self.field_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid sort by name: {}", self.field_name)));
+        }
+
+        Ok(())
     }
 }
 
@@ -205,6 +190,18 @@ impl GeoDistanceSort {
 
         self
     }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_column_name(&self.field_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid sort by name: {}", self.field_name)));
+        }
+
+        if self.points.is_empty() {
+            return Err(OtsError::ValidationFailed("points must not be empty".to_string()));
+        }
+
+        Ok(())
+    }
 }
 
 impl From<GeoDistanceSort> for crate::protos::search::GeoDistanceSort {
@@ -248,6 +245,16 @@ pub enum Sorter {
     GeoDistance(GeoDistanceSort),
 }
 
+impl Sorter {
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        match self {
+            Self::Field(s) => s.validate(),
+            Self::GeoDistance(s) => s.validate(),
+            _ => Ok(()),
+        }
+    }
+}
+
 impl From<Sorter> for crate::protos::search::Sorter {
     fn from(value: Sorter) -> Self {
         let mut ret = crate::protos::search::Sorter::default();
@@ -257,23 +264,23 @@ impl From<Sorter> for crate::protos::search::Sorter {
                 ret.pk_sort = Some(PrimaryKeySort {
                     order: Some(sort_order as i32),
                 });
-            },
+            }
             Sorter::Score(sort_order) => {
                 ret.score_sort = Some(ScoreSort {
                     order: Some(sort_order as i32),
                 });
-            },
+            }
             Sorter::DocSort(sort_order) => {
                 ret.doc_sort = Some(DocSort {
                     order: Some(sort_order as i32),
                 });
-            },
+            }
             Sorter::Field(field_sort) => {
                 ret.field_sort = Some(crate::protos::search::FieldSort::from(field_sort));
-            },
+            }
             Sorter::GeoDistance(geo_distance_sort) => {
                 ret.geo_distance_sort = Some(crate::protos::search::GeoDistanceSort::from(geo_distance_sort));
-            },
+            }
         }
 
         ret
@@ -283,12 +290,70 @@ impl From<Sorter> for crate::protos::search::Sorter {
 impl<T, S> From<T> for crate::protos::search::Sort
 where
     T: IntoIterator<Item = S>,
-    S: Into<crate::protos::search::Sorter>
+    S: Into<crate::protos::search::Sorter>,
 {
     fn from(value: T) -> Self {
         crate::protos::search::Sort {
             sorter: value.into_iter().map(|i| i.into()).collect(),
             disable_default_pk_sorter: Some(false),
+        }
+    }
+}
+
+/// 封装 Sort
+#[derive(Debug, Default, Clone)]
+pub struct Sort {
+    /// 排序器
+    pub sorters: Vec<Sorter>,
+
+    /// 当指定非 PrimaryKeySort 的 sorter 时，默认情况下会主动添加 PrimaryKeySort，
+    /// 通过该参数可禁止主动添加 PrimaryKeySort
+    pub disable_default_pk_sorter: bool,
+}
+
+impl Sort {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_sorters(sorters: Vec<Sorter>, disable_default_pk_sorter: bool) -> Self {
+        Self {
+            sorters,
+            disable_default_pk_sorter,
+        }
+    }
+
+    /// 添加一个排序器
+    pub fn sorter(mut self, sorter: Sorter) -> Self {
+        self.sorters.push(sorter);
+
+        self
+    }
+
+    /// 设置排序器
+    pub fn sorters(mut self, sorters: impl IntoIterator<Item = Sorter>) -> Self {
+        self.sorters = sorters.into_iter().collect();
+
+        self
+    }
+
+    /// 设置是否禁用主动添加 PrimaryKeySort，
+    pub fn disable_default_pk_sorter(mut self, disable_default_pk_sorter: bool) -> Self {
+        self.disable_default_pk_sorter = disable_default_pk_sorter;
+
+        self
+    }
+}
+
+impl From<Sort> for crate::protos::search::Sort {
+    fn from(value: Sort) -> Self {
+        let Sort {
+            sorters,
+            disable_default_pk_sorter,
+        } = value;
+        Self {
+            sorter: sorters.into_iter().map(crate::protos::search::Sorter::from).collect(),
+            disable_default_pk_sorter: Some(disable_default_pk_sorter),
         }
     }
 }

@@ -2,10 +2,15 @@ use std::ops::Range;
 
 use prost::Message;
 
-use crate::{error::OtsError, model::ColumnValue, protos::search::{FieldRange, GroupByType, SortOrder}, table::rules::validate_column_name, OtsResult};
+use crate::{
+    OtsResult,
+    error::OtsError,
+    model::ColumnValue,
+    protos::search::{FieldRange, GeoHashPrecision, GroupByType, SortOrder},
+    table::rules::validate_column_name,
+};
 
-use super::{validate_group_name, validate_timezone_string, Aggregation, Duration, Query};
-
+use super::{Aggregation, Duration, GeoPoint, Query, validate_aggregation_name, validate_group_name, validate_timezone_string};
 
 /// 分组中的item排序规则集。
 #[derive(Debug, Clone)]
@@ -30,24 +35,35 @@ impl From<GroupBySorter> for crate::protos::search::GroupBySorter {
 
         match value {
             GroupBySorter::GroupKey(order) => {
-                ret.group_key_sort = Some(crate::protos::search::GroupKeySort {
-                    order: Some(order as i32),
-                });
-            },
+                ret.group_key_sort = Some(crate::protos::search::GroupKeySort { order: Some(order as i32) });
+            }
             GroupBySorter::RowCount(order) => {
-                ret.row_count_sort = Some(crate::protos::search::RowCountSort {
-                    order: Some(order as i32),
-                });
-            },
+                ret.row_count_sort = Some(crate::protos::search::RowCountSort { order: Some(order as i32) });
+            }
             GroupBySorter::SubAggregation(name, order) => {
                 ret.sub_agg_sort = Some(crate::protos::search::SubAggSort {
                     sub_agg_name: Some(name),
                     order: Some(order as i32),
                 });
-            },
+            }
         }
 
         ret
+    }
+}
+
+impl GroupBySorter {
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        match self {
+            Self::SubAggregation(name, _) => {
+                if !validate_aggregation_name(name) {
+                    return Err(OtsError::ValidationFailed(format!("invalid aggregation name: {}", name)));
+                }
+
+                Ok(())
+            }
+            _ => Ok(()),
+        }
     }
 }
 
@@ -55,7 +71,7 @@ impl From<GroupBySorter> for crate::protos::search::GroupBySorter {
 impl<T, S> From<T> for crate::protos::search::GroupBySort
 where
     T: IntoIterator<Item = S>,
-    S: Into<crate::protos::search::GroupBySorter>
+    S: Into<crate::protos::search::GroupBySorter>,
 {
     fn from(value: T) -> Self {
         Self {
@@ -91,12 +107,10 @@ pub struct GroupByField {
     pub min_doc_count: Option<u64>,
 }
 
-
 impl GroupByField {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            size: 10,
             ..Default::default()
         }
     }
@@ -181,8 +195,24 @@ impl GroupByField {
             return Err(OtsError::ValidationFailed(format!("invalid field name: {}", self.field_name)));
         }
 
+        if self.size == 0 {
+            return Err(OtsError::ValidationFailed("invalid size: 0".to_string()));
+        }
+
         if self.size > i32::MAX as u32 {
-            return Err(OtsError::ValidationFailed("size is too large".to_string()));
+            return Err(OtsError::ValidationFailed(format!("size is too large: {}", self.size)));
+        }
+
+        for s in &self.sorters {
+            s.validate()?;
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
         }
 
         Ok(())
@@ -295,6 +325,14 @@ impl GroupByFilter {
             return Err(OtsError::ValidationFailed("filters are required, please set a valid value".to_string()));
         }
 
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
         Ok(())
     }
 }
@@ -309,7 +347,7 @@ impl From<GroupByFilter> for crate::protos::search::GroupByFilter {
         } = value;
 
         Self {
-            filters: filters.into_iter().map(|f| crate::protos::search::Query::from(f)).collect(),
+            filters: filters.into_iter().map(crate::protos::search::Query::from).collect(),
             sub_aggs: Some(crate::protos::search::Aggregations::from(sub_aggregations)),
             sub_group_bys: Some(crate::protos::search::GroupBys::from(sub_group_bys)),
         }
@@ -477,6 +515,18 @@ impl GroupByHistogram {
             return Err(OtsError::ValidationFailed("field_range.max is required, please set a valid value".to_string()));
         }
 
+        for s in &self.sorters {
+            s.validate()?;
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
         Ok(())
     }
 }
@@ -484,7 +534,7 @@ impl GroupByHistogram {
 impl From<GroupByHistogram> for crate::protos::search::GroupByHistogram {
     fn from(value: GroupByHistogram) -> Self {
         let GroupByHistogram {
-            name:_ ,
+            name: _,
             field_name,
             interval,
             min_value,
@@ -494,7 +544,7 @@ impl From<GroupByHistogram> for crate::protos::search::GroupByHistogram {
             sorters,
             sub_aggregations,
             sub_group_bys,
-            offset
+            offset,
         } = value;
 
         Self {
@@ -513,7 +563,6 @@ impl From<GroupByHistogram> for crate::protos::search::GroupByHistogram {
         }
     }
 }
-
 
 /// 在多元索引统计聚合中表示范围分组，用于根据一个字段的范围对查询结果进行分组，字段值在某范围内放到同一分组内，返回每个范围中相应的item个数。
 #[derive(Debug, Clone, Default)]
@@ -558,7 +607,7 @@ impl GroupByRange {
 
     /// 增加一组范围配置
     pub fn range(mut self, range: Range<f64>) -> Self {
-        self.ranges.push(range.into());
+        self.ranges.push(range);
 
         self
     }
@@ -612,16 +661,15 @@ impl GroupByRange {
             return Err(OtsError::ValidationFailed("ranges is required, please set a valid value".to_string()));
         }
 
-        Ok(())
-    }
-}
-
-impl From<Range<f64>> for crate::protos::search::Range {
-    fn from(value: Range<f64>) -> Self {
-        Self {
-            from: Some(value.start),
-            to: Some(value.end),
+        for g in &self.sub_group_bys {
+            g.validate()?;
         }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
+        Ok(())
     }
 }
 
@@ -823,8 +871,23 @@ impl GroupByDateHistogram {
 
         if let Some(s) = &self.timezone {
             if !validate_timezone_string(s.as_str()) {
-                return Err(OtsError::ValidationFailed(format!("invalid timezone string: {}. It should be like `+08:00` or `-08:00`", s)));
+                return Err(OtsError::ValidationFailed(format!(
+                    "invalid timezone string: {}. It should be like `+08:00` or `-08:00`",
+                    s
+                )));
             }
+        }
+
+        for s in &self.sorters {
+            s.validate()?;
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
         }
 
         Ok(())
@@ -862,33 +925,455 @@ impl From<GroupByDateHistogram> for crate::protos::search::GroupByDateHistogram 
             sort: Some(crate::protos::search::GroupBySort::from(sorters)),
             sub_aggs: Some(crate::protos::search::Aggregations::from(sub_aggregations)),
             sub_group_bys: Some(crate::protos::search::GroupBys::from(sub_group_bys)),
-
         }
     }
 }
 
+/// 对 GeoPoint 类型的字段按照地理区域进行分组统计
 #[derive(Debug, Clone, Default)]
-pub struct GroupByComposite {
+pub struct GroupByGeoGrid {
+    /// 分组名称
+    pub name: String,
 
+    /// 字段名称
+    pub field_name: String,
+
+    /// 返回的分组数量
+    pub size: u32,
+
+    /// GroupBy 的精度
+    pub precision: GeoHashPrecision,
+
+    /// 子统计聚合Aggregation，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_aggregations: Vec<Aggregation>,
+
+    /// 子统计聚合GroupBy，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_group_bys: Vec<GroupBy>,
 }
 
-impl GroupByComposite {
+impl GroupByGeoGrid {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            ..Default::default()
+        }
+    }
+
+    /// 设置名称
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+
+        self
+    }
+
+    /// 设置字段名
+    pub fn field_name(mut self, field_name: &str) -> Self {
+        self.field_name = field_name.to_string();
+
+        self
+    }
+
+    /// 设置分组数量
+    pub fn size(mut self, size: u32) -> Self {
+        self.size = size;
+
+        self
+    }
+
+    /// 增加子聚合
+    pub fn sub_aggregation(mut self, aggr: Aggregation) -> Self {
+        self.sub_aggregations.push(aggr);
+
+        self
+    }
+
+    /// 设置子聚合
+    pub fn sub_aggregations(mut self, aggregations: impl IntoIterator<Item = Aggregation>) -> Self {
+        self.sub_aggregations = aggregations.into_iter().collect();
+
+        self
+    }
+
+    /// 增加子分组
+    pub fn sub_group_by(mut self, sub_group_by: GroupBy) -> Self {
+        self.sub_group_bys.push(sub_group_by);
+
+        self
+    }
+
+    /// 设置子分组
+    pub fn sub_group_bys(mut self, sub_group_bys: impl IntoIterator<Item = GroupBy>) -> Self {
+        self.sub_group_bys = sub_group_bys.into_iter().collect();
+
+        self
+    }
+
     pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_group_name(&self.name) {
+            return Err(OtsError::ValidationFailed(format!("invalid group name: {}", self.name)));
+        }
+
+        if !validate_column_name(&self.field_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid field name: {}", self.field_name)));
+        }
+
+        if self.size > i32::MAX as u32 {
+            return Err(OtsError::ValidationFailed("size is too large".to_string()));
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
         Ok(())
     }
 }
 
-///
+impl From<GroupByGeoGrid> for crate::protos::search::GroupByGeoGrid {
+    fn from(value: GroupByGeoGrid) -> Self {
+        let GroupByGeoGrid {
+            name: _,
+            field_name,
+            size,
+            precision,
+            sub_aggregations,
+            sub_group_bys,
+        } = value;
+
+        Self {
+            field_name: Some(field_name),
+            precision: Some(precision as i32),
+            size: Some(size as i32),
+            sub_aggs: Some(crate::protos::search::Aggregations::from(sub_aggregations)),
+            sub_group_bys: Some(crate::protos::search::GroupBys::from(sub_group_bys)),
+        }
+    }
+}
+
+/// 根据地理位置坐标进行分组。
+#[derive(Debug, Default, Clone)]
+pub struct GroupByGeoDistance {
+    // 分组名称
+    pub name: String,
+
+    /// 字段名称
+    pub field_name: String,
+
+    /// 设置起始中心点坐标
+    pub origin: GeoPoint,
+
+    /// 分组的依据范围
+    pub ranges: Vec<Range<f64>>,
+
+    /// 子统计聚合Aggregation，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_aggregations: Vec<Aggregation>,
+
+    /// 子统计聚合GroupBy，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_group_bys: Vec<GroupBy>,
+}
+
+impl GroupByGeoDistance {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            ..Default::default()
+        }
+    }
+
+    /// 设置名称
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+
+        self
+    }
+
+    /// 设置字段名
+    pub fn field_name(mut self, field_name: &str) -> Self {
+        self.field_name = field_name.to_string();
+
+        self
+    }
+
+    /// 设置起始中心点
+    pub fn origin(mut self, origin: GeoPoint) -> Self {
+        self.origin = origin;
+
+        self
+    }
+
+    /// 增加一个分组范围
+    pub fn range(mut self, range: Range<f64>) -> Self {
+        self.ranges.push(range);
+
+        self
+    }
+
+    /// 设置分组范围
+    pub fn ranges(mut self, ranges: impl IntoIterator<Item = Range<f64>>) -> Self {
+        self.ranges = ranges.into_iter().collect();
+
+        self
+    }
+
+    /// 增加子聚合
+    pub fn sub_aggregation(mut self, aggr: Aggregation) -> Self {
+        self.sub_aggregations.push(aggr);
+
+        self
+    }
+
+    /// 设置子聚合
+    pub fn sub_aggregations(mut self, aggregations: impl IntoIterator<Item = Aggregation>) -> Self {
+        self.sub_aggregations = aggregations.into_iter().collect();
+
+        self
+    }
+
+    /// 增加子分组
+    pub fn sub_group_by(mut self, sub_group_by: GroupBy) -> Self {
+        self.sub_group_bys.push(sub_group_by);
+
+        self
+    }
+
+    /// 设置子分组
+    pub fn sub_group_bys(mut self, sub_group_bys: impl IntoIterator<Item = GroupBy>) -> Self {
+        self.sub_group_bys = sub_group_bys.into_iter().collect();
+
+        self
+    }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_group_name(&self.name) {
+            return Err(OtsError::ValidationFailed(format!("invalid group name: {}", self.name)));
+        }
+
+        if !validate_column_name(&self.field_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid field name: {}", self.field_name)));
+        }
+
+        if self.ranges.is_empty() {
+            return Err(OtsError::ValidationFailed("ranges must not be empty".to_string()));
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
+        Ok(())
+    }
+}
+
+impl From<GroupByGeoDistance> for crate::protos::search::GroupByGeoDistance {
+    fn from(value: GroupByGeoDistance) -> Self {
+        let GroupByGeoDistance {
+            name: _,
+            field_name,
+            origin,
+            ranges,
+            sub_aggregations,
+            sub_group_bys,
+        } = value;
+
+        Self {
+            field_name: Some(field_name),
+            origin: Some(crate::protos::search::GeoPoint::from(origin)),
+            ranges: ranges.into_iter().map(|r| r.into()).collect(),
+            sub_aggs: Some(crate::protos::search::Aggregations::from(sub_aggregations)),
+            sub_group_bys: Some(crate::protos::search::GroupBys::from(sub_group_bys)),
+        }
+    }
+}
+
+/// 组合式分组
+#[derive(Debug, Clone, Default)]
+pub struct GroupByComposite {
+    /// GroupBy 的名字，之后从 GroupBy 结果列表中根据该名字拿到 GroupBy 结果
+    pub name: String,
+
+    /// 返回的分组数量
+    pub size: u32,
+
+    /// 返回分组的数量；软限制，允许设置大于服务端最大限制值。当该值超过服务端最大值限制后被修正为最大值。
+    ///
+    /// - 实际值返回分组结果数量为：min(suggestedSize, 服务端分组数量限制，总分组数量)
+    /// - 适用场景：重吞吐的场景，一般是对接计算系统，比如spark、presto等。
+    pub suggested_size: Option<u32>,
+
+    /// GroupByComposite 结果内会返回 `nextToken`，用于支持分组翻页
+    pub next_token: Option<String>,
+
+    /// 支持对多种类型的多列进行分组统计
+    ///
+    /// - [`GroupByField`]
+    /// - [`GroupByHistogram`]
+    /// - [`GroupByDateHistogram`]
+    pub sources: Vec<GroupBy>,
+
+    /// 子统计聚合Aggregation，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_aggregations: Vec<Aggregation>,
+
+    /// 子统计聚合GroupBy，子统计聚合会根据分组内容再进行一次统计聚合分析。
+    pub sub_group_bys: Vec<GroupBy>,
+}
+
+impl GroupByComposite {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            size: 10,
+            ..Default::default()
+        }
+    }
+
+    /// 设置名称
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+
+        self
+    }
+
+    /// 设置分组数量
+    pub fn size(mut self, size: u32) -> Self {
+        self.size = size;
+
+        self
+    }
+
+    /// 设置软限制分组数量
+    pub fn suggested_size(mut self, suggested_size: u32) -> Self {
+        self.suggested_size = Some(suggested_size);
+
+        self
+    }
+
+    /// 添加一个分组设置
+    pub fn source(mut self, source: GroupBy) -> Self {
+        self.sources.push(source);
+
+        self
+    }
+
+    /// 设置分组集合
+    pub fn sources(mut self, sources: impl IntoIterator<Item = GroupBy>) -> Self {
+        self.sources = sources.into_iter().collect();
+
+        self
+    }
+
+    /// 设置分页 token
+    pub fn next_token(mut self, next_token: impl Into<String>) -> Self {
+        self.next_token = Some(next_token.into());
+
+        self
+    }
+
+    /// 增加子聚合
+    pub fn sub_aggregation(mut self, aggr: Aggregation) -> Self {
+        self.sub_aggregations.push(aggr);
+
+        self
+    }
+
+    /// 设置子聚合
+    pub fn sub_aggregations(mut self, aggregations: impl IntoIterator<Item = Aggregation>) -> Self {
+        self.sub_aggregations = aggregations.into_iter().collect();
+
+        self
+    }
+
+    /// 增加子分组
+    pub fn sub_group_by(mut self, sub_group_by: GroupBy) -> Self {
+        self.sub_group_bys.push(sub_group_by);
+
+        self
+    }
+
+    /// 设置子分组
+    pub fn sub_group_bys(mut self, sub_group_bys: impl IntoIterator<Item = GroupBy>) -> Self {
+        self.sub_group_bys = sub_group_bys.into_iter().collect();
+
+        self
+    }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_group_name(&self.name) {
+            return Err(OtsError::ValidationFailed(format!("invalid group name: {}", self.name)));
+        }
+
+        if self.size > i32::MAX as u32 {
+            return Err(OtsError::ValidationFailed("size is too large".to_string()));
+        }
+
+        if let Some(n) = self.suggested_size {
+            if n > i32::MAX as u32 {
+                return Err(OtsError::ValidationFailed("suggested size is too large".to_string()));
+            }
+        }
+
+        if self.sources.is_empty() {
+            return Err(OtsError::ValidationFailed("sources must not be empty".to_string()));
+        }
+
+        for g in &self.sources {
+            g.validate()?;
+        }
+
+        for g in &self.sub_group_bys {
+            g.validate()?;
+        }
+
+        for a in &self.sub_aggregations {
+            a.validate()?;
+        }
+
+        Ok(())
+    }
+}
+
+impl From<GroupByComposite> for crate::protos::search::GroupByComposite {
+    fn from(value: GroupByComposite) -> Self {
+        let GroupByComposite {
+            name: _,
+            size,
+            suggested_size,
+            next_token,
+            sources,
+            sub_aggregations,
+            sub_group_bys,
+        } = value;
+
+        Self {
+            sources: Some(crate::protos::search::GroupBys::from(sources)),
+            size: Some(size as i32),
+            suggested_size: suggested_size.map(|n| n as i32),
+            next_token,
+            sub_aggs: Some(crate::protos::search::Aggregations::from(sub_aggregations)),
+            sub_group_bys: Some(crate::protos::search::GroupBys::from(sub_group_bys)),
+        }
+    }
+}
+
+/// 分组设置
 #[derive(Debug, Clone)]
 pub enum GroupBy {
     Field(GroupByField),
     Filter(GroupByFilter),
+    Range(GroupByRange),
     Histogram(GroupByHistogram),
     DateHistogram(GroupByDateHistogram),
-    Range(GroupByRange),
+    GeoGrid(GroupByGeoGrid),
+    GeoDistance(GroupByGeoDistance),
     Composite(GroupByComposite),
 }
-
 
 impl From<GroupBy> for crate::protos::search::GroupBy {
     fn from(value: GroupBy) -> Self {
@@ -902,28 +1387,44 @@ impl From<GroupBy> for crate::protos::search::GroupBy {
             GroupBy::Filter(gb) => Self {
                 name: Some(gb.name.clone()),
                 r#type: Some(GroupByType::GroupByFilter as i32),
-                body: Some(crate::protos::search::GroupByFilter::from(gb).encode_to_vec())
+                body: Some(crate::protos::search::GroupByFilter::from(gb).encode_to_vec()),
             },
 
             GroupBy::Histogram(gb) => Self {
                 name: Some(gb.name.clone()),
                 r#type: Some(GroupByType::GroupByHistogram as i32),
-                body: Some(crate::protos::search::GroupByHistogram::from(gb).encode_to_vec())
+                body: Some(crate::protos::search::GroupByHistogram::from(gb).encode_to_vec()),
             },
 
             GroupBy::DateHistogram(gb) => Self {
                 name: Some(gb.name.clone()),
                 r#type: Some(GroupByType::GroupByDateHistogram as i32),
-                body: Some(crate::protos::search::GroupByDateHistogram::from(gb).encode_to_vec())
+                body: Some(crate::protos::search::GroupByDateHistogram::from(gb).encode_to_vec()),
             },
 
             GroupBy::Range(gb) => Self {
                 name: Some(gb.name.clone()),
                 r#type: Some(GroupByType::GroupByRange as i32),
-                body: Some(crate::protos::search::GroupByRange::from(gb).encode_to_vec())
+                body: Some(crate::protos::search::GroupByRange::from(gb).encode_to_vec()),
             },
 
-            GroupBy::Composite(gb) => todo!(),
+            GroupBy::GeoGrid(gb) => Self {
+                name: Some(gb.name.clone()),
+                r#type: Some(GroupByType::GroupByGeoGrid as i32),
+                body: Some(crate::protos::search::GroupByGeoGrid::from(gb).encode_to_vec()),
+            },
+
+            GroupBy::GeoDistance(gb) => Self {
+                name: Some(gb.name.clone()),
+                r#type: Some(GroupByType::GroupByGeoDistance as i32),
+                body: Some(crate::protos::search::GroupByGeoDistance::from(gb).encode_to_vec()),
+            },
+
+            GroupBy::Composite(gb) => Self {
+                name: Some(gb.name.clone()),
+                r#type: Some(GroupByType::GroupByComposite as i32),
+                body: Some(crate::protos::search::GroupByComposite::from(gb).encode_to_vec()),
+            },
         }
     }
 }
@@ -933,9 +1434,11 @@ impl GroupBy {
         match self {
             GroupBy::Field(gb) => gb.validate(),
             GroupBy::Filter(gb) => gb.validate(),
-            GroupBy::Histogram(gb) => gb.validate(),
             GroupBy::Range(gb) => gb.validate(),
+            GroupBy::Histogram(gb) => gb.validate(),
             GroupBy::DateHistogram(gb) => gb.validate(),
+            GroupBy::GeoGrid(gb) => gb.validate(),
+            GroupBy::GeoDistance(gb) => gb.validate(),
             GroupBy::Composite(gb) => gb.validate(),
         }
     }
@@ -948,7 +1451,7 @@ where
 {
     fn from(value: T) -> Self {
         Self {
-            group_bys: value.into_iter().map(|g| g.into()).collect()
+            group_bys: value.into_iter().map(|g| g.into()).collect(),
         }
     }
 }

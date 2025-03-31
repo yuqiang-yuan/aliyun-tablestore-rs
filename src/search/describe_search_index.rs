@@ -1,6 +1,10 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, protos::search::{DescribeSearchIndexRequest, DescribeSearchIndexResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::search::{DescribeSearchIndexRequest, DescribeSearchIndexResponse},
+};
 
 /// 查询多元索引描述信息，包括多元索引的字段信息和索引配置等。
 ///
@@ -34,17 +38,14 @@ impl DescribeSearchIndexOperation {
                 table_name: Some(table_name.to_string()),
                 index_name: Some(index_name.to_string()),
                 include_sync_stat: Some(true),
-            }
+            },
         }
     }
 
     pub async fn send(self) -> OtsResult<DescribeSearchIndexResponse> {
         self.request.validate()?;
 
-        let Self {
-            client,
-            request
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::DescribeSearchIndex,

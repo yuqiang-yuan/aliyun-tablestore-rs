@@ -7,8 +7,8 @@ use crate::{
     error::OtsError,
     model::{Filter, Row},
     protos::{
-        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation,
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
     },
     table::rules::validate_table_name,
 };

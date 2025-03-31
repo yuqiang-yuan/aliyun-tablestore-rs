@@ -6,7 +6,10 @@ use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteD
 use error::OtsError;
 use index::{CreateIndexOperation, DropIndexOperation};
 use prost::Message;
-use protos::{search::{CreateSearchIndexRequest, UpdateSearchIndexRequest}, CreateIndexRequest};
+use protos::{
+    CreateIndexRequest,
+    search::{CreateSearchIndexRequest, UpdateSearchIndexRequest},
+};
 use reqwest::{
     Response,
     header::{HeaderMap, HeaderName, HeaderValue},
@@ -17,7 +20,10 @@ use data::{
     BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
     PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
-use search::{CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, UpdateSearchIndexOperation};
+use search::{
+    CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, SearchOperation, SearchRequest,
+    UpdateSearchIndexOperation,
+};
 use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
@@ -33,9 +39,9 @@ pub mod index;
 pub mod macros;
 pub mod model;
 pub mod protos;
+pub mod search;
 pub mod table;
 pub mod util;
-pub mod search;
 
 #[cfg(test)]
 pub mod test_util;
@@ -913,4 +919,8 @@ impl OtsClient {
         DeleteSearchIndexOperation::new(self.clone(), table_name, index_name)
     }
 
+    /// 通过多元索引查询数据
+    pub fn search(&self, request: SearchRequest) -> SearchOperation {
+        SearchOperation::new(self.clone(), request)
+    }
 }

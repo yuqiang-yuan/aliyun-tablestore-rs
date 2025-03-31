@@ -8,9 +8,9 @@ use crate::{
     error::OtsError,
     model::{Filter, PrimaryKey, PrimaryKeyColumn, Row},
     protos::{
+        ConsumedCapacity, DataBlockType,
         plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
         simple_row_matrix::SimpleRowMatrix,
-        ConsumedCapacity, DataBlockType,
     },
     table::rules::validate_table_name,
 };

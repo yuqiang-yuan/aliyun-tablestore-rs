@@ -1,9 +1,16 @@
-use std::{sync::Once, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    sync::Once,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-use aliyun_tablestore_rs::{data::BulkImportRequest, model::Row, OtsClient};
-use base64::{prelude::BASE64_STANDARD, Engine};
-use fake::{faker::{name::zh_cn::Name, phone_number::zh_cn::PhoneNumber}, uuid::UUIDv4, Fake};
-use rand::{random_range, Rng};
+use aliyun_tablestore_rs::{OtsClient, data::BulkImportRequest, model::Row};
+use base64::{Engine, prelude::BASE64_STANDARD};
+use fake::{
+    Fake,
+    faker::{name::zh_cn::Name, phone_number::zh_cn::PhoneNumber},
+    uuid::UUIDv4,
+};
+use rand::{Rng, random_range};
 
 static INIT: Once = Once::new();
 
@@ -23,8 +30,6 @@ fn current_time_ms() -> u128 {
 async fn main() {
     setup();
     let client = OtsClient::from_env();
-
-
 
     const MAX_USERS: usize = 10_000_000;
     const BATCH_ROWS: usize = 200;
@@ -61,7 +66,7 @@ async fn main() {
                     .column_string("gender", gender)
                     .column_integer("registered_at_ms", registered_at_ms)
                     .column_double("score", score)
-                    .column_bool("deleted", false)
+                    .column_bool("deleted", false),
             );
         }
 

@@ -1,29 +1,33 @@
 //! 多元索引模块
 
-mod list_search_index;
-mod create_search_index;
-mod describe_search_index;
-mod update_search_index;
-mod delete_search_index;
-mod search;
-mod filter;
 mod aggregation;
+mod create_search_index;
+mod delete_search_index;
+mod describe_search_index;
+mod filter;
 mod group_by;
-mod sort_by;
+mod list_search_index;
 mod query;
+mod search_index;
+mod sort_by;
+mod update_search_index;
 
-pub use list_search_index::*;
-pub use create_search_index::*;
-pub use describe_search_index::*;
-use regex::Regex;
-pub use update_search_index::*;
-pub use delete_search_index::*;
-pub use search::*;
-pub use filter::*;
+use std::{fmt::Display, ops::Range};
+
 pub use aggregation::*;
+pub use create_search_index::*;
+pub use delete_search_index::*;
+pub use describe_search_index::*;
+pub use filter::*;
 pub use group_by::*;
-pub use sort_by::*;
+pub use list_search_index::*;
 pub use query::*;
+use regex::Regex;
+pub use search_index::*;
+pub use sort_by::*;
+pub use update_search_index::*;
+
+use crate::protos::search::DateTimeUnit;
 
 /// 验证分组名称是否符合规范
 ///
@@ -70,9 +74,122 @@ pub(crate) fn validate_timezone_string(tz: &str) -> bool {
     regex.is_match(tz)
 }
 
+/// 表示时间间隔的枚举类型，用于在多元索引统计聚合中表示日期直方图统计。
+/// 标准库和 chrono 库提供的 Duration 和 API 的 [`DateTimeValue`](crate::protos::search::DateTimeValue) 不能完全对应，
+/// 所以需要单独定义一个
+#[derive(Debug, Copy, Clone)]
+pub enum Duration {
+    Year(i32),
+    Quarter(i32),
+    Month(i32),
+    Week(i32),
+    Day(i32),
+    Hour(i32),
+    Minute(i32),
+    Second(i32),
+    Millisecond(i32),
+}
+
+impl From<Duration> for crate::protos::search::DateTimeValue {
+    fn from(duration: Duration) -> Self {
+        match duration {
+            Duration::Year(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Year as i32),
+            },
+
+            Duration::Quarter(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::QuarterYear as i32),
+            },
+
+            Duration::Month(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Month as i32),
+            },
+
+            Duration::Week(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Week as i32),
+            },
+
+            Duration::Day(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Day as i32),
+            },
+
+            Duration::Hour(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Hour as i32),
+            },
+
+            Duration::Minute(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Minute as i32),
+            },
+
+            Duration::Second(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Second as i32),
+            },
+
+            Duration::Millisecond(value) => Self {
+                value: Some(value),
+                unit: Some(DateTimeUnit::Millisecond as i32),
+            },
+        }
+    }
+}
+
+/// 坐标点，是一个经纬度值。
+#[derive(Debug, Default, Clone, Copy)]
+pub struct GeoPoint {
+    /// 纬度
+    pub latitude: f64,
+
+    /// 经度
+    pub longitude: f64,
+}
+
+impl GeoPoint {
+    pub fn new(lat: f64, lng: f64) -> Self {
+        Self { latitude: lat, longitude: lng }
+    }
+}
+
+impl Display for GeoPoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{},{}", self.latitude, self.longitude)
+    }
+}
+
+impl From<GeoPoint> for crate::protos::search::GeoPoint {
+    fn from(value: GeoPoint) -> Self {
+        Self {
+            lat: Some(value.latitude),
+            lon: Some(value.longitude),
+        }
+    }
+}
+
+impl From<Range<f64>> for crate::protos::search::Range {
+    fn from(value: Range<f64>) -> Self {
+        Self {
+            from: Some(value.start),
+            to: Some(value.end),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_search_index {
-    use crate::{protos::search::{CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema}, test_util::setup, OtsClient};
+    use crate::{
+        OtsClient,
+        protos::search::{CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema},
+        test_util::setup,
+    };
+
+    use super::{MatchQuery, Query, SearchQuery, SearchRequest};
 
     #[tokio::test]
     async fn test_list_search_index() {
@@ -88,22 +205,23 @@ mod test_search_index {
         setup();
 
         let client = OtsClient::from_env();
-        let res = client.create_search_index(CreateSearchIndexRequest {
-            table_name: "data_types".to_string(),
-            index_name: "si_1".to_string(),
-            schema: Some(IndexSchema {
-                field_schemas: vec![
-                    FieldSchema {
+        let res = client
+            .create_search_index(CreateSearchIndexRequest {
+                table_name: "data_types".to_string(),
+                index_name: "si_1".to_string(),
+                schema: Some(IndexSchema {
+                    field_schemas: vec![FieldSchema {
                         field_name: Some("str_col".to_string()),
                         field_type: Some(FieldType::Text as i32),
                         ..Default::default()
-                    }
-                ],
-                index_setting: None,
-                index_sort: None
-            }),
-            ..Default::default()
-        }).send().await;
+                    }],
+                    index_setting: None,
+                    index_sort: None,
+                }),
+                ..Default::default()
+            })
+            .send()
+            .await;
 
         log::debug!("{:#?}", res);
 
@@ -117,7 +235,6 @@ mod test_search_index {
         let client = OtsClient::from_env();
         let res = client.describe_search_index("data_types", "si_1").send().await;
         log::debug!("{:#?}", res);
-
     }
 
     #[tokio::test]
@@ -127,6 +244,18 @@ mod test_search_index {
         let client = OtsClient::from_env();
         let res = client.delete_search_index("data_types", "si_1").send().await;
         log::debug!("{:#?}", res);
+    }
 
+    #[tokio::test]
+    async fn test_search_match_query() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let match_query = MatchQuery::new("full_name", "万宇驰");
+
+        let query = Query::Match(match_query);
+
+        let res = client.search(SearchRequest::new("users", "users_index", SearchQuery::new(query))).send().await;
     }
 }

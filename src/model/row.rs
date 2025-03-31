@@ -398,7 +398,8 @@ mod test_row {
 
     use crate::{
         model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn},
-        protos::plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM}, test_util::setup,
+        protos::plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+        test_util::setup,
     };
 
     use super::Row;

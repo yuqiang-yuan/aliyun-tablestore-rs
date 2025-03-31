@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, protos::search::CreateSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, protos::search::CreateSearchIndexRequest};
 
 /// 接口创建一个多元索引。
 ///
@@ -20,17 +20,11 @@ add_per_request_options!(CreateSearchIndexOperation);
 
 impl CreateSearchIndexOperation {
     pub(crate) fn new(client: OtsClient, request: CreateSearchIndexRequest) -> Self {
-        Self {
-            client,
-            request
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<()> {
-        let Self {
-            client,
-            request
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::CreateSearchIndex,

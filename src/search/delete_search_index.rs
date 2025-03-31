@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, protos::search::DeleteSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, protos::search::DeleteSearchIndexRequest};
 
 /// 删除一个多元索引。
 ///
@@ -13,7 +13,6 @@ pub struct DeleteSearchIndexOperation {
 
 add_per_request_options!(DeleteSearchIndexOperation);
 
-
 impl DeleteSearchIndexOperation {
     pub(crate) fn new(client: OtsClient, table_name: &str, index_name: &str) -> Self {
         Self {
@@ -21,7 +20,6 @@ impl DeleteSearchIndexOperation {
             request: DeleteSearchIndexRequest {
                 table_name: Some(table_name.to_string()),
                 index_name: Some(index_name.to_string()),
-                ..Default::default()
             },
         }
     }
@@ -29,10 +27,7 @@ impl DeleteSearchIndexOperation {
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self {
-            client,
-            request,
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::DeleteSearchIndex,

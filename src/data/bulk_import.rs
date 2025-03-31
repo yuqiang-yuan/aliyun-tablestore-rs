@@ -5,8 +5,8 @@ use crate::{
     error::OtsError,
     model::Row,
     protos::{
-        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         OperationType,
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
     },
     table::rules::validate_table_name,
 };

@@ -25,16 +25,18 @@ mod test_row_operations {
     use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
 
     use crate::{
-        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest}, error::OtsError, model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter}, protos::{
-            filter::LogicalOperator, Direction, ReturnType
-        }, test_util::setup, OtsClient
+        OtsClient,
+        data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
+        error::OtsError,
+        model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
+        protos::{Direction, ReturnType, filter::LogicalOperator},
+        test_util::setup,
     };
 
     use super::{
         BatchGetRowRequest, BatchWriteRowRequest, BulkExportRequest, BulkImportRequest, GetRangeRequest, RowInBatchWriteRowRequest, TableInBatchGetRowRequest,
         TableInBatchWriteRowRequest,
     };
-
 
     async fn test_get_row_impl() {
         setup();

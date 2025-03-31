@@ -19,8 +19,8 @@ impl DropIndexOperation {
             client,
             request: DropIndexRequest {
                 main_table_name: table_name.to_string(),
-                index_name: idx_name.to_string()
-            }
+                index_name: idx_name.to_string(),
+            },
         }
     }
 

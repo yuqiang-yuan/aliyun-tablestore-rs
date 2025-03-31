@@ -55,7 +55,11 @@ pub(crate) mod rules {
 #[cfg(test)]
 mod test_table {
     use crate::{
-        index::IndexMetaBuilder, protos::IndexType, table::{CreateTableRequest, UpdateTableRequest}, test_util::setup, OtsClient
+        OtsClient,
+        index::IndexMetaBuilder,
+        protos::IndexType,
+        table::{CreateTableRequest, UpdateTableRequest},
+        test_util::setup,
     };
 
     use super::ComputeSplitPointsBySizeRequest;

@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, protos::search::UpdateSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, protos::search::UpdateSearchIndexRequest};
 
 /// 接口更新多元索引的配置，包括数据生命周期（TTL）和多元索引 schema。
 ///
@@ -34,19 +34,13 @@ impl UpdateSearchIndexRequest {
 
 impl UpdateSearchIndexOperation {
     pub(crate) fn new(client: OtsClient, request: UpdateSearchIndexRequest) -> Self {
-        Self {
-            client,
-            request,
-        }
+        Self { client, request }
     }
 
     pub async fn execute(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self {
-            client,
-            request,
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::UpdateSearchIndex,
@@ -59,5 +53,4 @@ impl UpdateSearchIndexOperation {
 
         Ok(())
     }
-
 }

@@ -1,7 +1,9 @@
 use prost::Message;
 
-use crate::{add_per_request_options, protos::search::{IndexInfo, ListSearchIndexRequest, ListSearchIndexResponse}, OtsClient, OtsOp, OtsRequest, OtsResult};
-
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    protos::search::{IndexInfo, ListSearchIndexRequest, ListSearchIndexResponse},
+};
 
 /// 列出多元索引列表。
 ///
@@ -19,15 +21,12 @@ impl ListSearchIndexOperation {
             client,
             request: ListSearchIndexRequest {
                 table_name: table_name.map(|s| s.into()),
-            }
+            },
         }
     }
 
     pub async fn send(self) -> OtsResult<Vec<IndexInfo>> {
-        let Self {
-            client,
-            request,
-        } = self;
+        let Self { client, request } = self;
 
         let req = OtsRequest {
             operation: OtsOp::ListSearchIndex,
