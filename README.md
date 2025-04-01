@@ -28,3 +28,9 @@ There operations are implemented:
   - Index
     - Create index
     - Drop index
+  - Search Index
+    - Create search index
+    - Delete search index
+    - Describe search Index
+    - List search Index
+    - Search using index
