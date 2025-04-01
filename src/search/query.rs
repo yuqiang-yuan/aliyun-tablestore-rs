@@ -1,5 +1,3 @@
-use std::i32;
-
 use prost::Message;
 
 use crate::{
@@ -134,7 +132,9 @@ impl From<Query> for crate::protos::search::Query {
 
 impl Query {
     pub(crate) fn validate(&self) -> OtsResult<()> {
-        Ok(())
+        match self {
+            Query::Match(mq) => mq.validate(),
+        }
     }
 }
 
@@ -321,6 +321,9 @@ pub struct SearchQuery {
     /// 本次查询需要返回的最大数量。
     pub limit: Option<u32>,
 
+    /// 当符合查询条件的数据未读取完时，服务端会返回 `next_token`，此时可以使用 `next_token` 继续读取后面的数据。
+    pub token: Vec<u8>,
+
     /// 按照指定列对返回结果进行去重。
     ///
     /// 按该列对结果集做折叠，只支持应用于整型、浮点数和 `Keyword` 类型的列，不支持数组类型的列。
@@ -354,6 +357,7 @@ impl SearchQuery {
             filter: None,
             offset: None,
             limit: None,
+            token: vec![],
             collapse_field_name: None,
             sorters: vec![],
             disable_default_pk_sorter: false,
@@ -388,6 +392,13 @@ impl SearchQuery {
     /// 设置本次查询需要返回的最大数量
     pub fn limit(mut self, n: u32) -> Self {
         self.limit = Some(n);
+
+        self
+    }
+
+    /// 设置查询的游标
+    pub fn token(mut self, token: impl Into<Vec<u8>>) -> Self {
+        self.token = token.into();
 
         self
     }
@@ -483,6 +494,10 @@ impl SearchQuery {
             }
         }
 
+        if let Some(h) = &self.highlight {
+            h.validate()?;
+        }
+
         for s in &self.sorters {
             s.validate()?;
         }
@@ -506,6 +521,7 @@ impl From<SearchQuery> for crate::protos::search::SearchQuery {
             filter,
             offset,
             limit,
+            token,
             collapse_field_name,
             sorters,
             disable_default_pk_sorter,
@@ -523,7 +539,7 @@ impl From<SearchQuery> for crate::protos::search::SearchQuery {
             query: Some(query.into()),
             collapse: collapse_field_name.map(|f| Collapse { field_name: Some(f) }),
             sort: Some(sort),
-            token: None,
+            token: if !token.is_empty() { Some(token) } else { None },
             aggs: Some(aggregations.into()),
             group_bys: Some(group_bys.into()),
             highlight: highlight.map(|h| h.into()),

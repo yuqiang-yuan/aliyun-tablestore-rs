@@ -90,6 +90,7 @@ impl Row {
     }
 
     /// 从一个响应数据中读取多行
+    #[allow(dead_code)]
     pub(crate) fn decode_plain_buffer_for_rows(bytes: Vec<u8>, masks: u32) -> OtsResult<Vec<Self>> {
         let mut cursor = Cursor::new(bytes);
 

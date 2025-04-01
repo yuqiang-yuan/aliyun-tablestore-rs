@@ -58,11 +58,6 @@ pub(crate) fn validate_group_name(name: &str) -> bool {
     name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
-/// 验证排序名称
-pub(crate) fn validate_sort_name(name: &str) -> bool {
-    validate_group_name(name)
-}
-
 /// 验证聚合名称
 pub(crate) fn validate_aggregation_name(name: &str) -> bool {
     validate_group_name(name)
@@ -185,7 +180,11 @@ impl From<Range<f64>> for crate::protos::search::Range {
 mod test_search_index {
     use crate::{
         OtsClient,
-        protos::search::{CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema},
+        protos::search::{ColumnReturnType, CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema, SortOrder},
+        search::{
+            Aggregation, AvgAggregation, CountAggregation, DistinctCountAggregation, GroupBy, GroupByField, MaxAggregation, MinAggregation,
+            PercentilesAggregation, Sorter, SumAggregation, TopRowsAggregation,
+        },
         test_util::setup,
     };
 
@@ -246,8 +245,7 @@ mod test_search_index {
         log::debug!("{:#?}", res);
     }
 
-    #[tokio::test]
-    async fn test_search_match_query() {
+    async fn test_search_match_query_impl() {
         setup();
 
         let client = OtsClient::from_env();
@@ -256,6 +254,84 @@ mod test_search_index {
 
         let query = Query::Match(match_query);
 
-        let res = client.search(SearchRequest::new("users", "users_index", SearchQuery::new(query))).send().await;
+        let mut search_query = SearchQuery::new(query).sorter(Sorter::PrimaryKey(SortOrder::Asc));
+
+        let mut search_req = SearchRequest::new("users", "users_index", search_query.clone()).column_return_type(ColumnReturnType::ReturnAll);
+
+        let mut total_row = 0;
+
+        loop {
+            let res = client.search(search_req.clone()).send().await;
+
+            assert!(res.is_ok());
+
+            let res = res.unwrap();
+
+            // log::debug!("{:#?}", res);
+
+            for row in &res.rows {
+                log::debug!(
+                    "user id: {:?}, phone number: {:?}",
+                    row.get_primary_key_value("user_id"),
+                    row.get_column_value("phone_number")
+                );
+            }
+
+            total_row += res.rows.len();
+
+            if let Some(token) = res.next_token {
+                search_query = search_query.token(token);
+                search_req = search_req.search_query(search_query.clone());
+            } else {
+                break;
+            }
+        }
+
+        log::debug!("total rows: {}", total_row);
+    }
+
+    #[tokio::test]
+    async fn test_search_match_query() {
+        test_search_match_query_impl().await;
+    }
+
+    async fn test_search_match_query_with_aggr_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let match_query = MatchQuery::new("full_name", "万宇驰");
+
+        let query = Query::Match(match_query);
+        let group = GroupBy::Field(
+            // GroupByField::new("group_by_gender", "gender", 10)
+            GroupByField::new("group_by_score", "score", 10),
+        );
+
+        let search_query = SearchQuery::new(query)
+            .sorter(Sorter::PrimaryKey(SortOrder::Asc))
+            .group_by(group)
+            .aggregation(Aggregation::Avg(AvgAggregation::new("avg_score", "score")))
+            .aggregation(Aggregation::Min(MinAggregation::new("min_score", "score")))
+            .aggregation(Aggregation::Max(MaxAggregation::new("max_score", "score")))
+            .aggregation(Aggregation::Sum(SumAggregation::new("sum_score", "score")))
+            .aggregation(Aggregation::Count(CountAggregation::new("count_score", "score")))
+            .aggregation(Aggregation::DistinctCount(DistinctCountAggregation::new("distinct_count_score", "score")))
+            .aggregation(Aggregation::TopRows(TopRowsAggregation::new("top_score", 10)))
+            .aggregation(Aggregation::Percentiles(PercentilesAggregation::new(
+                "percentiles_score",
+                "score",
+                [25.0f64, 50.0, 75.0, 100.0],
+            )));
+
+        let search_req = SearchRequest::new("users", "users_index", search_query).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", res);
+    }
+
+    #[tokio::test]
+    async fn test_search_match_query_with_aggr() {
+        test_search_match_query_with_aggr_impl().await;
     }
 }

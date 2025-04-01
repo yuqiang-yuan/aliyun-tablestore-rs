@@ -94,6 +94,49 @@ impl ColumnValue {
         }
     }
 
+    /// 仅仅解码列值部分
+    pub(crate) fn decode_plain_buffer(bytes: impl Into<Vec<u8>>) -> OtsResult<Self> {
+        let mut cursor = Cursor::new(bytes.into());
+        let value_type = cursor.read_u8()?;
+
+        match value_type {
+            VT_INF_MIN => Ok(Self::InfMin),
+
+            VT_INF_MAX => Ok(Self::InfMax),
+
+            VT_INTEGER => {
+                let n = cursor.read_i64::<LittleEndian>()?;
+                Ok(Self::Integer(n))
+            }
+
+            VT_DOUBLE => {
+                let n = cursor.read_f64::<LittleEndian>()?;
+                Ok(Self::Double(n))
+            }
+
+            VT_BOOLEAN => {
+                let n = cursor.read_u8()?;
+                Ok(Self::Boolean(n != 0))
+            }
+
+            VT_STRING => {
+                let len = cursor.read_u32::<LittleEndian>()?;
+                let mut buf = vec![0u8; len as usize];
+                cursor.read_exact(&mut buf)?;
+                Ok(Self::String(String::from_utf8(buf)?))
+            }
+
+            VT_BLOB => {
+                let len = cursor.read_u32::<LittleEndian>()?;
+                let mut buf = vec![0u8; len as usize];
+                cursor.read_exact(&mut buf)?;
+                Ok(Self::Blob(buf))
+            }
+
+            _ => Err(OtsError::ValidationFailed(format!("invalid column value type: {}", value_type))),
+        }
+    }
+
     /// 仅编码列值部分。返回的数据不包含列值前缀的 4 字节。
     /// 这个方法仅适用于只写出列值的场景
     pub(crate) fn encode_plain_buffer(&self) -> Vec<u8> {

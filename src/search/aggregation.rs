@@ -1,6 +1,14 @@
+use std::collections::HashMap;
+
 use prost::Message;
 
-use crate::{OtsResult, error::OtsError, model::ColumnValue, table::rules::validate_column_name};
+use crate::{
+    OtsResult,
+    error::OtsError,
+    model::{ColumnValue, Row},
+    protos::{plain_buffer::MASK_HEADER, search::AggregationType},
+    table::rules::validate_column_name,
+};
 
 use super::{Sort, Sorter, validate_aggregation_name};
 
@@ -376,10 +384,11 @@ pub struct PercentilesAggregation {
 }
 
 impl PercentilesAggregation {
-    pub fn new(name: &str, field_name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, percentiles: impl IntoIterator<Item = f64>) -> Self {
         Self {
             name: name.to_string(),
             field_name: field_name.to_string(),
+            percentiles: percentiles.into_iter().collect(),
             ..Default::default()
         }
     }
@@ -529,7 +538,7 @@ impl From<SumAggregation> for crate::protos::search::SumAggregation {
 
 /// 在多元索引统计聚合中表示获取统计聚合分组中的行，
 /// 用于在对查询结果进行分组后获取每个分组内的一些行数据，
-/// 可实现 和MySQL 中 `ANY_VALUE(field)` 类似的功能。
+/// 可实现和 MySQL 中 `ANY_VALUE(field)` 类似的功能。
 #[derive(Debug, Clone)]
 pub struct TopRowsAggregation {
     /// 此聚合的名称，用来从响应中提取聚合结果
@@ -558,9 +567,10 @@ impl Default for TopRowsAggregation {
 }
 
 impl TopRowsAggregation {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, limit: u32) -> Self {
         Self {
             name: name.to_string(),
+            limit,
             ..Default::default()
         }
     }
@@ -749,5 +759,184 @@ where
         Self {
             aggs: value.into_iter().map(|a| a.into()).collect(),
         }
+    }
+}
+
+/// 在百分位统计返回结果中表示返回的单个百分位信息。
+#[derive(Debug, Clone)]
+pub struct PercentilesAggregationItem {
+    /// 每个百分位的值
+    pub key: f64,
+
+    /// 每个百分位的分布情况
+    pub value: ColumnValue,
+}
+
+impl TryFrom<crate::protos::search::PercentilesAggregationItem> for PercentilesAggregationItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::PercentilesAggregationItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::PercentilesAggregationItem { key, value } = value;
+
+        Ok(Self {
+            key: key.unwrap_or_default(),
+            value: if let Some(bytes) = value {
+                ColumnValue::decode_plain_buffer(bytes)?
+            } else {
+                // WILL THIS HAPPEN?
+                ColumnValue::Null
+            },
+        })
+    }
+}
+
+impl TryFrom<crate::protos::search::PercentilesAggregationResult> for Vec<PercentilesAggregationItem> {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::PercentilesAggregationResult) -> Result<Self, Self::Error> {
+        let mut items = vec![];
+
+        for item in value.percentiles_aggregation_items {
+            items.push(item.try_into()?)
+        }
+
+        Ok(items)
+    }
+}
+
+impl TryFrom<crate::protos::search::TopRowsAggregationResult> for Vec<Row> {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::TopRowsAggregationResult) -> Result<Self, Self::Error> {
+        let crate::protos::search::TopRowsAggregationResult { rows: rows_bytes } = value;
+
+        let mut rows = vec![];
+
+        for row_bytes in rows_bytes {
+            rows.push(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?);
+        }
+
+        Ok(rows)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AggregationResult {
+    Min(f64),
+    Max(f64),
+    Avg(f64),
+    Sum(f64),
+    Count(u64),
+    DistinctCount(u64),
+    TopRows(Vec<Row>),
+    Percentiles(Vec<PercentilesAggregationItem>),
+}
+
+impl TryFrom<crate::protos::search::AggregationResult> for AggregationResult {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::AggregationResult) -> Result<Self, Self::Error> {
+        let crate::protos::search::AggregationResult { name, r#type, agg_result } = value;
+
+        if name.is_none() || r#type.is_none() {
+            return Err(OtsError::ValidationFailed("invalid aggregation result type or name".to_string()));
+        }
+
+        let aggr_type = match AggregationType::try_from(r#type.unwrap()) {
+            Ok(t) => t,
+            Err(_) => return Err(OtsError::ValidationFailed(format!("invalid aggregation result type: {}", r#type.unwrap()))),
+        };
+
+        match aggr_type {
+            AggregationType::AggAvg => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::AvgAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Avg(msg.value()))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggMax => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::MaxAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Max(msg.value()))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggMin => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::MinAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Min(msg.value()))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggSum => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::SumAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Sum(msg.value()))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggCount => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::CountAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Count(msg.value() as u64))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggDistinctCount => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::DistinctCountAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::DistinctCount(msg.value() as u64))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggTopRows => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::TopRowsAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::TopRows(msg.try_into()?))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+
+            AggregationType::AggPercentiles => {
+                if let Some(bytes) = agg_result {
+                    let msg = crate::protos::search::PercentilesAggregationResult::decode(bytes.as_slice())?;
+                    Ok(Self::Percentiles(msg.try_into()?))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid aggregation result data".to_string()))
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<crate::protos::search::AggregationsResult> for HashMap<String, AggregationResult> {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::AggregationsResult) -> Result<Self, Self::Error> {
+        let crate::protos::search::AggregationsResult { agg_results } = value;
+
+        let mut map = HashMap::new();
+
+        for ar in agg_results {
+            let name = ar.name().to_string();
+            let result = AggregationResult::try_from(ar)?;
+            map.insert(name, result);
+        }
+
+        Ok(map)
     }
 }

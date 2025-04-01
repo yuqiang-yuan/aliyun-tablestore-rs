@@ -1,16 +1,22 @@
-use std::collections::HashSet;
+//! 这个 module 的名字有点儿问题，因为不想和上层 `search` 包名重名，所以搞了这么一个奇怪的名字
+
+use std::collections::{HashMap, HashSet};
 
 use prost::Message;
 
 use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
     error::OtsError,
-    model::PrimaryKey,
-    protos::search::ColumnReturnType,
+    model::{PrimaryKey, Row},
+    protos::{
+        ConsumedCapacity,
+        plain_buffer::MASK_HEADER,
+        search::{ColumnReturnType, SearchHit},
+    },
     table::rules::{validate_index_name, validate_table_name},
 };
 
-use super::SearchQuery;
+use super::{AggregationResult, GroupByResult, SearchQuery};
 
 /// 通过多元索引查询数据。
 ///
@@ -166,6 +172,86 @@ impl From<SearchRequest> for crate::protos::search::SearchRequest {
     }
 }
 
+/// 通过多元索引查询数据响应结构
+#[derive(Debug, Default, Clone)]
+pub struct SearchResponse {
+    /// 命中的总行数
+    pub total_hits: u64,
+
+    /// 数据行
+    pub rows: Vec<Row>,
+
+    /// 返回的命中结果。当使用查询摘要与高亮功能或向量检索进行查询时才有返回值。
+    pub search_hits: Vec<SearchHit>,
+
+    /// 是否全部成功。
+    pub is_all_succeeded: bool,
+
+    /// 下一次数据读取的起始位置。如果满足条件的数据行均已返回，则返回值为空。
+    pub next_token: Option<Vec<u8>>,
+
+    /// 对数据行进行统计聚合结果。key 是聚合名称
+    pub aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 对数据行进行分组的结果。key 是分组名称
+    pub group_by_results: HashMap<String, GroupByResult>,
+
+    /// 一次操作消耗的按量服务能力单元
+    pub consumed: ConsumedCapacity,
+
+    /// 一次操作消耗的预留服务能力单元
+    pub reserved_consumed: ConsumedCapacity,
+}
+
+impl TryFrom<crate::protos::search::SearchResponse> for SearchResponse {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::SearchResponse) -> Result<Self, Self::Error> {
+        let crate::protos::search::SearchResponse {
+            total_hits,
+            rows: rows_bytes,
+            is_all_succeeded,
+            search_hits,
+            next_token,
+            aggs: aggs_bytes,
+            group_bys: group_bys_bytes,
+            consumed,
+            reserved_consumed,
+        } = value;
+
+        let mut rows = vec![];
+        for row_bytes in rows_bytes {
+            rows.push(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?);
+        }
+
+        let aggregation_results = if let Some(bytes) = aggs_bytes {
+            let msg = crate::protos::search::AggregationsResult::decode(bytes.as_slice())?;
+            HashMap::<String, AggregationResult>::try_from(msg)?
+        } else {
+            HashMap::new()
+        };
+
+        let group_by_results = if let Some(bytes) = group_bys_bytes {
+            let msg = crate::protos::search::GroupBysResult::decode(bytes.as_slice())?;
+            HashMap::<String, GroupByResult>::try_from(msg)?
+        } else {
+            HashMap::new()
+        };
+
+        Ok(Self {
+            total_hits: total_hits.map_or(0, |n| n as u64),
+            rows,
+            is_all_succeeded: is_all_succeeded.unwrap_or(true),
+            search_hits,
+            next_token,
+            aggregation_results,
+            group_by_results,
+            consumed: consumed.unwrap_or_default(),
+            reserved_consumed: reserved_consumed.unwrap_or_default(),
+        })
+    }
+}
+
 /// 多元索引搜索
 #[derive(Debug, Clone)]
 pub struct SearchOperation {
@@ -180,7 +266,7 @@ impl SearchOperation {
         Self { client, request }
     }
 
-    pub async fn send(self) -> OtsResult<()> {
+    pub async fn send(self) -> OtsResult<SearchResponse> {
         self.request.validate()?;
 
         let Self { client, request } = self;
@@ -195,10 +281,8 @@ impl SearchOperation {
 
         let res = client.send(req).await?;
 
-        let res = crate::protos::search::SearchResponse::decode(res.bytes().await?)?;
+        let res_msg = crate::protos::search::SearchResponse::decode(res.bytes().await?)?;
 
-        log::debug!("{:#?}", res);
-
-        Ok(())
+        SearchResponse::try_from(res_msg)
     }
 }

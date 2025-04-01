@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use prost::Message;
 
@@ -94,7 +94,7 @@ pub struct GroupByField {
     /// 返回的分组数量，默认值为 `10`。最大值为 `2000`。当分组数量超过 `2000` 时，只会返回前 `2000` 个分组。
     pub size: u32,
 
-    /// 分组中的item排序规则，默认按照分组中item的数量降序排序，多个排序则按照添加的顺序进行排列。
+    /// 分组中的 item 排序规则，默认按照分组中item的数量降序排序，多个排序则按照添加的顺序进行排列。
     pub sorters: Vec<GroupBySorter>,
 
     /// 子统计聚合Aggregation，子统计聚合会根据分组内容再进行一次统计聚合分析。
@@ -108,9 +108,11 @@ pub struct GroupByField {
 }
 
 impl GroupByField {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, size: u32) -> Self {
         Self {
             name: name.to_string(),
+            field_name: field_name.to_string(),
+            size,
             ..Default::default()
         }
     }
@@ -259,9 +261,10 @@ pub struct GroupByFilter {
 }
 
 impl GroupByFilter {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, filters: impl IntoIterator<Item = Query>) -> Self {
         Self {
             name: name.to_string(),
+            filters: filters.into_iter().collect(),
             ..Default::default()
         }
     }
@@ -396,9 +399,13 @@ pub struct GroupByHistogram {
 }
 
 impl GroupByHistogram {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, min_value: ColumnValue, max_value: ColumnValue, interval: ColumnValue) -> Self {
         Self {
             name: name.to_string(),
+            field_name: field_name.to_string(),
+            min_value,
+            max_value,
+            interval,
             ..Default::default()
         }
     }
@@ -584,9 +591,11 @@ pub struct GroupByRange {
 }
 
 impl GroupByRange {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, ranges: impl IntoIterator<Item = Range<f64>>) -> Self {
         Self {
             name: name.to_string(),
+            field_name: field_name.to_string(),
+            ranges: ranges.into_iter().collect(),
             ..Default::default()
         }
     }
@@ -737,9 +746,13 @@ pub struct GroupByDateHistogram {
 }
 
 impl GroupByDateHistogram {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, min_value: ColumnValue, max_value: ColumnValue, interval: Duration) -> Self {
         Self {
             name: name.to_string(),
+            field_name: field_name.to_string(),
+            min_value,
+            max_value,
+            interval: Some(interval),
             ..Default::default()
         }
     }
@@ -952,9 +965,12 @@ pub struct GroupByGeoGrid {
 }
 
 impl GroupByGeoGrid {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, size: u32, precision: GeoHashPrecision) -> Self {
         Self {
             name: name.to_string(),
+            field_name: field_name.to_string(),
+            size,
+            precision,
             ..Default::default()
         }
     }
@@ -1077,10 +1093,14 @@ pub struct GroupByGeoDistance {
 }
 
 impl GroupByGeoDistance {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, field_name: &str, origin: GeoPoint, ranges: impl IntoIterator<Item = Range<f64>>) -> Self {
         Self {
             name: name.to_string(),
-            ..Default::default()
+            field_name: field_name.to_string(),
+            origin,
+            ranges: ranges.into_iter().collect(),
+            sub_aggregations: Vec::new(),
+            sub_group_bys: Vec::new(),
         }
     }
 
@@ -1226,10 +1246,10 @@ pub struct GroupByComposite {
 }
 
 impl GroupByComposite {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, size: u32) -> Self {
         Self {
             name: name.to_string(),
-            size: 10,
+            size,
             ..Default::default()
         }
     }
@@ -1453,5 +1473,107 @@ where
         Self {
             group_bys: value.into_iter().map(|g| g.into()).collect(),
         }
+    }
+}
+
+/// 在字段值分组的返回结果中表示单个字段值的分组信息。
+#[derive(Debug, Clone)]
+pub struct GroupByFieldResultItem {
+    /// 单个分组的字段值
+    pub key: String,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合 SubGroupBy 的返回信息。
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByFieldResultItem> for GroupByFieldResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByFieldResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByFieldResultItem {
+            key,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            key: key.unwrap_or_default(),
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+/// 统计聚合 GroupBy 的返回信息。
+#[derive(Debug, Clone)]
+pub enum GroupByResult {
+    Field(Vec<GroupByFieldResultItem>),
+}
+
+impl TryFrom<crate::protos::search::GroupBysResult> for HashMap<String, GroupByResult> {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupBysResult) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupBysResult { group_by_results } = value;
+
+        let mut map = HashMap::new();
+
+        for r in group_by_results {
+            if r.r#type.is_none() || r.name.is_none() {
+                return Err(OtsError::ValidationFailed("group by result's type or name is missing".to_string()));
+            }
+
+            let result_type = r.r#type.unwrap();
+            let name = r.name.unwrap();
+            match GroupByType::try_from(result_type) {
+                Ok(GroupByType::GroupByField) => {
+                    if let Some(bytes) = r.group_by_result {
+                        let by_field_results = crate::protos::search::GroupByFieldResult::decode(bytes.as_slice())?;
+                        let mut items = vec![];
+                        for result_item in by_field_results.group_by_field_result_items {
+                            items.push(result_item.try_into()?);
+                        }
+
+                        map.insert(name, GroupByResult::Field(items));
+                    }
+                }
+
+                Err(_) => {
+                    return Err(OtsError::ValidationFailed(format!("unknown group by result type: {}", result_type)));
+                }
+                _ => {}
+            }
+        }
+
+        Ok(map)
+    }
+}
+
+#[cfg(test)]
+mod test_group_by {
+    use std::collections::HashMap;
+
+    use prost::Message;
+
+    use crate::test_util::setup;
+
+    use super::GroupByResult;
+
+    #[test]
+    fn test_group_by_result_parser() {
+        setup();
+
+        let bytes = std::fs::read("/home/yuanyq/Downloads/aliyun-plainbuffer/group-bys.data").unwrap();
+        let msg = crate::protos::search::GroupBysResult::decode(bytes.as_slice()).unwrap();
+        let map = HashMap::<String, GroupByResult>::try_from(msg);
+        log::debug!("{:?}", map);
     }
 }
