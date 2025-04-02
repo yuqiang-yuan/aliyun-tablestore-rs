@@ -34,3 +34,12 @@ There operations are implemented:
     - Describe search Index
     - List search Index
     - Search using index
+
+
+TODO List:
+
+- [ ] Test group by date histogram
+- [ ] Test group by geo grid
+- [ ] Test group by geo distance
+- [ ] Test group by composite
+- [ ] Test search with routing values.

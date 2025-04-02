@@ -842,7 +842,7 @@ impl TryFrom<crate::protos::search::AggregationResult> for AggregationResult {
             return Err(OtsError::ValidationFailed("invalid aggregation result type or name".to_string()));
         }
 
-        let aggr_type = match AggregationType::try_from(r#type.unwrap()) {
+        let aggr_type = match AggregationType::try_from(r#type.unwrap_or_default()) {
             Ok(t) => t,
             Err(_) => return Err(OtsError::ValidationFailed(format!("invalid aggregation result type: {}", r#type.unwrap()))),
         };

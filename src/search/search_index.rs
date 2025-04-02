@@ -10,7 +10,7 @@ use crate::{
     model::{PrimaryKey, Row},
     protos::{
         ConsumedCapacity,
-        plain_buffer::MASK_HEADER,
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         search::{ColumnReturnType, SearchHit},
     },
     table::rules::{validate_index_name, validate_table_name},
@@ -166,7 +166,10 @@ impl From<SearchRequest> for crate::protos::search::SearchRequest {
                 None
             },
             search_query: Some(crate::protos::search::SearchQuery::from(search_query).encode_to_vec()),
-            routing_values: vec![],
+            routing_values: routing_values
+                .into_iter()
+                .map(|pk| pk.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM))
+                .collect(),
             timeout_ms: timeout_ms.map(|n| n as i32),
         }
     }

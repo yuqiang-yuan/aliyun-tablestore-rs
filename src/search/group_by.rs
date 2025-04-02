@@ -6,11 +6,11 @@ use crate::{
     OtsResult,
     error::OtsError,
     model::ColumnValue,
-    protos::search::{FieldRange, GeoHashPrecision, GroupByType, SortOrder},
+    protos::search::{FieldRange, GeoGrid, GeoHashPrecision, GroupByType, SortOrder},
     table::rules::validate_column_name,
 };
 
-use super::{Aggregation, Duration, GeoPoint, Query, validate_aggregation_name, validate_group_name, validate_timezone_string};
+use super::{Aggregation, AggregationResult, Duration, GeoPoint, Query, validate_aggregation_name, validate_group_name, validate_timezone_string};
 
 /// 分组中的item排序规则集。
 #[derive(Debug, Clone)]
@@ -1480,12 +1480,15 @@ where
 #[derive(Debug, Clone)]
 pub struct GroupByFieldResultItem {
     /// 单个分组的字段值
-    pub key: String,
+    pub value: String,
 
     /// 单个分组对应的总行数
     pub row_count: u64,
 
-    /// 子统计聚合 SubGroupBy 的返回信息。
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组 SubGroupBy 的返回信息。
     pub sub_group_by_results: HashMap<String, GroupByResult>,
 }
 
@@ -1501,8 +1504,351 @@ impl TryFrom<crate::protos::search::GroupByFieldResultItem> for GroupByFieldResu
         } = value;
 
         Ok(Self {
-            key: key.unwrap_or_default(),
+            value: key.unwrap_or_default(),
             row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+/// 过滤器分组结果条目
+#[derive(Debug, Clone)]
+pub struct GroupByFilterResultItem {
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByFilterResultItem> for GroupByFilterResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByFilterResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByFilterResultItem {
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+/// 范围分组返回结果条目
+#[derive(Debug, Clone)]
+pub struct GroupByRangeResultItem {
+    /// 单个分组的范围起始值
+    pub value_from: f64,
+
+    /// 单个分组的范围结束值
+    pub value_to: f64,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByRangeResultItem> for GroupByRangeResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByRangeResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByRangeResultItem {
+            from,
+            to,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            value_from: from.unwrap_or_default(),
+            value_to: to.unwrap_or_default(),
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+/// 直方图分组统计结果条目
+#[derive(Debug, Clone)]
+pub struct GroupByHistogramResultItem {
+    /// 单个分组的字段值
+    pub value: ColumnValue,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByHistogramItem> for GroupByHistogramResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByHistogramItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByHistogramItem {
+            key,
+            value: row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        let value = if let Some(bytes) = key {
+            ColumnValue::decode_plain_buffer(bytes)?
+        } else {
+            return Err(OtsError::ValidationFailed(
+                "invalid column value from group by histogram result item".to_string(),
+            ));
+        };
+
+        Ok(Self {
+            value,
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+/// 日期直方图统计结果
+#[derive(Debug, Clone)]
+pub struct GroupByDateHistogramResultItem {
+    /// 单个分组的时间戳，毫秒为单位
+    pub value: i64,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByDateHistogramItem> for GroupByDateHistogramResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByDateHistogramItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByDateHistogramItem {
+            timestamp,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            value: timestamp.unwrap_or_default(),
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupByGeoGridResultItem {
+    pub value: String,
+
+    pub geo_grid: GeoGrid,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByGeoGridResultItem> for GroupByGeoGridResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByGeoGridResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByGeoGridResultItem {
+            key,
+            geo_grid,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            value: key.unwrap_or_default(),
+            geo_grid: geo_grid.unwrap_or_default(),
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupByGeoDistanceResultItem {
+    /// 单个分组的范围起始值
+    pub value_from: f64,
+
+    /// 单个分组的范围结束值
+    pub value_to: f64,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByGeoDistanceResultItem> for GroupByGeoDistanceResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByGeoDistanceResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByGeoDistanceResultItem {
+            from,
+            to,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        Ok(Self {
+            value_from: from.unwrap_or_default(),
+            value_to: to.unwrap_or_default(),
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+            sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
+                sub_results.try_into()?
+            } else {
+                HashMap::new()
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupByCompositeResultItem {
+    /// 每个分组的字段值，如果分组数据对应字段不存在，这个值可能为 `None`
+    pub values: Vec<Option<String>>,
+
+    /// 单个分组对应的总行数
+    pub row_count: u64,
+
+    /// 子统计聚合结果
+    pub sub_aggregation_results: HashMap<String, AggregationResult>,
+
+    /// 子统计分组结果
+    pub sub_group_by_results: HashMap<String, GroupByResult>,
+}
+
+impl TryFrom<crate::protos::search::GroupByCompositeResultItem> for GroupByCompositeResultItem {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByCompositeResultItem) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByCompositeResultItem {
+            keys,
+            is_null_keys,
+            row_count,
+            sub_aggs_result,
+            sub_group_bys_result,
+        } = value;
+
+        // 不知道为什么是这么一个逻辑，从 Java SDK 转换过来的
+        let values = if keys.len() != is_null_keys.len() {
+            keys.into_iter().map(Some).collect::<Vec<_>>()
+        } else {
+            (0..keys.len())
+                .map(|idx| {
+                    if let Some(b) = is_null_keys.get(idx) {
+                        if *b { None } else { keys.get(idx).map(|s| s.to_string()) }
+                    } else {
+                        keys.get(idx).map(|s| s.to_string())
+                    }
+                })
+                .collect::<Vec<_>>()
+        };
+
+        Ok(Self {
+            values,
+            row_count: row_count.unwrap_or_default() as u64,
+            sub_aggregation_results: if let Some(agg_results) = sub_aggs_result {
+                agg_results.try_into()?
+            } else {
+                HashMap::new()
+            },
             sub_group_by_results: if let Some(sub_results) = sub_group_bys_result {
                 sub_results.try_into()?
             } else {
@@ -1516,6 +1862,156 @@ impl TryFrom<crate::protos::search::GroupByFieldResultItem> for GroupByFieldResu
 #[derive(Debug, Clone)]
 pub enum GroupByResult {
     Field(Vec<GroupByFieldResultItem>),
+    Filter(Vec<GroupByFilterResultItem>),
+    Range(Vec<GroupByRangeResultItem>),
+    Histogram(Vec<GroupByHistogramResultItem>),
+    DateHistogram(Vec<GroupByDateHistogramResultItem>),
+    GeoGrid(Vec<GroupByGeoGridResultItem>),
+    GeoDistance(Vec<GroupByGeoDistanceResultItem>),
+    Composite(Vec<GroupByCompositeResultItem>),
+}
+
+impl TryFrom<crate::protos::search::GroupByResult> for GroupByResult {
+    type Error = OtsError;
+
+    fn try_from(value: crate::protos::search::GroupByResult) -> Result<Self, Self::Error> {
+        let crate::protos::search::GroupByResult {
+            name: _,
+            r#type: result_type,
+            group_by_result,
+        } = value;
+
+        let result_type = match GroupByType::try_from(result_type.unwrap_or_default()) {
+            Ok(t) => t,
+            Err(_) => {
+                return Err(OtsError::ValidationFailed(format!(
+                    "invalid group by result type: {}",
+                    result_type.unwrap_or_default()
+                )));
+            }
+        };
+
+        match result_type {
+            GroupByType::GroupByField => {
+                if let Some(bytes) = group_by_result {
+                    let by_field_results = crate::protos::search::GroupByFieldResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+                    for result_item in by_field_results.group_by_field_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::Field(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByFilter => {
+                if let Some(bytes) = group_by_result {
+                    let by_filter_results = crate::protos::search::GroupByFilterResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_filter_results.group_by_filter_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::Filter(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByRange => {
+                if let Some(bytes) = group_by_result {
+                    let by_range_results = crate::protos::search::GroupByRangeResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_range_results.group_by_range_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::Range(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByHistogram => {
+                if let Some(bytes) = group_by_result {
+                    let by_his_results = crate::protos::search::GroupByHistogramResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_his_results.group_by_histogra_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::Histogram(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByDateHistogram => {
+                if let Some(bytes) = group_by_result {
+                    let by_date_his_results = crate::protos::search::GroupByDateHistogramResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_date_his_results.group_by_date_histogram_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::DateHistogram(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByGeoGrid => {
+                if let Some(bytes) = group_by_result {
+                    let by_geo_grid_results = crate::protos::search::GroupByGeoGridResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_geo_grid_results.group_by_geo_grid_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::GeoGrid(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByGeoDistance => {
+                if let Some(bytes) = group_by_result {
+                    let by_geo_dis_results = crate::protos::search::GroupByGeoDistanceResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_geo_dis_results.group_by_geo_distance_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::GeoDistance(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+
+            GroupByType::GroupByComposite => {
+                if let Some(bytes) = group_by_result {
+                    let by_comp_results = crate::protos::search::GroupByCompositeResult::decode(bytes.as_slice())?;
+                    let mut items = vec![];
+
+                    for result_item in by_comp_results.group_by_composite_result_items {
+                        items.push(result_item.try_into()?);
+                    }
+
+                    Ok(Self::Composite(items))
+                } else {
+                    Err(OtsError::ValidationFailed("invalid group by result bytes data".to_string()))
+                }
+            }
+        }
+    }
 }
 
 impl TryFrom<crate::protos::search::GroupBysResult> for HashMap<String, GroupByResult> {
@@ -1527,30 +2023,7 @@ impl TryFrom<crate::protos::search::GroupBysResult> for HashMap<String, GroupByR
         let mut map = HashMap::new();
 
         for r in group_by_results {
-            if r.r#type.is_none() || r.name.is_none() {
-                return Err(OtsError::ValidationFailed("group by result's type or name is missing".to_string()));
-            }
-
-            let result_type = r.r#type.unwrap();
-            let name = r.name.unwrap();
-            match GroupByType::try_from(result_type) {
-                Ok(GroupByType::GroupByField) => {
-                    if let Some(bytes) = r.group_by_result {
-                        let by_field_results = crate::protos::search::GroupByFieldResult::decode(bytes.as_slice())?;
-                        let mut items = vec![];
-                        for result_item in by_field_results.group_by_field_result_items {
-                            items.push(result_item.try_into()?);
-                        }
-
-                        map.insert(name, GroupByResult::Field(items));
-                    }
-                }
-
-                Err(_) => {
-                    return Err(OtsError::ValidationFailed(format!("unknown group by result type: {}", result_type)));
-                }
-                _ => {}
-            }
+            map.insert(r.name().to_string(), GroupByResult::try_from(r)?);
         }
 
         Ok(map)

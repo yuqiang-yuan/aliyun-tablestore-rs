@@ -180,15 +180,16 @@ impl From<Range<f64>> for crate::protos::search::Range {
 mod test_search_index {
     use crate::{
         OtsClient,
+        model::ColumnValue,
         protos::search::{ColumnReturnType, CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema, SortOrder},
         search::{
-            Aggregation, AvgAggregation, CountAggregation, DistinctCountAggregation, GroupBy, GroupByField, MaxAggregation, MinAggregation,
-            PercentilesAggregation, Sorter, SumAggregation, TopRowsAggregation,
+            Aggregation, AvgAggregation, CountAggregation, DistinctCountAggregation, GroupBy, GroupByField, GroupByHistogram, GroupByRange, GroupByResult,
+            MaxAggregation, MinAggregation, PercentilesAggregation, Sorter, SumAggregation, TopRowsAggregation,
         },
         test_util::setup,
     };
 
-    use super::{MatchQuery, Query, SearchQuery, SearchRequest};
+    use super::{GroupByFilter, MatchQuery, Query, SearchQuery, SearchRequest};
 
     #[tokio::test]
     async fn test_list_search_index() {
@@ -333,5 +334,138 @@ mod test_search_index {
     #[tokio::test]
     async fn test_search_match_query_with_aggr() {
         test_search_match_query_with_aggr_impl().await;
+    }
+
+    /// 测试搜索的时候使用 Filter 分组
+    async fn test_search_with_group_by_filter_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let group_by_filter = GroupByFilter::new("g_filter", [Query::Match(MatchQuery::new("gender", "M"))]);
+
+        let group = GroupBy::Filter(group_by_filter);
+
+        let query = SearchQuery::new(Query::Match(MatchQuery::new("full_name", "万宇驰"))).group_by(group);
+
+        let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", res);
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        log::debug!("{:#?}", res.group_by_results);
+
+        assert!(!res.group_by_results.is_empty());
+
+        let g_result = res.group_by_results.get("g_filter");
+
+        assert!(g_result.is_some());
+
+        let g_result = g_result.unwrap();
+
+        if let GroupByResult::Filter(items) = g_result {
+            assert_eq!(1, items.len());
+        } else {
+            panic!("Unexpected group by result");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_search_with_group_by_filter() {
+        test_search_with_group_by_filter_impl().await;
+    }
+
+    async fn test_search_with_group_by_range_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let group_by = GroupByRange::new("g_range", "score", [0.0..10.0, 10.0..20.0]);
+
+        let group = GroupBy::Range(group_by);
+
+        let query = SearchQuery::new(Query::Match(MatchQuery::new("full_name", "万宇驰"))).group_by(group);
+
+        let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", res);
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        log::debug!("{:#?}", res.group_by_results);
+
+        assert!(!res.group_by_results.is_empty());
+
+        let g_result = res.group_by_results.get("g_range");
+
+        assert!(g_result.is_some());
+
+        let g_result = g_result.unwrap();
+
+        if let GroupByResult::Range(items) = g_result {
+            assert_eq!(2, items.len());
+        } else {
+            panic!("Unexpected group by result");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_search_with_group_by_range() {
+        test_search_with_group_by_range_impl().await;
+    }
+
+    async fn test_search_with_group_by_histogram_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let group_by = GroupByHistogram::new(
+            "g_his",
+            "score",
+            ColumnValue::Double(0.0),
+            ColumnValue::Double(100.0),
+            ColumnValue::Double(10.0),
+        );
+
+        let group = GroupBy::Histogram(group_by);
+
+        let query = SearchQuery::new(Query::Match(MatchQuery::new("full_name", "万宇驰"))).group_by(group);
+
+        let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", res);
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        log::debug!("{:#?}", res.group_by_results);
+
+        assert!(!res.group_by_results.is_empty());
+
+        let g_result = res.group_by_results.get("g_his");
+
+        assert!(g_result.is_some());
+
+        let g_result = g_result.unwrap();
+
+        if let GroupByResult::Histogram(items) = g_result {
+            assert_eq!(10, items.len());
+        } else {
+            panic!("Unexpected group by result");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_search_with_group_by_histogram() {
+        test_search_with_group_by_histogram_impl().await;
     }
 }
