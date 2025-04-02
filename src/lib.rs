@@ -21,8 +21,8 @@ use data::{
     PutRowRequest, UpdateRowOperation, UpdateRowRequest,
 };
 use search::{
-    CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation, SearchOperation, SearchRequest,
-    UpdateSearchIndexOperation,
+    ComputeSplitsOperation, CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation,
+    ParallelScanOperation, ParallelScanRequest, SearchOperation, SearchRequest, UpdateSearchIndexOperation,
 };
 use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
@@ -922,5 +922,15 @@ impl OtsClient {
     /// 通过多元索引查询数据
     pub fn search(&self, request: SearchRequest) -> SearchOperation {
         SearchOperation::new(self.clone(), request)
+    }
+
+    /// 计算多元索引的并发度
+    pub fn compute_splits(&self, table_name: &str, index_name: &str) -> ComputeSplitsOperation {
+        ComputeSplitsOperation::new(self.clone(), table_name, index_name)
+    }
+
+    /// 并行扫描
+    pub fn parallel_scan(&self, request: ParallelScanRequest) -> ParallelScanOperation {
+        ParallelScanOperation::new(self.clone(), request)
     }
 }

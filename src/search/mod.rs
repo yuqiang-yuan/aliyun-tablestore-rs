@@ -6,12 +6,14 @@ use std::{fmt::Display, ops::Range};
 use crate::protos::search::DateTimeUnit;
 
 mod aggregation;
+mod compute_splits;
 mod create_search_index;
 mod delete_search_index;
 mod describe_search_index;
 mod filter;
 mod group_by;
 mod list_search_index;
+mod parallel_scan;
 mod query;
 mod score_function;
 mod search_index;
@@ -19,18 +21,19 @@ mod sort_by;
 mod update_search_index;
 
 pub use aggregation::*;
+pub use compute_splits::*;
 pub use create_search_index::*;
 pub use delete_search_index::*;
 pub use describe_search_index::*;
 pub use filter::*;
 pub use group_by::*;
 pub use list_search_index::*;
+pub use parallel_scan::*;
 pub use query::*;
 pub use score_function::*;
 pub use search_index::*;
 pub use sort_by::*;
 pub use update_search_index::*;
-
 /// 验证分组名称是否符合规范
 ///
 /// 分组名称应符合以下规范：
@@ -186,7 +189,7 @@ mod test_search_index {
         protos::search::{ColumnReturnType, CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema, SortOrder},
         search::{
             Aggregation, AvgAggregation, CountAggregation, DistinctCountAggregation, GroupBy, GroupByField, GroupByHistogram, GroupByRange, GroupByResult,
-            MaxAggregation, MinAggregation, PercentilesAggregation, Sorter, SumAggregation, TopRowsAggregation,
+            MaxAggregation, MinAggregation, ParallelScanRequest, PercentilesAggregation, ScanQuery, Sorter, SumAggregation, TopRowsAggregation,
         },
         test_util::setup,
     };
@@ -583,5 +586,55 @@ mod test_search_index {
     #[tokio::test]
     async fn test_query_range() {
         test_query_range_impl().await;
+    }
+
+    async fn test_compute_splits_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let res = client.compute_splits("users", "users_index").send().await;
+
+        log::debug!("{:#?}", res);
+    }
+
+    #[tokio::test]
+    async fn test_compute_splits() {
+        test_compute_splits_impl().await;
+    }
+
+    async fn test_parallel_scan_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let resp = client.compute_splits("users", "users_index").send().await;
+
+        assert!(resp.is_ok());
+
+        let splits = resp.unwrap();
+
+        let session_id = splits.session_id;
+
+        let scan_query = ScanQuery::new(Query::Match(MatchQuery::new("full_name", "万宇驰")), 1, 0);
+
+        let parallel_scan_req = ParallelScanRequest::new("users", "users_index", scan_query)
+            .session_id(session_id)
+            .column_return_type(ColumnReturnType::ReturnAllFromIndex);
+
+        let resp = client.parallel_scan(parallel_scan_req).send().await;
+
+        assert!(resp.is_ok());
+
+        let resp = resp.unwrap();
+
+        for row in &resp.rows {
+            assert_eq!(Some(&ColumnValue::String("万宇驰".to_string())), row.get_column_value("full_name"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parallel_scan() {
+        test_parallel_scan_impl().await;
     }
 }
