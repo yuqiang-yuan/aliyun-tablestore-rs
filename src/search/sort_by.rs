@@ -343,6 +343,14 @@ impl Sort {
 
         self
     }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        for sorter in &self.sorters {
+            sorter.validate()?;
+        }
+
+        Ok(())
+    }
 }
 
 impl From<Sort> for crate::protos::search::Sort {

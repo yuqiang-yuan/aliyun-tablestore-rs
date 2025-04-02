@@ -1,5 +1,10 @@
 //! 多元索引模块
 
+use regex::Regex;
+use std::{fmt::Display, ops::Range};
+
+use crate::protos::search::DateTimeUnit;
+
 mod aggregation;
 mod create_search_index;
 mod delete_search_index;
@@ -8,11 +13,10 @@ mod filter;
 mod group_by;
 mod list_search_index;
 mod query;
+mod score_function;
 mod search_index;
 mod sort_by;
 mod update_search_index;
-
-use std::{fmt::Display, ops::Range};
 
 pub use aggregation::*;
 pub use create_search_index::*;
@@ -22,12 +26,10 @@ pub use filter::*;
 pub use group_by::*;
 pub use list_search_index::*;
 pub use query::*;
-use regex::Regex;
+pub use score_function::*;
 pub use search_index::*;
 pub use sort_by::*;
 pub use update_search_index::*;
-
-use crate::protos::search::DateTimeUnit;
 
 /// 验证分组名称是否符合规范
 ///
@@ -189,7 +191,7 @@ mod test_search_index {
         test_util::setup,
     };
 
-    use super::{GroupByFilter, MatchQuery, Query, SearchQuery, SearchRequest};
+    use super::{BoolQuery, ConstScoreQuery, GroupByFilter, MatchQuery, Query, SearchQuery, SearchRequest, WildcardQuery};
 
     #[tokio::test]
     async fn test_list_search_index() {
@@ -467,5 +469,92 @@ mod test_search_index {
     #[tokio::test]
     async fn test_search_with_group_by_histogram() {
         test_search_with_group_by_histogram_impl().await;
+    }
+
+    /// 测试常量打分查询
+    async fn test_query_const_score_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let query = Query::ConstScore(Box::new(ConstScoreQuery::new(Query::Match(MatchQuery::new("full_name", "万宇驰")))));
+
+        let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        for row in &res.rows {
+            assert_eq!(Some(&ColumnValue::String("万宇驰".to_string())), row.get_column_value("full_name"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_const_score() {
+        test_query_const_score_impl().await;
+    }
+
+    /// 测试 bool 查询
+    async fn test_query_bool_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let query = Query::Bool(
+            BoolQuery::new()
+                .must_query(Query::Match(MatchQuery::new("full_name", "万宇驰")))
+                .must_query(Query::Match(MatchQuery::new("gender", "M"))),
+        );
+
+        let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        for row in &res.rows {
+            assert_eq!(Some(&ColumnValue::String("万宇驰".to_string())), row.get_column_value("full_name"));
+
+            assert_eq!(Some(&ColumnValue::String("M".to_string())), row.get_column_value("gender"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_bool() {
+        test_query_bool_impl().await;
+    }
+
+    async fn test_query_wildcard_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let query = Query::Wildcard(WildcardQuery::new("full_name", "万*"));
+
+        let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        for row in &res.rows {
+            if let ColumnValue::String(full_name) = row.get_column_value("full_name").unwrap() {
+                assert!(full_name.starts_with("万"));
+            } else {
+                panic!("Unexpected column value");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_wildcard() {
+        test_query_wildcard_impl().await;
     }
 }

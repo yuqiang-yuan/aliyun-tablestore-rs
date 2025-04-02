@@ -1751,6 +1751,7 @@ impl TryFrom<crate::protos::search::GroupByGeoGridResultItem> for GroupByGeoGrid
     }
 }
 
+/// 距离分组结果条目
 #[derive(Debug, Clone)]
 pub struct GroupByGeoDistanceResultItem {
     /// 单个分组的范围起始值
@@ -1799,6 +1800,7 @@ impl TryFrom<crate::protos::search::GroupByGeoDistanceResultItem> for GroupByGeo
     }
 }
 
+/// 组合式分组结果条目
 #[derive(Debug, Clone)]
 pub struct GroupByCompositeResultItem {
     /// 每个分组的字段值，如果分组数据对应字段不存在，这个值可能为 `None`

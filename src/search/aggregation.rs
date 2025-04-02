@@ -820,6 +820,7 @@ impl TryFrom<crate::protos::search::TopRowsAggregationResult> for Vec<Row> {
     }
 }
 
+/// 聚合结果枚举
 #[derive(Debug, Clone)]
 pub enum AggregationResult {
     Min(f64),
