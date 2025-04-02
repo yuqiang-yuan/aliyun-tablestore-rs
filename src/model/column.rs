@@ -63,6 +63,37 @@ pub enum ColumnValue {
     InfMax,
 }
 
+impl PartialOrd for ColumnValue {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            // Null is considered less than all other values
+            (Self::Null, Self::Null) => Some(std::cmp::Ordering::Equal),
+            (Self::Null, _) => Some(std::cmp::Ordering::Less),
+            (_, Self::Null) => Some(std::cmp::Ordering::Greater),
+
+            // InfMin is less than all other values except Null
+            (Self::InfMin, Self::InfMin) => Some(std::cmp::Ordering::Equal),
+            (Self::InfMin, _) => Some(std::cmp::Ordering::Less),
+            (_, Self::InfMin) => Some(std::cmp::Ordering::Greater),
+
+            // InfMax is greater than all other values except Null
+            (Self::InfMax, Self::InfMax) => Some(std::cmp::Ordering::Equal),
+            (Self::InfMax, _) => Some(std::cmp::Ordering::Greater),
+            (_, Self::InfMax) => Some(std::cmp::Ordering::Less),
+
+            // Compare same types
+            (Self::Integer(a), Self::Integer(b)) => a.partial_cmp(b),
+            (Self::Double(a), Self::Double(b)) => a.partial_cmp(b),
+            (Self::Boolean(a), Self::Boolean(b)) => a.partial_cmp(b),
+            (Self::String(a), Self::String(b)) => a.partial_cmp(b),
+            (Self::Blob(a), Self::Blob(b)) => a.partial_cmp(b),
+
+            // Compare different types
+            (_, _) => None,
+        }
+    }
+}
+
 impl ColumnValue {
     /// 返回的长度包含：4 字节前缀 + 1 字节类型 + 4 字节值的长度（仅针对 String 和 Binary）+ 值的实际数据长度
     pub(crate) fn compute_size(&self) -> u32 {

@@ -191,7 +191,7 @@ mod test_search_index {
         test_util::setup,
     };
 
-    use super::{BoolQuery, ConstScoreQuery, GroupByFilter, MatchQuery, Query, SearchQuery, SearchRequest, WildcardQuery};
+    use super::{BoolQuery, ConstScoreQuery, GroupByFilter, MatchQuery, Query, RangeQuery, SearchQuery, SearchRequest, WildcardQuery};
 
     #[tokio::test]
     async fn test_list_search_index() {
@@ -556,5 +556,32 @@ mod test_search_index {
     #[tokio::test]
     async fn test_query_wildcard() {
         test_query_wildcard_impl().await;
+    }
+
+    async fn test_query_range_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let query = Query::Range(RangeQuery::new("score", ColumnValue::Double(0.0), ColumnValue::Double(10.0)));
+
+        let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
+
+        let res = client.search(search_req.clone()).send().await;
+
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+
+        for row in &res.rows {
+            log::debug!("score: {:?}", row.get_column_value("score"));
+            assert!(row.get_column_value("score").unwrap() >= &ColumnValue::Double(0.0));
+            assert!(row.get_column_value("score").unwrap() <= &ColumnValue::Double(10.0));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_range() {
+        test_query_range_impl().await;
     }
 }
