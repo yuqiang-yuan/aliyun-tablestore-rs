@@ -1,17 +1,23 @@
 //! Protobuf and plainbuf and types generated from `.proto` file using `prost_build`.
 
 // Mapping to Java SDK: ots_internal_api.proto
-include!(concat!(env!("OUT_DIR"), "/table_store.rs"));
+include!("./table_store.rs");
+
+include!("./timeseries_generated.rs");
 
 pub mod filter {
     // Mapping to Java SDK: ots_filter.proto
-    include!(concat!(env!("OUT_DIR"), "/table_store_filter.rs"));
+    include!("./table_store_filter.rs");
 }
 
 pub mod search {
     // Mapping to Java SDK: search.proto
     // Line 999 and Line 1000 are updated to add `table_store.` prefix to `ConsumedCapacity`
-    include!(concat!(env!("OUT_DIR"), "/table_store_search.rs"));
+    include!("./table_store_search.rs");
+}
+
+pub mod timeseries {
+    include!("./timeseries.rs");
 }
 
 pub mod plain_buffer;
