@@ -73,7 +73,7 @@ mod test_table {
         log::debug!("{:#?}", list_table_response);
         assert!(list_table_response.is_ok());
         let tables = list_table_response.unwrap();
-        assert!(tables.len() > 0);
+        assert!(!tables.is_empty());
     }
 
     #[tokio::test]
@@ -88,7 +88,7 @@ mod test_table {
         let info = desc_response.unwrap();
         let pk = &info.table_meta.primary_key;
         assert_eq!(1, pk.len());
-        assert_eq!("user_id", &pk.get(0).unwrap().name);
+        assert_eq!("user_id", &pk.first().unwrap().name);
     }
 
     async fn test_create_table_impl() {

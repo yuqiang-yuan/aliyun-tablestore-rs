@@ -302,12 +302,11 @@ mod test_row_operations {
 
         let tables = &res.tables;
 
-        assert_eq!(2, tables.get(0).unwrap().rows.len());
+        assert_eq!(2, tables.first().unwrap().rows.len());
 
         assert_eq!(
             &Some(&PrimaryKeyValue::String("02421870-56d8-4429-a548-27e0e1f42894".to_string())),
-            &tables
-                .get(0)
+            &tables.first()
                 .unwrap()
                 .rows
                 .get(1)

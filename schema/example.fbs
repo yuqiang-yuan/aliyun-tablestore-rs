@@ -1,9 +1,0 @@
-namespace Example;
-
-table Person {
-    name: string;
-    age: int;
-    email: string;
-}
-
-root_type Person; 

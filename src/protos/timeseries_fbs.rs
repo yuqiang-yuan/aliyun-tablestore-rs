@@ -3,11 +3,8 @@
 
 // @generated
 
-use core::mem;
-use core::cmp::Ordering;
 
 extern crate flatbuffers;
-use self::flatbuffers::{EndianScalar, Follow};
 
 #[allow(unused_imports, dead_code)]
 pub mod fbs {
@@ -88,18 +85,18 @@ impl core::fmt::Debug for DataType {
 impl<'a> flatbuffers::Follow<'a> for DataType {
   type Inner = Self;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     let b = flatbuffers::read_scalar_at::<i8>(buf, loc);
     Self(b)
-  }
+  }}
 }
 
 impl flatbuffers::Push for DataType {
     type Output = DataType;
     #[inline]
-    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) { unsafe {
         flatbuffers::emplace_scalar::<i8>(dst, self.0);
-    }
+    }}
 }
 
 impl flatbuffers::EndianScalar for DataType {
@@ -137,9 +134,9 @@ pub struct BytesValue<'a> {
 impl<'a> flatbuffers::Follow<'a> for BytesValue<'a> {
   type Inner = BytesValue<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> BytesValue<'a> {
@@ -184,7 +181,7 @@ impl flatbuffers::Verifiable for BytesValue<'_> {
 pub struct BytesValueArgs<'a> {
     pub value: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, i8>>>,
 }
-impl<'a> Default for BytesValueArgs<'a> {
+impl Default for BytesValueArgs<'_> {
   #[inline]
   fn default() -> Self {
     BytesValueArgs {
@@ -234,9 +231,9 @@ pub struct FieldValues<'a> {
 impl<'a> flatbuffers::Follow<'a> for FieldValues<'a> {
   type Inner = FieldValues<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> FieldValues<'a> {
@@ -325,7 +322,7 @@ pub struct FieldValuesArgs<'a> {
     pub string_values: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
     pub binary_values: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<BytesValue<'a>>>>>,
 }
-impl<'a> Default for FieldValuesArgs<'a> {
+impl Default for FieldValuesArgs<'_> {
   #[inline]
   fn default() -> Self {
     FieldValuesArgs {
@@ -399,9 +396,9 @@ pub struct Tag<'a> {
 impl<'a> flatbuffers::Follow<'a> for Tag<'a> {
   type Inner = Tag<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> Tag<'a> {
@@ -457,7 +454,7 @@ pub struct TagArgs<'a> {
     pub name: Option<flatbuffers::WIPOffset<&'a str>>,
     pub value: Option<flatbuffers::WIPOffset<&'a str>>,
 }
-impl<'a> Default for TagArgs<'a> {
+impl Default for TagArgs<'_> {
   #[inline]
   fn default() -> Self {
     TagArgs {
@@ -513,9 +510,9 @@ pub struct FlatBufferRowInGroup<'a> {
 impl<'a> flatbuffers::Follow<'a> for FlatBufferRowInGroup<'a> {
   type Inner = FlatBufferRowInGroup<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> FlatBufferRowInGroup<'a> {
@@ -615,7 +612,7 @@ pub struct FlatBufferRowInGroupArgs<'a> {
     pub meta_cache_update_time: u32,
     pub tag_list: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Tag<'a>>>>>,
 }
-impl<'a> Default for FlatBufferRowInGroupArgs<'a> {
+impl Default for FlatBufferRowInGroupArgs<'_> {
   #[inline]
   fn default() -> Self {
     FlatBufferRowInGroupArgs {
@@ -695,9 +692,9 @@ pub struct FlatBufferRowGroup<'a> {
 impl<'a> flatbuffers::Follow<'a> for FlatBufferRowGroup<'a> {
   type Inner = FlatBufferRowGroup<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> FlatBufferRowGroup<'a> {
@@ -775,7 +772,7 @@ pub struct FlatBufferRowGroupArgs<'a> {
     pub field_types: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, DataType>>>,
     pub rows: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<FlatBufferRowInGroup<'a>>>>>,
 }
-impl<'a> Default for FlatBufferRowGroupArgs<'a> {
+impl Default for FlatBufferRowGroupArgs<'_> {
   #[inline]
   fn default() -> Self {
     FlatBufferRowGroupArgs {
@@ -843,9 +840,9 @@ pub struct FlatBufferRows<'a> {
 impl<'a> flatbuffers::Follow<'a> for FlatBufferRows<'a> {
   type Inner = FlatBufferRows<'a>;
   #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner { unsafe {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
-  }
+  }}
 }
 
 impl<'a> FlatBufferRows<'a> {
@@ -890,7 +887,7 @@ impl flatbuffers::Verifiable for FlatBufferRows<'_> {
 pub struct FlatBufferRowsArgs<'a> {
     pub row_groups: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<FlatBufferRowGroup<'a>>>>>,
 }
-impl<'a> Default for FlatBufferRowsArgs<'a> {
+impl Default for FlatBufferRowsArgs<'_> {
   #[inline]
   fn default() -> Self {
     FlatBufferRowsArgs {
@@ -980,16 +977,16 @@ pub fn size_prefixed_root_as_flat_buffer_rows_with_opts<'b, 'o>(
 /// Assumes, without verification, that a buffer of bytes contains a FlatBufferRows and returns it.
 /// # Safety
 /// Callers must trust the given bytes do indeed contain a valid `FlatBufferRows`.
-pub unsafe fn root_as_flat_buffer_rows_unchecked(buf: &[u8]) -> FlatBufferRows {
+pub unsafe fn root_as_flat_buffer_rows_unchecked(buf: &[u8]) -> FlatBufferRows { unsafe {
   flatbuffers::root_unchecked::<FlatBufferRows>(buf)
-}
+}}
 #[inline]
 /// Assumes, without verification, that a buffer of bytes contains a size prefixed FlatBufferRows and returns it.
 /// # Safety
 /// Callers must trust the given bytes do indeed contain a valid size prefixed `FlatBufferRows`.
-pub unsafe fn size_prefixed_root_as_flat_buffer_rows_unchecked(buf: &[u8]) -> FlatBufferRows {
+pub unsafe fn size_prefixed_root_as_flat_buffer_rows_unchecked(buf: &[u8]) -> FlatBufferRows { unsafe {
   flatbuffers::size_prefixed_root_unchecked::<FlatBufferRows>(buf)
-}
+}}
 #[inline]
 pub fn finish_flat_buffer_rows_buffer<'a, 'b, A: flatbuffers::Allocator + 'a>(
     fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,

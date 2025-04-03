@@ -3,7 +3,7 @@
 // Mapping to Java SDK: ots_internal_api.proto
 include!("./table_store.rs");
 
-include!("./timeseries_generated.rs");
+include!("./timeseries_fbs.rs");
 
 pub mod filter {
     // Mapping to Java SDK: ots_filter.proto

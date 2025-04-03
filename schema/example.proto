@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package example;
-
-message Person {
-    string name = 1;
-    int32 age = 2;
-    repeated string emails = 3;
-} 
