@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{error::OtsError, OtsResult};
+use crate::{OtsResult, error::OtsError};
 
-use super::{rules::{validate_timeseries_datasource, validate_timeseries_measurement, validate_timeseries_tag_name, validate_timeseries_tag_value}, TimeseriesVersion};
-
+use super::{
+    TimeseriesVersion,
+    rules::{validate_timeseries_datasource, validate_timeseries_measurement, validate_timeseries_tag_name, validate_timeseries_tag_value},
+};
 
 /// 时间线标识
 #[derive(Debug, Clone, Default)]
@@ -17,7 +19,6 @@ pub struct TimeseriesKey {
     /// 标签列表。适用于 `supported_table_version` 为 `1` 的实例
     pub tags: HashMap<String, String>,
 }
-
 
 impl TimeseriesKey {
     pub fn new() -> Self {
@@ -35,12 +36,6 @@ impl TimeseriesKey {
         self.datasource = Some(source.into());
         self
     }
-
-    /// 设置 `supported_table_version` 为 `0` 的实例的标签
-    // pub fn tags_string(mut self, tags_string: impl Into<String>) -> Self {
-    //     self.tags_string = Some(tags_string.into());
-    //     self
-    // }
 
     /// 增加一个 `supported_table_version` 为 `1` 的实例的标签
     pub fn tag(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
@@ -102,16 +97,14 @@ impl TimeseriesKey {
                 TimeseriesVersion::V0 => {
                     let s = items.into_iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",");
                     ret.tags = Some(format!("[{}]", s));
-                },
+                }
 
                 TimeseriesVersion::V1 => {
-                    ret.tag_list = items.into_iter().map(|(k, v)| {
-                        crate::protos::timeseries::TimeseriesTag {
-                            name: k,
-                            value: v,
-                        }
-                    }).collect();
-                },
+                    ret.tag_list = items
+                        .into_iter()
+                        .map(|(k, v)| crate::protos::timeseries::TimeseriesTag { name: k, value: v })
+                        .collect();
+                }
             }
         }
 

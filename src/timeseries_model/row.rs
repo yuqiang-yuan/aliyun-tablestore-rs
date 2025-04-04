@@ -1,7 +1,6 @@
 use crate::model::{Column, PrimaryKeyColumn, PrimaryKeyValue};
 
-use super::{parse_tags, TimeseriesKey};
-
+use super::{TimeseriesKey, parse_tags};
 
 /// 时序表中的数据行
 #[derive(Debug, Clone)]
@@ -56,35 +55,32 @@ impl From<crate::model::Row> for TimeseriesRow {
         let mut timestamp_us = 0;
 
         for column in primary_key.columns {
-            let PrimaryKeyColumn {
-                name,
-                value,
-            } = column;
+            let PrimaryKeyColumn { name, value } = column;
 
             match name.as_str() {
                 "_m_name" => {
                     if let PrimaryKeyValue::String(s) = value {
                         key.measurement_name = Some(s);
                     }
-                },
+                }
 
                 "_data_source" => {
                     if let PrimaryKeyValue::String(s) = value {
                         key.datasource = Some(s);
                     }
-                },
+                }
 
                 "_tags" => {
                     if let PrimaryKeyValue::String(s) = value {
                         key.tags = parse_tags(&s);
                     }
-                },
+                }
 
-                "_time" =>  {
+                "_time" => {
                     if let PrimaryKeyValue::Integer(ts) = value {
                         timestamp_us = ts;
                     }
-                },
+                }
 
                 _ => {}
             }

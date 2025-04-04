@@ -1,14 +1,12 @@
 //! 时序模型
 
-mod key;
 mod field;
-mod version;
+mod key;
 mod row;
 pub(crate) mod rules;
+mod version;
 
-pub use key::*;
 pub use field::*;
-pub use version::*;
+pub use key::*;
 pub use row::*;
-
-
+pub use version::*;

@@ -14,6 +14,8 @@ pub mod fbs {
 
   extern crate flatbuffers;
   use self::flatbuffers::{EndianScalar, Follow};
+
+  #[allow(clippy::missing_safety_doc)]
 #[allow(unused_imports, dead_code)]
 pub mod timeseries {
 
@@ -113,7 +115,7 @@ impl flatbuffers::EndianScalar for DataType {
   }
 }
 
-impl<'a> flatbuffers::Verifiable for DataType {
+impl flatbuffers::Verifiable for DataType {
   #[inline]
   fn run_verifier(
     v: &mut flatbuffers::Verifier, pos: usize
@@ -1000,4 +1002,3 @@ pub fn finish_size_prefixed_flat_buffer_rows_buffer<'a, 'b, A: flatbuffers::Allo
 }
 }  // pub mod timeseries
 }  // pub mod fbs
-

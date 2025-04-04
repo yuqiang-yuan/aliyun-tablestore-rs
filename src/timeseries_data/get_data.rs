@@ -1,7 +1,12 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, model::Row, protos::plain_buffer::MASK_HEADER, timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
-
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::Row,
+    protos::plain_buffer::MASK_HEADER,
+    timeseries_model::{TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion, rules::validate_timeseries_table_name},
+};
 
 /// 查询某个时间线的数据
 ///
@@ -142,7 +147,6 @@ impl GetTimeseriesDataRequest {
             }
         }
 
-
         Ok(())
     }
 }
@@ -187,23 +191,18 @@ pub struct GetTimeseriesDataResponse {
     pub next_token: Option<Vec<u8>>,
 }
 
-
 impl TryFrom<crate::protos::timeseries::GetTimeseriesDataResponse> for GetTimeseriesDataResponse {
     type Error = OtsError;
 
     fn try_from(value: crate::protos::timeseries::GetTimeseriesDataResponse) -> Result<Self, Self::Error> {
-        let crate::protos::timeseries::GetTimeseriesDataResponse {
-            rows_data,
-            next_token,
-        } = value;
+        let crate::protos::timeseries::GetTimeseriesDataResponse { rows_data, next_token } = value;
 
         // Returned bytes with plainbuf encoding
         let plainbuf_rows = Row::decode_plain_buffer_for_rows(rows_data, MASK_HEADER)?;
 
-
         Ok(Self {
-            rows: plainbuf_rows.into_iter().map(|prow| TimeseriesRow::from(prow)).collect(),
-            next_token
+            rows: plainbuf_rows.into_iter().map(TimeseriesRow::from).collect(),
+            next_token,
         })
     }
 }
@@ -212,17 +211,14 @@ impl TryFrom<crate::protos::timeseries::GetTimeseriesDataResponse> for GetTimese
 #[derive(Debug, Clone, Default)]
 pub struct GetTimeseriesDataOperation {
     client: OtsClient,
-    request: GetTimeseriesDataRequest
+    request: GetTimeseriesDataRequest,
 }
 
 add_per_request_options!(GetTimeseriesDataOperation);
 
 impl GetTimeseriesDataOperation {
     pub(crate) fn new(client: OtsClient, request: GetTimeseriesDataRequest) -> Self {
-        Self {
-            client,
-            request
-        }
+        Self { client, request }
     }
 
     pub async fn send(self) -> OtsResult<GetTimeseriesDataResponse> {

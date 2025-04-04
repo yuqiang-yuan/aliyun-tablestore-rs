@@ -42,9 +42,9 @@ pub mod model;
 pub mod protos;
 pub mod search;
 pub mod table;
-pub mod util;
-pub mod timeseries_model;
 pub mod timeseries_data;
+pub mod timeseries_model;
+pub mod util;
 
 #[cfg(test)]
 pub mod test_util;

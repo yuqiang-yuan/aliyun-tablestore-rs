@@ -1,6 +1,8 @@
-
 /// 自定义时间线标识字段个数
+pub const MAX_ID_FIELD_COUNT: usize = 6;
 
+/// 可作为主键的数据字段个数
+pub const MAX_PRIMARY_KEY_FIELD_COUNT: usize = 6;
 
 /// 验证时序表名称
 ///
@@ -53,7 +55,6 @@ pub fn validate_timeseries_measurement(name: &str) -> bool {
 
     true
 }
-
 
 /// 验证数据源名称。 UTF-8 字符串，长度限制为 0 - 256 字节
 pub fn validate_timeseries_datasource(s: &str) -> bool {
@@ -113,7 +114,7 @@ pub fn validate_timeseries_tag_name(name: &str) -> bool {
     }
 
     for c in name.chars() {
-        if !(c >= '!' && c <= '~' && c != '"' && c != '=') {
+        if !('!'..='~').contains(&c) {
             return false;
         }
     }

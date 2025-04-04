@@ -6,7 +6,7 @@ pub use get_data::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
-    use crate::{test_util::setup, timeseries_model::TimeseriesKey, OtsClient};
+    use crate::{OtsClient, test_util::setup, timeseries_model::TimeseriesKey};
 
     use super::GetTimeseriesDataRequest;
 
@@ -21,8 +21,9 @@ mod test_timeseries_data {
                 .measurement_name("measure_7")
                 .datasource("data_3")
                 .tag("cluster", "cluster_3")
-                .tag("region", "region_7")
-        ).end_time_us(1743735588398000)
+                .tag("region", "region_7"),
+        )
+        .end_time_us(1743735588398000)
         .limit(10);
 
         let resp = client.get_timeseries_data(request).send().await;

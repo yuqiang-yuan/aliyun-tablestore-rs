@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TimeseriesFieldType {
     Long = 1,

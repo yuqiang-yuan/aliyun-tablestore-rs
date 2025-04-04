@@ -306,7 +306,8 @@ mod test_row_operations {
 
         assert_eq!(
             &Some(&PrimaryKeyValue::String("02421870-56d8-4429-a548-27e0e1f42894".to_string())),
-            &tables.first()
+            &tables
+                .first()
                 .unwrap()
                 .rows
                 .get(1)

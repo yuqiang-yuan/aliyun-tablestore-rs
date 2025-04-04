@@ -3,7 +3,11 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::Row, protos::{plain_buffer::MASK_HEADER, search::ColumnReturnType}, table::rules::{validate_index_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::Row,
+    protos::{plain_buffer::MASK_HEADER, search::ColumnReturnType},
+    table::rules::{validate_index_name, validate_table_name},
 };
 
 use super::Query;

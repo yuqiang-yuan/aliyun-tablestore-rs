@@ -1,7 +1,9 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, table::rules::{validate_index_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    table::rules::{validate_index_name, validate_table_name},
 };
 
 /// 调用 ComputeSplits 接口获取当前 ParallelScan 单个请求的最大并发数，用于使用多元索引并发导出数据时的并发度规划。
