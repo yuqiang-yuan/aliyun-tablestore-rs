@@ -206,6 +206,18 @@ pub struct SearchResponse {
     pub reserved_consumed: ConsumedCapacity,
 }
 
+impl SearchResponse {
+    /// 获取一个聚合结果
+    pub fn get_aggregation_result(&self, aggr_name: impl AsRef<str>) -> Option<&AggregationResult> {
+        self.aggregation_results.get(aggr_name.as_ref())
+    }
+
+    /// 获取一个分组结果
+    pub fn get_group_by_result(&self, group_by_name: impl AsRef<str>) -> Option<&GroupByResult> {
+        self.group_by_results.get(group_by_name.as_ref())
+    }
+}
+
 impl TryFrom<crate::protos::search::SearchResponse> for SearchResponse {
     type Error = OtsError;
 

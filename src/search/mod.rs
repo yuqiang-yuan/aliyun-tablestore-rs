@@ -34,6 +34,7 @@ pub use score_function::*;
 pub use search_index::*;
 pub use sort_by::*;
 pub use update_search_index::*;
+
 /// 验证分组名称是否符合规范
 ///
 /// 分组名称应符合以下规范：

@@ -15,7 +15,7 @@ There operations are implemented:
   - Defined column operations
     - Add column
     - Delete column
-  - Row operations
+  - Data operations
     - Get row
     - Get range
     - Put row
@@ -34,6 +34,11 @@ There operations are implemented:
     - Describe search Index
     - List search Index
     - Search using index
+    - Parallel scan
+    - Compute splits
+- Time series table
+  - Data operations
+    - Get data
 
 
 TODO List:

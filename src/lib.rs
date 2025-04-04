@@ -28,6 +28,7 @@ use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
+use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
@@ -42,6 +43,8 @@ pub mod protos;
 pub mod search;
 pub mod table;
 pub mod util;
+pub mod timeseries_model;
+pub mod timeseries_data;
 
 #[cfg(test)]
 pub mod test_util;
@@ -932,5 +935,10 @@ impl OtsClient {
     /// 并行扫描
     pub fn parallel_scan(&self, request: ParallelScanRequest) -> ParallelScanOperation {
         ParallelScanOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 查询数据
+    pub fn get_timeseries_data(&self, request: GetTimeseriesDataRequest) -> GetTimeseriesDataOperation {
+        GetTimeseriesDataOperation::new(self.clone(), request)
     }
 }

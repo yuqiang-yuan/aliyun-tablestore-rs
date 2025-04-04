@@ -3,11 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult,
-    error::OtsError,
-    model::Row,
-    protos::{plain_buffer::MASK_HEADER, search::ColumnReturnType},
-    table::rules::{validate_index_name, validate_table_name},
+    add_per_request_options, error::OtsError, model::Row, protos::{plain_buffer::MASK_HEADER, search::ColumnReturnType}, table::rules::{validate_index_name, validate_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 use super::Query;
@@ -301,6 +297,8 @@ pub struct ParallelScanOperation {
     client: OtsClient,
     request: ParallelScanRequest,
 }
+
+add_per_request_options!(ParallelScanOperation);
 
 impl ParallelScanOperation {
     pub(crate) fn new(client: OtsClient, request: ParallelScanRequest) -> Self {
