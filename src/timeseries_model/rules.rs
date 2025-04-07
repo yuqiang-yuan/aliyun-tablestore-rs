@@ -33,6 +33,16 @@ pub fn validate_timeseries_table_name(name: &str) -> bool {
     true
 }
 
+/// 验证时序表 lastpoint 索引名称
+pub fn validate_lastpoint_index_name(name: &str) -> bool {
+    validate_timeseries_table_name(name)
+}
+
+/// 验证时序表分析存储名称
+pub fn validate_analytical_store_name(name: &str) -> bool {
+    validate_timeseries_table_name(name)
+}
+
 /// 验证度量名称
 ///
 /// - UTF-8 字符串

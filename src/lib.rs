@@ -5,6 +5,7 @@ use bytes::Bytes;
 use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteDefinedColumnOperation, DeleteDefinedColumnRequest};
 use error::OtsError;
 use index::{CreateIndexOperation, DropIndexOperation};
+use lastpoint_index::{CreateTimeseriesLastpointIndexOperation, CreateTimeseriesLastpointIndexRequest, DeleteTimeseriesLastpointIndexOperation};
 use prost::Message;
 use protos::{
     CreateIndexRequest,
@@ -15,6 +16,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
+use analytical_store::{CreateTimeseriesAnalyticalStoreOperation, CreateTimeseriesAnalyticalStoreRequest, DescribeTimeseriesAnalyticalStoreOperation};
 use data::{
     BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, BulkExportOperation, BulkExportRequest, BulkImportOperation,
     BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
@@ -29,14 +31,17 @@ use table::{
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
 use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest};
+use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
 use util::get_iso8601_date_time_string;
 
+pub mod analytical_store;
 pub mod crc8;
 pub mod data;
 pub mod defined_column;
 pub mod error;
 pub mod index;
+pub mod lastpoint_index;
 pub mod macros;
 pub mod model;
 pub mod protos;
@@ -44,6 +49,7 @@ pub mod search;
 pub mod table;
 pub mod timeseries_data;
 pub mod timeseries_model;
+pub mod timeseries_table;
 pub mod util;
 
 #[cfg(test)]
@@ -115,6 +121,10 @@ pub enum OtsOp {
     DeleteTimeseriesMeta,
     SplitTimeseriesScanTask,
     ScanTimeseriesData,
+
+    // timeseries lastpoint index
+    CreateTimeseriesLastpointIndex,
+    DeleteTimeseriesLastpointIndex,
 
     // timeseries table analyzing operations
     CreateTimeseriesAnalyticalStore,
@@ -196,6 +206,9 @@ impl Display for OtsOp {
             OtsOp::DeleteTimeseriesMeta => "DeleteTimeseriesMeta",
             OtsOp::SplitTimeseriesScanTask => "SplitTimeseriesScanTask",
             OtsOp::ScanTimeseriesData => "ScanTimeseriesData",
+
+            OtsOp::CreateTimeseriesLastpointIndex => "CreateTimeseriesLastpointIndex",
+            OtsOp::DeleteTimeseriesLastpointIndex => "DeleteTimeseriesLastpointIndex",
 
             OtsOp::CreateTimeseriesAnalyticalStore => "CreateTimeseriesAnalyticalStore",
             OtsOp::UpdateTimeseriesAnalyticalStore => "UpdateTimeseriesAnalyticalStore",
@@ -940,5 +953,30 @@ impl OtsClient {
     /// 时序表 - 查询数据
     pub fn get_timeseries_data(&self, request: GetTimeseriesDataRequest) -> GetTimeseriesDataOperation {
         GetTimeseriesDataOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 查询时序表信息
+    pub fn describe_timeseries_table(&self, table_name: &str) -> DescribeTimeseriesTableOperation {
+        DescribeTimeseriesTableOperation::new(self.clone(), table_name)
+    }
+
+    /// 时序表 - 创建 lastpoint 索引
+    pub fn create_timeseries_lastpoint_index(&self, request: CreateTimeseriesLastpointIndexRequest) -> CreateTimeseriesLastpointIndexOperation {
+        CreateTimeseriesLastpointIndexOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 删除 lastpoint 索引
+    pub fn delete_timeseries_lastpoint_index(&self, table_name: &str, index_name: &str) -> DeleteTimeseriesLastpointIndexOperation {
+        DeleteTimeseriesLastpointIndexOperation::new(self.clone(), table_name, index_name)
+    }
+
+    /// 时序表 - 创建分析存储
+    pub fn create_timeseries_analytical_store(&self, request: CreateTimeseriesAnalyticalStoreRequest) -> CreateTimeseriesAnalyticalStoreOperation {
+        CreateTimeseriesAnalyticalStoreOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 查询分析存储的信息
+    pub fn describe_timeseries_analytical_store(self, table_name: &str, store_name: &str) -> DescribeTimeseriesAnalyticalStoreOperation {
+        DescribeTimeseriesAnalyticalStoreOperation::new(self.clone(), table_name, store_name)
     }
 }
