@@ -304,7 +304,11 @@ impl TryFrom<crate::protos::BulkExportResponse> for BulkExportResponse {
         };
 
         let pk = if let Some(pk_bytes) = next_start_primary_key {
-            Some(Row::decode_plain_buffer(pk_bytes, MASK_HEADER | MASK_ROW_CHECKSUM)?.primary_key)
+            if !pk_bytes.is_empty() {
+                Some(Row::decode_plain_buffer(pk_bytes, MASK_HEADER | MASK_ROW_CHECKSUM)?.primary_key)
+            } else {
+                None
+            }
         } else {
             None
         };

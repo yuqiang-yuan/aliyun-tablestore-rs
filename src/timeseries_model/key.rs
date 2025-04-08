@@ -126,7 +126,13 @@ pub(crate) fn parse_tags(tags: &str) -> HashMap<String, String> {
     s.split(",").for_each(|kv| {
         let mut parts = kv.split("=");
         if let (Some(k), Some(v)) = (parts.next(), parts.next()) {
-            ret.insert(k.to_string(), v.to_string());
+            let sk = k.strip_prefix("\"").unwrap_or(k);
+            let sk = sk.strip_suffix("\"").unwrap_or(sk);
+
+            let sv = v.strip_prefix("\"").unwrap_or(v);
+            let sv = sv.strip_suffix("\"").unwrap_or(sv);
+
+            ret.insert(sk.to_string(), sv.to_string());
         }
     });
 

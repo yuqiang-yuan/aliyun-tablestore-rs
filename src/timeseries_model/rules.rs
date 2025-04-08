@@ -4,6 +4,15 @@ pub const MAX_ID_FIELD_COUNT: usize = 6;
 /// 可作为主键的数据字段个数
 pub const MAX_PRIMARY_KEY_FIELD_COUNT: usize = 6;
 
+/// 单行写入的属性列个数不能超过 1024 列
+pub const MAX_FIELD_COUNT: usize = 1024;
+
+/// 一次写入的行数不能超过 200 行
+pub const MAX_ROW_COUNT: usize = 200;
+
+/// 一次写入数据大小上限为 `4 MB`
+pub const MAX_DATA_SIZE: usize = 1024 * 1024 * 4;
+
 /// 验证时序表名称
 ///
 /// - 由英文字母、数字或下划线组成

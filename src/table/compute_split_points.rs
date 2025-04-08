@@ -130,14 +130,16 @@ impl TryFrom<crate::protos::ComputeSplitPointsBySizeResponse> for ComputeSplitPo
 
         let mut split_pks = vec![];
         for row_bytes in split_points {
-            let row = Row::decode_plain_buffer(row_bytes, MASK_HEADER | MASK_ROW_CHECKSUM)?;
-            let mut pk = row.primary_key;
-            // 把每个主键尾部省略的 `-INF` 补充回来
-            for i in pk.columns.len()..schema.len() {
-                pk.columns.push(PrimaryKeyColumn::new(&schema.get(i).unwrap().name, PrimaryKeyValue::InfMin));
-            }
+            if !row_bytes.is_empty() {
+                let row = Row::decode_plain_buffer(row_bytes, MASK_HEADER | MASK_ROW_CHECKSUM)?;
+                let mut pk = row.primary_key;
+                // 把每个主键尾部省略的 `-INF` 补充回来
+                for i in pk.columns.len()..schema.len() {
+                    pk.columns.push(PrimaryKeyColumn::new(&schema.get(i).unwrap().name, PrimaryKeyValue::InfMin));
+                }
 
-            split_pks.push(pk);
+                split_pks.push(pk);
+            }
         }
 
         Ok(Self {

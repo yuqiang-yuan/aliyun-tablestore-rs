@@ -289,7 +289,9 @@ impl TryFrom<crate::protos::search::ParallelScanResponse> for ParallelScanRespon
 
         let mut rows = vec![];
         for row_bytes in rows_bytes {
-            rows.push(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?);
+            if !row_bytes.is_empty() {
+                rows.push(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?);
+            }
         }
 
         Ok(Self { rows, next_token })

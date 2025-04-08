@@ -188,7 +188,11 @@ impl TryFrom<crate::protos::UpdateRowResponse> for UpdateRowResponse {
         let crate::protos::UpdateRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
-            Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+            if !row_bytes.is_empty() {
+                Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+            } else {
+                None
+            }
         } else {
             None
         };

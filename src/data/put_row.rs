@@ -180,7 +180,11 @@ impl TryFrom<crate::protos::PutRowResponse> for PutRowResponse {
         let crate::protos::PutRowResponse { consumed, row } = value;
 
         let row = if let Some(row_bytes) = row {
-            Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+            if !row_bytes.is_empty() {
+                Some(Row::decode_plain_buffer(row_bytes, MASK_HEADER)?)
+            } else {
+                None
+            }
         } else {
             None
         };

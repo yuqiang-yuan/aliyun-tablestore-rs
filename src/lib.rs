@@ -30,7 +30,7 @@ use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
-use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest};
+use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest};
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -953,6 +953,11 @@ impl OtsClient {
     /// 时序表 - 查询数据
     pub fn get_timeseries_data(&self, request: GetTimeseriesDataRequest) -> GetTimeseriesDataOperation {
         GetTimeseriesDataOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 写入数据
+    pub fn put_timeseries_data(&self, request: PutTimeseriesDataRequest) -> PutTimeseriesDataOperation {
+        PutTimeseriesDataOperation::new(self.clone(), request)
     }
 
     /// 时序表 - 查询时序表信息

@@ -400,12 +400,16 @@ impl TryFrom<crate::protos::GetRangeResponse> for GetRangeResponse {
         } = value;
 
         let next_pk = if let Some(bytes) = next_start_primary_key {
-            let Row {
-                primary_key,
-                columns: _,
-                deleted: _,
-            } = Row::decode_plain_buffer(bytes, MASK_HEADER)?;
-            Some(primary_key)
+            if !bytes.is_empty() {
+                let Row {
+                    primary_key,
+                    columns: _,
+                    deleted: _,
+                } = Row::decode_plain_buffer(bytes, MASK_HEADER)?;
+                Some(primary_key)
+            } else {
+                None
+            }
         } else {
             None
         };

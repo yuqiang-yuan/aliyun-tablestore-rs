@@ -3,10 +3,7 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{
-    OtsResult,
-    crc8::crc_u8,
-    error::OtsError,
-    protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, TAG_DELETE_ROW_MARKER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK},
+    crc8::crc_u8, error::OtsError, protos::plain_buffer::{self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, MASK_ROW_CHECKSUM, TAG_DELETE_ROW_MARKER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK}, OtsResult
 };
 
 use super::{Column, ColumnOp, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue};
@@ -74,6 +71,28 @@ impl Row {
         cursor.into_inner()
     }
 
+    /// 将多行数据编码成一个 plain buffer
+    pub(crate) fn encode_plain_buffer_for_rows(rows: Vec<Row>, masks: u32) -> Vec<u8> {
+        let size = rows.iter().map(|r| r.compute_size(MASK_ROW_CHECKSUM)).sum::<u32>() as usize;
+        let buf = if masks & MASK_HEADER == MASK_HEADER {
+            vec![0u8; size + 4]
+        } else {
+            vec![0u8; size]
+        };
+
+        let mut cursor = Cursor::new(buf);
+
+        if masks & MASK_HEADER == MASK_HEADER {
+            cursor.write_u32::<LittleEndian>(HEADER).unwrap();
+        }
+
+        for row in rows {
+            row.write_plain_buffer(&mut cursor, MASK_ROW_CHECKSUM);
+        }
+
+        cursor.into_inner()
+    }
+
     /// 解码 plain buffer
     pub(crate) fn decode_plain_buffer(bytes: Vec<u8>, masks: u32) -> OtsResult<Self> {
         let mut cursor = Cursor::new(bytes);
@@ -92,6 +111,10 @@ impl Row {
     /// 从一个响应数据中读取多行
     #[allow(dead_code)]
     pub(crate) fn decode_plain_buffer_for_rows(bytes: Vec<u8>, masks: u32) -> OtsResult<Vec<Self>> {
+        if bytes.is_empty() {
+            return Ok(vec![]);
+        }
+
         let mut cursor = Cursor::new(bytes);
 
         if masks & MASK_HEADER == MASK_HEADER {
