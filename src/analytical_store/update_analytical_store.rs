@@ -1,14 +1,14 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::timeseries::AnalyticalStoreSyncType, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+    add_per_request_options, error::OtsError, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
-/// 为已存在的时序表创建一个时序分析存储用于低成本存储时序数据以及查询与分析时序数据
+/// 更新时序分析存储配置信息，目前仅支持修改数据生命周期TTL。
 ///
-/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/createtimeseriesanalyticalstore-api-of-tablestore>
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/updatetimeseriesanalyticalstore-api-of-tablestore>
 #[derive(Debug, Clone, Default)]
-pub struct CreateTimeseriesAnalyticalStoreRequest {
+pub struct UpdateTimeseriesAnalyticalStoreRequest {
     /// 时序表名
     pub table_name: String,
 
@@ -17,12 +17,9 @@ pub struct CreateTimeseriesAnalyticalStoreRequest {
 
     /// 分析存储数据保留时间。取值必须大于等于 `2592000` 秒（即 `30` 天）或者必须为 `-1`（数据永不过期）
     pub ttl_seconds: Option<i32>,
-
-    /// 分析存储同步方式
-    pub sync_option: Option<AnalyticalStoreSyncType>,
 }
 
-impl CreateTimeseriesAnalyticalStoreRequest {
+impl UpdateTimeseriesAnalyticalStoreRequest {
     pub fn new(table_name: &str, store_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
@@ -52,13 +49,6 @@ impl CreateTimeseriesAnalyticalStoreRequest {
         self
     }
 
-    /// 设置分析存储同步方式
-    pub fn sync_option(mut self, sync_option: AnalyticalStoreSyncType) -> Self {
-        self.sync_option = Some(sync_option);
-
-        self
-    }
-
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if !validate_timeseries_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("invalid time series table name: {}", self.table_name)));
@@ -81,36 +71,35 @@ impl CreateTimeseriesAnalyticalStoreRequest {
     }
 }
 
-impl From<CreateTimeseriesAnalyticalStoreRequest> for crate::protos::timeseries::CreateTimeseriesAnalyticalStoreRequest {
-    fn from(value: CreateTimeseriesAnalyticalStoreRequest) -> Self {
-        let CreateTimeseriesAnalyticalStoreRequest {
+impl From<UpdateTimeseriesAnalyticalStoreRequest> for crate::protos::timeseries::UpdateTimeseriesAnalyticalStoreRequest {
+    fn from(value: UpdateTimeseriesAnalyticalStoreRequest) -> Self {
+        let UpdateTimeseriesAnalyticalStoreRequest {
             table_name,
             store_name,
             ttl_seconds,
-            sync_option,
         } = value;
 
         Self {
             table_name,
-            analytical_store: Some(crate::protos::timeseries::TimeseriesAnalyticalStore {
+            analytical_store: crate::protos::timeseries::TimeseriesAnalyticalStore {
                 store_name: Some(store_name),
                 time_to_live: ttl_seconds,
-                sync_option: sync_option.map(|o| o as i32),
-            }),
+                sync_option: None,
+            },
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct CreateTimeseriesAnalyticalStoreOperation {
+pub struct UpdateTimeseriesAnalyticalStoreOperation {
     client: OtsClient,
-    request: CreateTimeseriesAnalyticalStoreRequest,
+    request: UpdateTimeseriesAnalyticalStoreRequest,
 }
 
-add_per_request_options!(CreateTimeseriesAnalyticalStoreOperation);
+add_per_request_options!(UpdateTimeseriesAnalyticalStoreOperation);
 
-impl CreateTimeseriesAnalyticalStoreOperation {
-    pub(crate) fn new(client: OtsClient, request: CreateTimeseriesAnalyticalStoreRequest) -> Self {
+impl UpdateTimeseriesAnalyticalStoreOperation {
+    pub(crate) fn new(client: OtsClient, request: UpdateTimeseriesAnalyticalStoreRequest) -> Self {
         Self { client, request }
     }
 
@@ -118,10 +107,10 @@ impl CreateTimeseriesAnalyticalStoreOperation {
         self.request.validate()?;
         let Self { client, request } = self;
 
-        let msg = crate::protos::timeseries::CreateTimeseriesAnalyticalStoreRequest::from(request);
+        let msg = crate::protos::timeseries::UpdateTimeseriesAnalyticalStoreRequest::from(request);
 
         let req = OtsRequest {
-            operation: OtsOp::CreateTimeseriesAnalyticalStore,
+            operation: OtsOp::UpdateTimeseriesAnalyticalStore,
             body: msg.encode_to_vec(),
             ..Default::default()
         };

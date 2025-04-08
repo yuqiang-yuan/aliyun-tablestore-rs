@@ -16,7 +16,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
-use analytical_store::{CreateTimeseriesAnalyticalStoreOperation, CreateTimeseriesAnalyticalStoreRequest, DescribeTimeseriesAnalyticalStoreOperation};
+use analytical_store::{CreateTimeseriesAnalyticalStoreOperation, CreateTimeseriesAnalyticalStoreRequest, DeleteTimeseriesAnalyticalStoreOperation, DeleteTimeseriesAnalyticalStoreRequest, DescribeTimeseriesAnalyticalStoreOperation, UpdateTimeseriesAnalyticalStoreOperation, UpdateTimeseriesAnalyticalStoreRequest};
 use data::{
     BatchGetRowOperation, BatchGetRowRequest, BatchWriteRowOperation, BatchWriteRowRequest, BulkExportOperation, BulkExportRequest, BulkImportOperation,
     BulkImportRequest, DeleteRowOperation, DeleteRowRequest, GetRangeOperation, GetRangeRequest, GetRowOperation, GetRowRequest, PutRowOperation,
@@ -973,6 +973,16 @@ impl OtsClient {
     /// 时序表 - 创建分析存储
     pub fn create_timeseries_analytical_store(&self, request: CreateTimeseriesAnalyticalStoreRequest) -> CreateTimeseriesAnalyticalStoreOperation {
         CreateTimeseriesAnalyticalStoreOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 更新分析存储
+    pub fn update_timeseries_analytical_store(&self, request: UpdateTimeseriesAnalyticalStoreRequest) -> UpdateTimeseriesAnalyticalStoreOperation {
+        UpdateTimeseriesAnalyticalStoreOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 删除分析存储
+    pub fn delete_timeseries_analytical_store(&self, request: DeleteTimeseriesAnalyticalStoreRequest) -> DeleteTimeseriesAnalyticalStoreOperation {
+        DeleteTimeseriesAnalyticalStoreOperation::new(self.clone(), request)
     }
 
     /// 时序表 - 查询分析存储的信息
