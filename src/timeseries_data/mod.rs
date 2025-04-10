@@ -2,20 +2,19 @@
 
 mod get_data;
 mod put_data;
+mod query_meta;
 
 pub use get_data::*;
 pub use put_data::*;
+pub use query_meta::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        OtsClient,
-        test_util::setup,
-        timeseries_model::{TimeseriesKey, TimeseriesRow, TimeseriesVersion},
-        util::current_time_ms,
+        test_util::setup, timeseries_model::{MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, util::current_time_ms, OtsClient
     };
 
-    use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest};
+    use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest};
 
     /// Test query timeseries data
     async fn test_get_timeseries_data_impl() {
@@ -90,5 +89,23 @@ mod test_timeseries_data {
     #[tokio::test]
     async fn test_put_timeseries_data() {
         test_put_timeseries_data_impl().await
+    }
+
+    async fn test_query_timeseries_meta_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let req = QueryTimeseriesMetaRequest::new(
+            "timeseries_demo_with_data",
+            MetaQuery::Measurement(crate::timeseries_model::MeasurementMetaQuery::Equal("measure_11".to_string()))
+        ).get_total_hit(true);
+
+        let resp = client.query_timeseries_meta(req).send().await;
+        log::debug!("{:?}", resp);
+    }
+
+    #[tokio::test]
+    async fn test_query_timeseries_meta() {
+        test_query_timeseries_meta_impl().await
     }
 }

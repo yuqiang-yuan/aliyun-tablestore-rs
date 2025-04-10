@@ -112,6 +112,39 @@ impl TimeseriesKey {
     }
 }
 
+impl From<crate::protos::timeseries::TimeseriesKey> for TimeseriesKey {
+    fn from(value: crate::protos::timeseries::TimeseriesKey) -> Self {
+        let crate::protos::timeseries::TimeseriesKey {
+            measurement,
+            source,
+            tags,
+            tag_list,
+        } = value;
+
+        let mut tag_map = HashMap::new();
+
+        if let Some(s) = tags {
+            tag_map.extend(parse_tags(&s));
+        }
+
+        if !tag_list.is_empty() {
+            tag_list.into_iter().for_each(|t| {
+                let crate::protos::timeseries::TimeseriesTag {
+                    name,
+                    value,
+                } = t;
+                tag_map.insert(name, value);
+            });
+        }
+
+        Self {
+            measurement_name: measurement,
+            datasource: source,
+            tags: tag_map,
+        }
+    }
+}
+
 /// 解析 tags 字符串。
 /// 例如：从服务器返回的 tags 字符串为： `"[\"cluster=cluster_3\",\"region=region_7\"]"`
 pub(crate) fn parse_tags(tags: &str) -> HashMap<String, String> {

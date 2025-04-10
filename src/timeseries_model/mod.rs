@@ -5,11 +5,15 @@ mod key;
 mod row;
 pub(crate) mod rules;
 mod version;
+mod query;
+mod meta;
 
 pub use field::*;
 pub use key::*;
 pub use row::*;
 pub use version::*;
+pub use query::*;
+pub use meta::*;
 
 #[cfg(test)]
 mod test_timeseries_model {

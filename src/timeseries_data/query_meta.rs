@@ -1,0 +1,188 @@
+use prost::Message;
+
+use crate::{error::OtsError, timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
+
+/// 检索时间线元数据
+///
+/// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/querytimeseriesmeta>
+#[derive(Debug, Clone)]
+pub struct QueryTimeseriesMetaRequest {
+    /// 时序表名
+    pub table_name: String,
+
+    /// 查询条件
+    pub condition: MetaQuery,
+
+    /// 是否获取符合条件总行数
+    pub get_total_hit: Option<bool>,
+
+    /// 用于继续获取剩余数据的标识
+    pub token: Option<Vec<u8>>,
+
+    /// 最多返回的行数限制
+    pub limit: Option<u32>,
+
+    /// 支持的模型版本号
+    pub supported_table_version: TimeseriesVersion,
+}
+
+impl QueryTimeseriesMetaRequest {
+    pub fn new(table_name: &str, condition: MetaQuery) -> Self {
+        Self {
+            table_name: table_name.to_string(),
+            condition,
+            get_total_hit: None,
+            token: None,
+            limit: None,
+            supported_table_version: TimeseriesVersion::V0,
+        }
+    }
+
+    /// 设置表名
+    pub fn table_name(mut self, table_name: &str) -> Self {
+        self.table_name = table_name.to_string();
+
+        self
+    }
+
+    /// 设置查询条件
+    pub fn condition(mut self, condition: MetaQuery) -> Self {
+        self.condition = condition;
+
+        self
+    }
+
+    /// 设置是否获取全部行数
+    pub fn get_total_hit(mut self, get_total_hit: bool) -> Self {
+        self.get_total_hit = Some(get_total_hit);
+
+        self
+    }
+
+    /// 设置翻页 token
+    pub fn token(mut self, token: impl Into<Vec<u8>>) -> Self {
+        self.token = Some(token.into());
+
+        self
+    }
+
+    /// 设置最多返回条数
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+
+        self
+    }
+
+    /// 设置支持的版本号
+    pub fn supported_table_version(mut self, ver: TimeseriesVersion) -> Self {
+        self.supported_table_version = ver;
+
+        self
+    }
+
+    pub(crate) fn validate(&self) -> OtsResult<()> {
+        if !validate_timeseries_table_name(&self.table_name) {
+            return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
+        }
+
+        if let Some(n) = self.limit {
+            if n > i32::MAX as u32 {
+                return Err(OtsError::ValidationFailed(format!("invalid limit: {}", n)));
+            }
+        }
+
+        Ok(())
+    }
+
+}
+
+impl From<QueryTimeseriesMetaRequest> for crate::protos::timeseries::QueryTimeseriesMetaRequest {
+    fn from(value: QueryTimeseriesMetaRequest) -> Self {
+        let QueryTimeseriesMetaRequest {
+            table_name,
+            condition,
+            get_total_hit,
+            token,
+            limit,
+            supported_table_version,
+        } = value;
+
+        Self {
+            table_name,
+            condition: Some(crate::protos::timeseries::MetaQueryCondition::from(condition)),
+            get_total_hit,
+            token,
+            limit: limit.map(|n| n as i32),
+            supported_table_version: Some(supported_table_version as i64),
+        }
+    }
+}
+
+#[derive(Debug, Clone,)]
+pub struct QueryTimeseriesMetaResponse {
+    /// 时间线元数据列表
+    pub metas: Vec<TimeseriesMeta>,
+
+    /// 只有在请求中设置 `get_total_hit` 为 true 时才会返回符合条件的总行数
+    pub total_hit: Option<u64>,
+
+    /// 用于获取剩余数据的标识
+    pub next_token: Option<Vec<u8>>,
+}
+
+impl From<crate::protos::timeseries::QueryTimeseriesMetaResponse> for QueryTimeseriesMetaResponse {
+    fn from(value: crate::protos::timeseries::QueryTimeseriesMetaResponse) -> Self {
+        let crate::protos::timeseries::QueryTimeseriesMetaResponse {
+            timeseries_metas,
+            total_hit,
+            next_token,
+        } = value;
+
+        Self {
+            metas: timeseries_metas.into_iter().map(TimeseriesMeta::from).collect(),
+            total_hit: if let Some(n) = total_hit {
+                // 如果在请求中没有要求返回命中行数，服务会返回 `Some(-1)`
+                if n >= 0 {
+                    Some(n as u64)
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
+            next_token
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryTimeseriesMetaOperation {
+    client: OtsClient,
+    request: QueryTimeseriesMetaRequest,
+}
+
+impl QueryTimeseriesMetaOperation {
+    pub(crate) fn new(client: OtsClient, request: QueryTimeseriesMetaRequest) -> Self {
+        Self { client, request }
+    }
+
+    pub async fn send(self) -> OtsResult<QueryTimeseriesMetaResponse> {
+        self.request.validate()?;
+
+        let Self { client, request } = self;
+
+        let msg = crate::protos::timeseries::QueryTimeseriesMetaRequest::from(request);
+
+        let req = OtsRequest {
+            operation: OtsOp::QueryTimeseriesMeta,
+            body: msg.encode_to_vec(),
+            ..Default::default()
+        };
+
+        let resp = client.send(req).await?;
+
+        let resp_msg = crate::protos::timeseries::QueryTimeseriesMetaResponse::decode(resp.bytes().await?)?;
+
+        Ok(resp_msg.into())
+    }
+}

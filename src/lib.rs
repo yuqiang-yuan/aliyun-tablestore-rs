@@ -34,7 +34,7 @@ use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
-use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest};
+use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest};
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
 use util::get_iso8601_date_time_string;
@@ -960,6 +960,37 @@ impl OtsClient {
     }
 
     /// 时序表 - 写入数据
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = OtsClient::from_env();
+    ///
+    /// let ts_us = (current_time_ms() * 1000) as u64;
+    ///
+    /// let request = PutTimeseriesDataRequest::new("timeseries_demo_with_data")
+    ///     .row(
+    ///         TimeseriesRow::new()
+    ///             .measurement_name("measure_11")
+    ///             .datasource("data_11")
+    ///             .tag("cluster", "cluster_11")
+    ///             .tag("region", "region_11")
+    ///             .timestamp_us(ts_us)
+    ///             .field_integer("temp", 123),
+    ///     )
+    ///     .row(
+    ///         TimeseriesRow::new()
+    ///             .measurement_name("measure_11")
+    ///             .datasource("data_11")
+    ///             .tag("cluster", "cluster_11")
+    ///             .tag("region", "region_11")
+    ///             .timestamp_us(ts_us + 1000)
+    ///             .field_double("temp", 543.21),
+    ///     )
+    ///     .supported_table_version(TimeseriesVersion::V1);
+    ///
+    /// let resp = client.put_timeseries_data(request).send().await;
+    /// ```
     pub fn put_timeseries_data(&self, request: PutTimeseriesDataRequest) -> PutTimeseriesDataOperation {
         PutTimeseriesDataOperation::new(self.clone(), request)
     }
@@ -997,5 +1028,10 @@ impl OtsClient {
     /// 时序表 - 查询分析存储的信息
     pub fn describe_timeseries_analytical_store(self, table_name: &str, store_name: &str) -> DescribeTimeseriesAnalyticalStoreOperation {
         DescribeTimeseriesAnalyticalStoreOperation::new(self.clone(), table_name, store_name)
+    }
+
+    /// 时序表 - 查询元数据
+    pub fn query_timeseries_meta(self, request: QueryTimeseriesMetaRequest) -> QueryTimeseriesMetaOperation {
+        QueryTimeseriesMetaOperation::new(self.clone(), request)
     }
 }
