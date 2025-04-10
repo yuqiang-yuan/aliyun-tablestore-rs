@@ -1,8 +1,16 @@
-use flatbuffers::FlatBufferBuilder;
+use flatbuffers::{FlatBufferBuilder, WIPOffset};
 
-use crate::{error::OtsError, model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue}, protos::fbs::timeseries::{DataType, FieldValuesBuilder}, OtsResult};
+use crate::{
+    OtsResult,
+    error::OtsError,
+    model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
+    protos::fbs::timeseries::{
+        BytesValueBuilder, DataType, FieldValuesBuilder, FlatBufferRowGroup, FlatBufferRowGroupBuilder, FlatBufferRowInGroupBuilder, FlatBufferRowsBuilder,
+        TagBuilder,
+    },
+};
 
-use super::{parse_tags, rules::validate_timeseries_field_name, TimeseriesKey, TimeseriesVersion};
+use super::{TimeseriesKey, TimeseriesVersion, parse_tags, rules::validate_timeseries_field_name};
 
 /// 时序表中的数据行
 #[derive(Debug, Default, Clone)]
@@ -105,86 +113,166 @@ impl TimeseriesRow {
             if !validate_timeseries_field_name(&f.name) {
                 return Err(OtsError::ValidationFailed(format!("invalid field name: {}", f.name)));
             }
+
+            match &f.value {
+                ColumnValue::Integer(_) | ColumnValue::Double(_) | ColumnValue::Boolean(_) | ColumnValue::String(_) | ColumnValue::Blob(_) => {}
+
+                ColumnValue::InfMin | ColumnValue::InfMax | ColumnValue::Null => {
+                    return Err(OtsError::ValidationFailed(format!(
+                        "invalid field value of field {}: can not be NULL, INF_MIN, INF_MAX",
+                        f.name
+                    )));
+                }
+            }
         }
 
         if self.fields.len() > super::rules::MAX_FIELD_COUNT {
-            return Err(OtsError::ValidationFailed(format!("invalid field. field count exceeds max field count: {}", super::rules::MAX_FIELD_COUNT)));
+            return Err(OtsError::ValidationFailed(format!(
+                "invalid field. field count exceeds max field count: {}",
+                super::rules::MAX_FIELD_COUNT
+            )));
         }
 
         Ok(())
     }
 
-    /// Write a row to flat buffer
-    pub(crate) fn write_flat_buffer(&self, fbb: &mut FlatBufferBuilder, ver: TimeseriesVersion) -> OtsResult<()> {
-        let mut field_types = vec![DataType::NONE; self.fields.len()];
-        let mut field_names = vec![""; self.fields.len()];
+    /// 将 TimeseriesRow 编码成 Flat Buffer 的
+    /// 虽然返回的是 `FlatBufferRowGroup` 但是实际上这里仅仅包含一行 `TimeseriesRow` 数据
+    ///
+    pub(crate) fn build_flatbuf_row<'a>(&'a self, fbb: &mut FlatBufferBuilder<'a>, ver: TimeseriesVersion) -> OtsResult<WIPOffset<FlatBufferRowGroup<'a>>> {
+        let mut field_types = vec![];
+        let mut field_names = vec![];
 
-        let measure_name = if let Some(s) = &self.key.measurement_name {
-            fbb.create_string(s.as_str())
-        } else {
-            fbb.create_string("")
-        };
-
-
+        let mut long_values = vec![];
+        let mut double_values = vec![];
+        let mut string_values = vec![];
+        let mut bool_values = vec![];
+        let mut binary_values = vec![];
 
         for col in &self.fields {
+            field_types.push(DataType::from(&col.value));
+            field_names.push(fbb.create_string(&col.name));
+
             match &col.value {
                 ColumnValue::Integer(n) => {
-                    let v = fbb.create_vector(&[*n]);
-                    // fv_builder.add_long_values(v);
-                },
+                    long_values.push(*n);
+                }
+
                 ColumnValue::Double(d) => {
-                    let v = fbb.create_vector(&[*d]);
-                    // fv_builder.add_double_values(v);
-                },
+                    double_values.push(*d);
+                }
+
                 ColumnValue::Boolean(b) => {
-                    let v = fbb.create_vector(&[*b]);
-                    // fv_builder.add_bool_values(v);
-                },
+                    bool_values.push(*b);
+                }
+
                 ColumnValue::String(s) => {
-                    let fbs = fbb.create_string(s.as_str());
-                    let ss = fbb.create_vector(&[fbs]);
-                    // fv_builder.add_string_values(ss);
-                },
-                ColumnValue::Blob(items) => todo!(),
+                    string_values.push(fbb.create_string(s));
+                }
+
+                ColumnValue::Blob(items) => {
+                    let bytes = fbb.create_vector(&items.iter().map(|b| *b as i8).collect::<Vec<_>>());
+                    let mut bv_builder = BytesValueBuilder::new(fbb);
+                    bv_builder.add_value(bytes);
+                    binary_values.push(bv_builder.finish());
+                }
+
                 other => {
                     return Err(OtsError::ValidationFailed(format!("invalid column data type: {:?}", other)));
                 }
             }
         }
 
-        let mut fv_builder = FieldValuesBuilder::new(fbb);
+        let field_names = fbb.create_vector(&field_names);
+        let field_types = fbb.create_vector(&field_types);
 
-        Ok(())
+        let long_values = fbb.create_vector(&long_values);
+        let bool_values = fbb.create_vector(&bool_values);
+        let string_values = fbb.create_vector(&string_values);
+        let double_values = fbb.create_vector(&double_values);
+        let binary_values = fbb.create_vector(&binary_values);
+
+        let mut fv_builder = FieldValuesBuilder::new(fbb);
+        fv_builder.add_long_values(long_values);
+        fv_builder.add_double_values(double_values);
+        fv_builder.add_bool_values(bool_values);
+        fv_builder.add_string_values(string_values);
+        fv_builder.add_binary_values(binary_values);
+
+        let fv = fv_builder.finish();
+
+        let datasource = if let Some(s) = &self.key.datasource {
+            fbb.create_string(s)
+        } else {
+            fbb.create_string("")
+        };
+
+        let tags = if !self.key.tags.is_empty() && matches!(ver, TimeseriesVersion::V0) {
+            let mut items = self.key.tags.iter().collect::<Vec<_>>();
+            items.sort_by(|a, b| a.0.cmp(b.0));
+            let s = items.iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",");
+            let s = format!("[{}]", s);
+            fbb.create_string(&s)
+        } else {
+            fbb.create_string("")
+        };
+
+        let tag_list = if !self.key.tags.is_empty() && matches!(ver, TimeseriesVersion::V1) {
+            let mut items = self.key.tags.iter().collect::<Vec<_>>();
+            items.sort_by(|a, b| a.0.cmp(b.0));
+
+            let pairs = items.into_iter().map(|(k, v)| (fbb.create_string(k), fbb.create_string(v))).collect::<Vec<_>>();
+
+            let mut tags = vec![];
+
+            for (k, v) in pairs {
+                let mut tag_builder = TagBuilder::new(fbb);
+                tag_builder.add_name(k);
+                tag_builder.add_value(v);
+                tags.push(tag_builder.finish());
+            }
+
+            tags
+        } else {
+            vec![]
+        };
+
+        let tag_list = fbb.create_vector(&tag_list);
+
+        // RowInGroup
+        let mut rig_builder = FlatBufferRowInGroupBuilder::new(fbb);
+        rig_builder.add_data_source(datasource);
+        rig_builder.add_field_values(fv);
+        rig_builder.add_time(self.timestamp_us as i64);
+        rig_builder.add_meta_cache_update_time(60);
+
+        match ver {
+            TimeseriesVersion::V0 => rig_builder.add_tags(tags),
+            TimeseriesVersion::V1 => rig_builder.add_tag_list(tag_list),
+        }
+
+        let row_in_group = rig_builder.finish();
+
+        let rows = fbb.create_vector(&[row_in_group]);
+
+        let measure_name = if let Some(s) = &self.key.measurement_name {
+            fbb.create_string(s)
+        } else {
+            fbb.create_string("")
+        };
+
+        // RowGroup
+        let mut rg_builder = FlatBufferRowGroupBuilder::new(fbb);
+        rg_builder.add_measurement_name(measure_name);
+        rg_builder.add_field_names(field_names);
+        rg_builder.add_field_types(field_types);
+        rg_builder.add_rows(rows);
+
+        let row_group = rg_builder.finish();
+
+        Ok(row_group)
     }
 }
-
-// impl TryFrom<crate::protos::timeseries::TimeseriesRows> for Vec<TimeseriesRow> {
-//     type Error = OtsError;
-
-//     fn try_from(value: crate::protos::timeseries::TimeseriesRows) -> Result<Self, Self::Error> {
-//         let crate::protos::timeseries::TimeseriesRows {
-//             r#type,
-//             rows_data,
-//             flatbuffer_crc32c,
-//         } = value;
-
-//         if rows_data.is_empty() {
-//             return Ok(vec![])
-//         }
-
-//         let ser_type = match RowsSerializeType::try_from(r#type) {
-//             Ok(t) => t,
-//             Err(err) => return Err(OtsError::ValidationFailed(format!("invalid timeseries serialize type: {}", r#type))),
-//         };
-
-//         log::debug!("timeseries serialize type: {}", r#type);
-
-//         let mut rows = vec![];
-
-//         Ok(rows)
-//     }
-// }
 
 /// 从宽表行转换出来时序行
 impl From<crate::model::Row> for TimeseriesRow {
@@ -238,16 +326,15 @@ impl From<crate::model::Row> for TimeseriesRow {
     }
 }
 
-
 impl From<TimeseriesRow> for crate::model::Row {
     fn from(value: TimeseriesRow) -> Self {
-        let TimeseriesRow {
-            key,
-            timestamp_us,
-            fields,
-        } = value;
+        let TimeseriesRow { key, timestamp_us, fields } = value;
 
-        let TimeseriesKey { measurement_name, datasource, tags } = key;
+        let TimeseriesKey {
+            measurement_name,
+            datasource,
+            tags,
+        } = key;
 
         let mut primary_key = PrimaryKey::new();
 
@@ -265,10 +352,7 @@ impl From<TimeseriesRow> for crate::model::Row {
 
             primary_key = primary_key.column_string(
                 "_tags",
-                format!(
-                    "[{}]",
-                    items.into_iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",")
-                )
+                format!("[{}]", items.into_iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",")),
             );
         }
 
@@ -279,7 +363,6 @@ impl From<TimeseriesRow> for crate::model::Row {
             columns: fields,
             ..Default::default()
         }
-
     }
 }
 
@@ -299,22 +382,29 @@ impl From<&ColumnValue> for DataType {
 }
 
 /// 将时序表的行集合以 flat buffer 的格式编码
-pub(crate) fn encode_rows_to_flat_buffer(rows: &[TimeseriesRow], supported_table_version: TimeseriesVersion) -> Vec<u8> {
+pub(crate) fn encode_flatbuf_rows(rows: &[TimeseriesRow], supported_table_version: TimeseriesVersion) -> OtsResult<Vec<u8>> {
     if rows.is_empty() {
-        return vec![];
+        return Ok(vec![]);
     }
-
-    // flat buffer 编码的 `FlatBufferRowGroup` 是以度量名称分组的，并且，字段的值和类型是两个集合保存的，
-    // 为了避免多个相同度量名称的行具有不同的列，所以还是一行对一行的这么转换
     let mut fbb = FlatBufferBuilder::new();
 
+    // First, collect all row offsets
+    let mut fb_row_groups = Vec::with_capacity(rows.len());
+
     for row in rows {
-        write_row_to_flat_buffer(&mut fbb, row);
+        let r = row.build_flatbuf_row(&mut fbb, supported_table_version)?;
+        fb_row_groups.push(r)
     }
 
-    vec![]
-}
+    let fb_rows = fbb.create_vector(&fb_row_groups);
+    let mut rows_builder = FlatBufferRowsBuilder::new(&mut fbb);
+    rows_builder.add_row_groups(fb_rows);
 
-pub(crate) fn write_row_to_flat_buffer(fbb: &mut FlatBufferBuilder, row: &TimeseriesRow) {
+    let fb_rows = rows_builder.finish();
 
+    fbb.finish(fb_rows, None);
+
+    let bytes = fbb.finished_data();
+
+    Ok(bytes.to_vec())
 }

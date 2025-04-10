@@ -1,7 +1,10 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::timeseries::AnalyticalStoreSyncType, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::timeseries::AnalyticalStoreSyncType,
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
 };
 
 /// 为已存在的时序表创建一个时序分析存储用于低成本存储时序数据以及查询与分析时序数据

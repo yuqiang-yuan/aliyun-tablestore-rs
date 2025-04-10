@@ -8,7 +8,12 @@ pub use put_data::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
-    use crate::{test_util::setup, timeseries_model::{TimeseriesKey, TimeseriesRow, TimeseriesVersion}, util::current_time_ms, OtsClient};
+    use crate::{
+        OtsClient,
+        test_util::setup,
+        timeseries_model::{TimeseriesKey, TimeseriesRow, TimeseriesVersion},
+        util::current_time_ms,
+    };
 
     use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest};
 
@@ -64,7 +69,7 @@ mod test_timeseries_data {
                     .tag("cluster", "cluster_11")
                     .tag("region", "region_11")
                     .timestamp_us(ts_us)
-                    .field_integer("temp", 123)
+                    .field_integer("temp", 123),
             )
             .row(
                 TimeseriesRow::new()
@@ -73,14 +78,14 @@ mod test_timeseries_data {
                     .tag("cluster", "cluster_11")
                     .tag("region", "region_11")
                     .timestamp_us(ts_us + 1000)
-                    .field_double("temp", 543.21)
-            ).supported_table_version(TimeseriesVersion::V1);
+                    .field_double("temp", 543.21),
+            )
+            .supported_table_version(TimeseriesVersion::V1);
 
         let resp = client.put_timeseries_data(request).send().await;
 
         log::debug!("{:?}", resp);
     }
-
 
     #[tokio::test]
     async fn test_put_timeseries_data() {

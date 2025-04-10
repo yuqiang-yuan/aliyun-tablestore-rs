@@ -1,6 +1,10 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
+};
 
 /// 删除一个时序分析存储
 ///
@@ -53,13 +57,15 @@ impl DeleteTimeseriesAnalyticalStoreRequest {
         }
 
         if !validate_analytical_store_name(&self.store_name) {
-            return Err(OtsError::ValidationFailed(format!("invalid timeseries analytical store name: {}", self.store_name)));
+            return Err(OtsError::ValidationFailed(format!(
+                "invalid timeseries analytical store name: {}",
+                self.store_name
+            )));
         }
 
         Ok(())
     }
 }
-
 
 impl From<DeleteTimeseriesAnalyticalStoreRequest> for crate::protos::timeseries::DeleteTimeseriesAnalyticalStoreRequest {
     fn from(value: DeleteTimeseriesAnalyticalStoreRequest) -> Self {

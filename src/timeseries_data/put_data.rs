@@ -1,8 +1,20 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, model::Row, protos::{plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM}, timeseries::MetaUpdateMode}, timeseries_model::{self, rules::validate_timeseries_table_name, TimeseriesRow, TimeseriesVersion}, util::debug_bytes, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    protos::timeseries::MetaUpdateMode,
+    timeseries_model::{self, TimeseriesRow, TimeseriesVersion, encode_flatbuf_rows, rules::validate_timeseries_table_name},
+};
 
-/// 写入时序数据。目前暂时只支持 plain buffer 编码
+/// 写入时序数据。目前暂时只支持 flat buffer 编码。
+///
+/// 神奇的事情：官方文档说支持 Plain Buffer 和 Flat Buffer 编码。但是
+///
+/// - Java SDK 中只支持 Flat Buffer 编码；
+/// - Go SDK 中支持 Plain Buffer 和 Proto Buffer 编码。而且，`timeseries.proto` 文件内容和 Java SDK 中的也不一样
+///
+/// 目前在写入数据的之后，暂时不支持设置 `meta_cache_update_time`，交给系统默认处理。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/puttimeseriesdata>
 #[derive(Debug, Default, Clone)]
@@ -73,7 +85,10 @@ impl PutTimeseriesDataRequest {
         }
 
         if self.rows.len() > timeseries_model::rules::MAX_ROW_COUNT {
-            return Err(OtsError::ValidationFailed(format!("rows count exceeds max rows count allowed: {}", timeseries_model::rules::MAX_ROW_COUNT)));
+            return Err(OtsError::ValidationFailed(format!(
+                "rows count exceeds max rows count allowed: {}",
+                timeseries_model::rules::MAX_ROW_COUNT
+            )));
         }
 
         for row in &self.rows {
@@ -93,19 +108,16 @@ impl From<PutTimeseriesDataRequest> for crate::protos::timeseries::PutTimeseries
             supported_table_version,
         } = value;
 
-        let ts_rows = rows.into_iter().map(crate::model::Row::from).collect::<Vec<_>>();
-        log::debug!("{:#?}", ts_rows);
-        let rows_data = Row::encode_plain_buffer_for_rows(ts_rows, MASK_HEADER | MASK_ROW_CHECKSUM);
+        let bytes = encode_flatbuf_rows(rows.as_slice(), supported_table_version).unwrap();
 
-        debug_bytes(rows_data.as_slice());
+        let checksum = crc32c::crc32c(&bytes);
 
         Self {
             table_name,
             rows_data: crate::protos::timeseries::TimeseriesRows {
-                r#type: crate::protos::timeseries::RowsSerializeType::RstPlainBuffer as i32,
-                rows_data,
-                // 虽然这个值是可选的，但是如果传入 None 会报错："Failed to parse the ProtoBuf message."
-                flatbuffer_crc32c: Some(0),
+                r#type: crate::protos::timeseries::RowsSerializeType::RstFlatBuffer as i32,
+                flatbuffer_crc32c: Some(checksum as i32),
+                rows_data: bytes,
             },
             meta_update_mode: meta_update_mode.map(|m| m as i32),
             supported_table_version: Some(supported_table_version as i64),
@@ -132,6 +144,14 @@ impl PutTimeseriesDataOperation {
         let Self { client, request } = self;
 
         let msg = crate::protos::timeseries::PutTimeseriesDataRequest::from(request);
+
+        if msg.rows_data.rows_data.len() > crate::timeseries_model::rules::MAX_DATA_SIZE {
+            return Err(OtsError::ValidationFailed(format!(
+                "data size: {} exceeds max data size allowed: {}",
+                msg.rows_data.rows_data.len(),
+                crate::timeseries_model::rules::MAX_DATA_SIZE
+            )));
+        }
 
         let req = OtsRequest {
             operation: OtsOp::PutTimeseriesData,

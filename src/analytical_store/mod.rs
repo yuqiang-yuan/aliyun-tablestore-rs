@@ -2,14 +2,14 @@
 //!
 
 mod create_analytical_store;
+mod delete_analytical_store;
 mod describe_analytical_store;
 mod update_analytical_store;
-mod delete_analytical_store;
 
 pub use create_analytical_store::*;
+pub use delete_analytical_store::*;
 pub use describe_analytical_store::*;
 pub use update_analytical_store::*;
-pub use delete_analytical_store::*;
 
 #[cfg(test)]
 mod test_analytical_store {
