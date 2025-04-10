@@ -1,11 +1,7 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
-    error::OtsError,
-    model::Row,
-    protos::plain_buffer::MASK_HEADER,
-    timeseries_model::{TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion, rules::validate_timeseries_table_name},
+    add_per_request_options, error::OtsError, model::decode_plainbuf_rows, protos::plain_buffer::MASK_HEADER, timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult
 };
 
 /// 查询某个时间线的数据
@@ -198,7 +194,7 @@ impl TryFrom<crate::protos::timeseries::GetTimeseriesDataResponse> for GetTimese
         let crate::protos::timeseries::GetTimeseriesDataResponse { rows_data, next_token } = value;
 
         // Returned bytes with plainbuf encoding
-        let plainbuf_rows = Row::decode_plain_buffer_for_rows(rows_data, MASK_HEADER)?;
+        let plainbuf_rows = decode_plainbuf_rows(rows_data, MASK_HEADER)?;
 
         Ok(Self {
             rows: plainbuf_rows.into_iter().map(TimeseriesRow::from).collect(),

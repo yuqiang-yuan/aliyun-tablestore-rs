@@ -91,31 +91,6 @@ impl Row {
         Row::read_plain_buffer(&mut cursor)
     }
 
-    /// 从一个响应数据中读取多行
-    #[allow(dead_code)]
-    pub(crate) fn decode_plain_buffer_for_rows(bytes: Vec<u8>, masks: u32) -> OtsResult<Vec<Self>> {
-        if bytes.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let mut cursor = Cursor::new(bytes);
-
-        if masks & MASK_HEADER == MASK_HEADER {
-            let header = cursor.read_u32::<LittleEndian>()?;
-
-            if header != HEADER {
-                return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
-            }
-        }
-
-        let mut rows = Vec::new();
-        while cursor.position() < (cursor.get_ref().len() - 1) as u64 {
-            rows.push(Row::read_plain_buffer(&mut cursor)?);
-        }
-
-        Ok(rows)
-    }
-
     pub(crate) fn write_plain_buffer(&self, cursor: &mut Cursor<Vec<u8>>, _masks: u32) {
         let Self { primary_key, columns, deleted } = self;
 
@@ -420,6 +395,31 @@ pub(crate) fn encode_plainbuf_rows(rows: Vec<Row>, masks: u32) -> Vec<u8> {
     }
 
     cursor.into_inner()
+}
+
+/// 从一个响应数据中读取多行
+#[allow(dead_code)]
+pub(crate) fn decode_plainbuf_rows(bytes: Vec<u8>, masks: u32) -> OtsResult<Vec<Row>> {
+    if bytes.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let mut cursor = Cursor::new(bytes);
+
+    if masks & MASK_HEADER == MASK_HEADER {
+        let header = cursor.read_u32::<LittleEndian>()?;
+
+        if header != HEADER {
+            return Err(OtsError::PlainBufferError(format!("invalid message header: {}", header)));
+        }
+    }
+
+    let mut rows = Vec::new();
+    while cursor.position() < (cursor.get_ref().len() - 1) as u64 {
+        rows.push(Row::read_plain_buffer(&mut cursor)?);
+    }
+
+    Ok(rows)
 }
 
 #[cfg(test)]

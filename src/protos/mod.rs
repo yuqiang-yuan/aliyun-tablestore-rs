@@ -25,12 +25,12 @@ pub mod simple_row_matrix;
 
 #[cfg(test)]
 mod test_protos {
-    use flatbuffers::{FlatBufferBuilder, WIPOffset};
+    use flatbuffers::FlatBufferBuilder;
 
     use crate::{test_util::setup, util::debug_bytes};
 
     use super::fbs::timeseries::{
-        DataType, FieldValuesBuilder, FlatBufferRowGroupBuilder, FlatBufferRowInGroup, FlatBufferRowInGroupArgs, FlatBufferRowInGroupBuilder,
+        DataType, FieldValuesBuilder, FlatBufferRowGroupBuilder, FlatBufferRowInGroupBuilder,
         FlatBufferRowsBuilder,
     };
 
