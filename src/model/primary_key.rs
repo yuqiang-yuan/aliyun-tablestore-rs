@@ -3,13 +3,13 @@ use std::io::{Cursor, Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{
-    OtsResult,
-    crc8::{crc_bytes, crc_i64, crc_u8, crc_u32},
+    crc8::{crc_bytes, crc_i64, crc_u32, crc_u8},
     error::OtsError,
     protos::plain_buffer::{
         self, HEADER, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, MASK_HEADER, MASK_ROW_CHECKSUM, TAG_CELL, TAG_CELL_CHECKSUM, TAG_CELL_NAME, TAG_CELL_VALUE,
         TAG_ROW_CHECKSUM, VT_AUTO_INCREMENT, VT_BLOB, VT_INF_MAX, VT_INF_MIN, VT_INTEGER, VT_STRING,
     },
+    OtsResult,
 };
 
 /// 主键容器

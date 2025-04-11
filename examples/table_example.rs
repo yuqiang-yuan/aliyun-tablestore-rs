@@ -1,4 +1,4 @@
-use aliyun_tablestore_rs::{OtsClient, model::ColumnValue};
+use aliyun_tablestore_rs::{model::ColumnValue, OtsClient};
 use dotenvy::dotenv;
 
 pub fn main() {

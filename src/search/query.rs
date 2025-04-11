@@ -1,13 +1,13 @@
 use prost::Message;
 
 use crate::{
-    OtsResult,
     error::OtsError,
     model::ColumnValue,
     protos::search::{
         Collapse, FunctionCombineMode, FunctionScoreMode, HighlightEncoder, HighlightFragmentOrder, QueryOperator, QueryType, ScoreMode, SearchFilter,
     },
     table::rules::validate_column_name,
+    OtsResult,
 };
 
 use super::{Aggregation, GeoPoint, GroupBy, ScoreFunction, Sort, Sorter};

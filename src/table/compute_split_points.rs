@@ -1,13 +1,14 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
-        {ConsumedCapacity, PrimaryKeySchema, compute_split_points_by_size_response::SplitLocation},
+        {compute_split_points_by_size_response::SplitLocation, ConsumedCapacity, PrimaryKeySchema},
     },
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 use super::rules::validate_table_name;

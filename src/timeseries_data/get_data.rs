@@ -1,11 +1,12 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::decode_plainbuf_rows,
     protos::plain_buffer::MASK_HEADER,
-    timeseries_model::{TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion, rules::validate_timeseries_table_name},
+    timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, SUPPORTED_TABLE_VERSION},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 查询某个时间线的数据
@@ -39,12 +40,6 @@ pub struct GetTimeseriesDataRequest {
 
     /// 指定读取部分数据列
     pub fields_to_get: Vec<TimeseriesFieldToGet>,
-
-    /// SDK支持的时序表模型版本号。取值范围如下：
-    ///
-    /// - `0`（默认）：不支持包含自定义时间线标识或作为主键的数据字段的时序表。
-    /// - `1`：支持包含自定义时间线标识和作为主键的数据字段的时序表。
-    pub supported_table_version: TimeseriesVersion,
 }
 
 impl GetTimeseriesDataRequest {
@@ -116,12 +111,6 @@ impl GetTimeseriesDataRequest {
         self
     }
 
-    /// 设置支持的版本
-    pub fn supported_table_version(mut self, supported_table_version: TimeseriesVersion) -> Self {
-        self.supported_table_version = supported_table_version;
-        self
-    }
-
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if !validate_timeseries_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
@@ -163,12 +152,11 @@ impl From<GetTimeseriesDataRequest> for crate::protos::timeseries::GetTimeseries
             limit,
             backward,
             fields_to_get,
-            supported_table_version,
         } = value;
 
         Self {
             table_name,
-            time_series_key: key.into_protobuf_timeseries_key(supported_table_version),
+            time_series_key: key.into(),
             begin_time: Some(begin_time_us as i64),
             end_time: Some(end_time_us as i64),
             specific_time: specific_time_us.map(|t| t as i64),
@@ -176,7 +164,7 @@ impl From<GetTimeseriesDataRequest> for crate::protos::timeseries::GetTimeseries
             limit: limit.map(|n| n as i32),
             backward: Some(backward),
             fields_to_get: fields_to_get.into_iter().map(|field| field.into()).collect(),
-            supported_table_version: Some(supported_table_version as i64),
+            supported_table_version: Some(SUPPORTED_TABLE_VERSION),
         }
     }
 }

@@ -1,9 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
-    timeseries_model::{MetaQuery, TimeseriesMeta, TimeseriesVersion, rules::validate_timeseries_table_name},
+    timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, SUPPORTED_TABLE_VERSION},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 检索时间线元数据
@@ -25,9 +26,6 @@ pub struct QueryTimeseriesMetaRequest {
 
     /// 最多返回的行数限制
     pub limit: Option<u32>,
-
-    /// 支持的模型版本号
-    pub supported_table_version: TimeseriesVersion,
 }
 
 impl QueryTimeseriesMetaRequest {
@@ -38,7 +36,6 @@ impl QueryTimeseriesMetaRequest {
             get_total_hit: None,
             token: None,
             limit: None,
-            supported_table_version: TimeseriesVersion::V0,
         }
     }
 
@@ -77,13 +74,6 @@ impl QueryTimeseriesMetaRequest {
         self
     }
 
-    /// 设置支持的版本号
-    pub fn supported_table_version(mut self, ver: TimeseriesVersion) -> Self {
-        self.supported_table_version = ver;
-
-        self
-    }
-
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if !validate_timeseries_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
@@ -109,7 +99,6 @@ impl From<QueryTimeseriesMetaRequest> for crate::protos::timeseries::QueryTimese
             get_total_hit,
             token,
             limit,
-            supported_table_version,
         } = value;
 
         Self {
@@ -118,7 +107,7 @@ impl From<QueryTimeseriesMetaRequest> for crate::protos::timeseries::QueryTimese
             get_total_hit,
             token,
             limit: limit.map(|n| n as i32),
-            supported_table_version: Some(supported_table_version as i64),
+            supported_table_version: Some(SUPPORTED_TABLE_VERSION),
         }
     }
 }
@@ -147,7 +136,11 @@ impl From<crate::protos::timeseries::QueryTimeseriesMetaResponse> for QueryTimes
             metas: timeseries_metas.into_iter().map(TimeseriesMeta::from).collect(),
             total_hit: if let Some(n) = total_hit {
                 // 如果在请求中没有要求返回命中行数，服务会返回 `Some(-1)`
-                if n >= 0 { Some(n as u64) } else { None }
+                if n >= 0 {
+                    Some(n as u64)
+                } else {
+                    None
+                }
             } else {
                 None
             },

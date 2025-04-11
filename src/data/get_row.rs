@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue, Row},
     protos::{
@@ -11,6 +11,7 @@ use crate::{
         {ConsumedCapacity, TimeRange},
     },
     table::rules::validate_table_name,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 获取单行数据的请求

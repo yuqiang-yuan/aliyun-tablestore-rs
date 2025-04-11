@@ -1,8 +1,8 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, protos::timeseries::DescribeTimeseriesTableResponse,
-    timeseries_model::rules::validate_timeseries_table_name,
+    add_per_request_options, error::OtsError, protos::timeseries::DescribeTimeseriesTableResponse, timeseries_model::rules::validate_timeseries_table_name,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 获取时序表信息

@@ -10,9 +10,9 @@ pub use delete_defined_column::*;
 mod test_defined_column {
 
     use crate::{
-        OtsClient,
         defined_column::{AddDefinedColumnRequest, DeleteDefinedColumnRequest},
         test_util::setup,
+        OtsClient,
     };
 
     async fn test_add_defined_column_impl() {

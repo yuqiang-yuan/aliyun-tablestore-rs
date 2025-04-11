@@ -2,9 +2,10 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     protos::{DescribeTableRequest, DescribeTableResponse},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 use super::rules::validate_table_name;

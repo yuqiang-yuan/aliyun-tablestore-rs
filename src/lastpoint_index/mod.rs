@@ -8,7 +8,7 @@ pub use delete_lastpoint_index::*;
 
 #[cfg(test)]
 mod test {
-    use crate::{OtsClient, lastpoint_index::CreateTimeseriesLastpointIndexRequest, test_util::setup};
+    use crate::{lastpoint_index::CreateTimeseriesLastpointIndexRequest, test_util::setup, OtsClient};
 
     async fn test_create_lastpoint_index_impl() {
         setup();

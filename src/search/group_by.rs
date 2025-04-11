@@ -3,14 +3,14 @@ use std::{collections::HashMap, ops::Range};
 use prost::Message;
 
 use crate::{
-    OtsResult,
     error::OtsError,
     model::ColumnValue,
     protos::search::{FieldRange, GeoGrid, GeoHashPrecision, GroupByType, SortOrder},
     table::rules::validate_column_name,
+    OtsResult,
 };
 
-use super::{Aggregation, AggregationResult, Duration, GeoPoint, Query, validate_aggregation_name, validate_group_name, validate_timezone_string};
+use super::{validate_aggregation_name, validate_group_name, validate_timezone_string, Aggregation, AggregationResult, Duration, GeoPoint, Query};
 
 /// 分组中的item排序规则集。
 #[derive(Debug, Clone)]
@@ -1835,7 +1835,11 @@ impl TryFrom<crate::protos::search::GroupByCompositeResultItem> for GroupByCompo
             (0..keys.len())
                 .map(|idx| {
                     if let Some(b) = is_null_keys.get(idx) {
-                        if *b { None } else { keys.get(idx).map(|s| s.to_string()) }
+                        if *b {
+                            None
+                        } else {
+                            keys.get(idx).map(|s| s.to_string())
+                        }
                     } else {
                         keys.get(idx).map(|s| s.to_string())
                     }

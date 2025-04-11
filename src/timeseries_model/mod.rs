@@ -6,20 +6,21 @@ mod meta;
 mod query;
 mod row;
 pub(crate) mod rules;
-mod version;
 
 pub use field::*;
 pub use key::*;
 pub use meta::*;
 pub use query::*;
 pub use row::*;
-pub use version::*;
+
+/// 直接使用 1 版本发送请求
+pub const SUPPORTED_TABLE_VERSION: i64 = 1;
 
 #[cfg(test)]
 mod test_timeseries_model {
     use crate::test_util::setup;
 
-    use super::{TimeseriesRow, encode_flatbuf_rows};
+    use super::{encode_flatbuf_rows, TimeseriesRow};
 
     #[test]
     fn test_flat_buffer_rows() {
@@ -37,6 +38,6 @@ mod test_timeseries_model {
                 .field_double("f12", 234.567),
         ];
 
-        let _ = encode_flatbuf_rows(&rows, super::TimeseriesVersion::V0);
+        let _ = encode_flatbuf_rows(&rows);
     }
 }

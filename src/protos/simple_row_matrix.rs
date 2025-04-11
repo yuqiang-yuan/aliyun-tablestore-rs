@@ -2,7 +2,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{OtsResult, crc8::crc_bytes, error::OtsError, model::Row};
+use crate::{crc8::crc_bytes, error::OtsError, model::Row, OtsResult};
 
 const API_VERSION: u32 = 0x304d5253;
 const TAG_CHECKSUM: u8 = 0x01;

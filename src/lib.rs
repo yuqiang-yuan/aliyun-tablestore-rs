@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display, str::FromStr, time::Duration};
 
-use base64::{Engine, prelude::BASE64_STANDARD};
+use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::Bytes;
 use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteDefinedColumnOperation, DeleteDefinedColumnRequest};
 use error::OtsError;
@@ -8,12 +8,12 @@ use index::{CreateIndexOperation, DropIndexOperation};
 use lastpoint_index::{CreateTimeseriesLastpointIndexOperation, CreateTimeseriesLastpointIndexRequest, DeleteTimeseriesLastpointIndexOperation};
 use prost::Message;
 use protos::{
-    CreateIndexRequest,
     search::{CreateSearchIndexRequest, UpdateSearchIndexRequest},
+    CreateIndexRequest,
 };
 use reqwest::{
-    Response,
     header::{HeaderMap, HeaderName, HeaderValue},
+    Response,
 };
 
 use analytical_store::{
@@ -35,7 +35,8 @@ use table::{
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
 use timeseries_data::{
-    GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest
+    GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation,
+    QueryTimeseriesMetaRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest,
 };
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;

@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, protos::search::DeleteSearchIndexRequest};
+use crate::{add_per_request_options, error::OtsError, protos::search::DeleteSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 /// 删除一个多元索引。
 ///

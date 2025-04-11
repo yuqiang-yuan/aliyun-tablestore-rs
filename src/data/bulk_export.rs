@@ -4,15 +4,16 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{Filter, PrimaryKey, PrimaryKeyColumn, Row},
     protos::{
-        ConsumedCapacity, DataBlockType,
         plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM},
         simple_row_matrix::SimpleRowMatrix,
+        ConsumedCapacity, DataBlockType,
     },
     table::rules::validate_table_name,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 接口批量导出数据。

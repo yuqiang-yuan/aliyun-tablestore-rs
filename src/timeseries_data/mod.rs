@@ -13,11 +13,11 @@ pub use update_meta::*;
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        OtsClient,
         protos::timeseries::MetaQueryCompositeOperator,
         test_util::setup,
-        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion},
+        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow},
         util::current_time_ms,
+        OtsClient,
     };
 
     use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest};
@@ -36,8 +36,7 @@ mod test_timeseries_data {
                 .tag("region", "region_7"),
         )
         .end_time_us(1744119422199000)
-        .limit(10)
-        .supported_table_version(TimeseriesVersion::V0);
+        .limit(10);
 
         let resp = client.get_timeseries_data(request).send().await;
         log::debug!("{:?}", resp);
@@ -85,8 +84,7 @@ mod test_timeseries_data {
                     .tag("region", "region_11")
                     .timestamp_us(ts_us + 1000)
                     .field_double("temp", 543.21),
-            )
-            .supported_table_version(TimeseriesVersion::V1);
+            );
 
         let resp = client.put_timeseries_data(request).send().await;
 
@@ -158,8 +156,7 @@ mod test_timeseries_data {
             "timeseries_demo_with_data",
             MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_12".to_string())),
         )
-        .get_total_hit(true)
-        .supported_table_version(TimeseriesVersion::V1);
+        .get_total_hit(true);
 
         let resp = client.query_timeseries_meta(req).send().await;
         log::debug!("{:?}", resp);

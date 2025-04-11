@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, protos::search::UpdateSearchIndexRequest};
+use crate::{add_per_request_options, error::OtsError, protos::search::UpdateSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 /// 接口更新多元索引的配置，包括数据生命周期（TTL）和多元索引 schema。
 ///

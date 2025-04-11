@@ -5,15 +5,16 @@ use std::collections::{HashMap, HashSet};
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{PrimaryKey, Row},
     protos::{
-        ConsumedCapacity,
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         search::{ColumnReturnType, SearchHit},
+        ConsumedCapacity,
     },
     table::rules::{validate_index_name, validate_table_name},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 use super::{AggregationResult, GroupByResult, SearchQuery};

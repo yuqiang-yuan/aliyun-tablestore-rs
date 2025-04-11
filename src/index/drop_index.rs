@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, protos::DropIndexRequest};
+use crate::{add_per_request_options, protos::DropIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 /// 删除二级索引
 ///

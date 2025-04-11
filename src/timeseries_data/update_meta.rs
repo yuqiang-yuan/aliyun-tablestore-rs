@@ -1,6 +1,12 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, protos::timeseries::UpdateTimeseriesMetaResponse, timeseries_model::{rules::validate_timeseries_table_name, TimeseriesMeta, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    add_per_request_options,
+    error::OtsError,
+    protos::timeseries::UpdateTimeseriesMetaResponse,
+    timeseries_model::{rules::validate_timeseries_table_name, TimeseriesMeta, SUPPORTED_TABLE_VERSION},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
+};
 
 /// 更新时间线元数据。如果更新的时间线元数据不存在，则直接执行新增操作。
 ///
@@ -14,9 +20,6 @@ pub struct UpdateTimeseriesMetaRequest {
     ///
     /// 注意，更新元数据的时候，**不可以**设置 meta 的 `update_time_us` 属性
     pub metas: Vec<TimeseriesMeta>,
-
-    /// 时序表模型版本号。官方文档上有这个属性，但是 Java SDK 中是没有这个属性的。
-    pub supported_table_version: TimeseriesVersion,
 }
 
 impl UpdateTimeseriesMetaRequest {
@@ -30,13 +33,6 @@ impl UpdateTimeseriesMetaRequest {
     /// 设置表名
     pub fn table_name(mut self, table_name: &str) -> Self {
         self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置支持的版本号
-    pub fn supported_table_version(mut self, ver: TimeseriesVersion) -> Self {
-        self.supported_table_version = ver;
 
         self
     }
@@ -68,7 +64,7 @@ impl UpdateTimeseriesMetaRequest {
             m.key.validate()?;
 
             if m.update_time_us.is_some() {
-                return Err(OtsError::ValidationFailed("please do not set `update_time_us` when update meta".to_string()))
+                return Err(OtsError::ValidationFailed("please do not set `update_time_us` when update meta".to_string()));
             }
         }
 
@@ -76,23 +72,17 @@ impl UpdateTimeseriesMetaRequest {
     }
 }
 
-
 impl From<UpdateTimeseriesMetaRequest> for crate::protos::timeseries::UpdateTimeseriesMetaRequest {
     fn from(value: UpdateTimeseriesMetaRequest) -> Self {
-        let UpdateTimeseriesMetaRequest {
-            table_name,
-            metas,
-            supported_table_version,
-        } = value;
+        let UpdateTimeseriesMetaRequest { table_name, metas } = value;
 
         Self {
             table_name,
-            timeseries_meta: todo!(),
-            supported_table_version: todo!(),
+            timeseries_meta: metas.into_iter().map(crate::protos::timeseries::TimeseriesMeta::from).collect(),
+            supported_table_version: Some(SUPPORTED_TABLE_VERSION),
         }
     }
 }
-
 
 #[derive(Debug, Default, Clone)]
 pub struct UpdateTimeseriesMetaOperation {

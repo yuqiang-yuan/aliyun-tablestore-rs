@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use prost::Message;
 
 use crate::{
-    OtsResult,
     error::OtsError,
     model::{ColumnValue, Row},
     protos::{plain_buffer::MASK_HEADER, search::AggregationType},
     table::rules::validate_column_name,
+    OtsResult,
 };
 
-use super::{Sort, Sorter, validate_aggregation_name};
+use super::{validate_aggregation_name, Sort, Sorter};
 
 /// 在多元索引统计聚合中表示求平均值，用于返回一个字段的平均值，类似于 SQL 中的 `avg`。
 ///

@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, protos::search::CreateSearchIndexRequest};
+use crate::{add_per_request_options, protos::search::CreateSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 /// 接口创建一个多元索引。
 ///

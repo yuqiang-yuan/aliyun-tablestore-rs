@@ -13,7 +13,7 @@ pub use update_analytical_store::*;
 
 #[cfg(test)]
 mod test_analytical_store {
-    use crate::{OtsClient, test_util::setup};
+    use crate::{test_util::setup, OtsClient};
 
     use super::CreateTimeseriesAnalyticalStoreRequest;
 

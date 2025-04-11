@@ -1,16 +1,16 @@
 use flatbuffers::{FlatBufferBuilder, WIPOffset};
 
 use crate::{
-    OtsResult,
     error::OtsError,
     model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue},
     protos::fbs::timeseries::{
         BytesValueBuilder, DataType, FieldValuesBuilder, FlatBufferRowGroup, FlatBufferRowGroupBuilder, FlatBufferRowInGroupBuilder, FlatBufferRowsBuilder,
         TagBuilder,
     },
+    OtsResult,
 };
 
-use super::{TimeseriesKey, TimeseriesVersion, parse_tags, rules::validate_timeseries_field_name};
+use super::{parse_tags, rules::validate_timeseries_field_name, TimeseriesKey};
 
 /// 时序表中的数据行
 #[derive(Debug, Default, Clone)]
@@ -42,13 +42,13 @@ impl TimeseriesRow {
         self
     }
 
-    /// 增加一个 `supported_table_version` 为 `1` 的实例的标签
+    /// 增加一个标签
     pub fn tag(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.key.tags.insert(key.into(), value.into());
         self
     }
 
-    /// 设置一个 `supported_table_version` 为 `1` 的实例的所有标签
+    /// 设置所有标签
     pub fn tags(mut self, tags: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
         self.key.tags = tags.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
         self
@@ -139,7 +139,7 @@ impl TimeseriesRow {
     /// 将 TimeseriesRow 编码成 Flat Buffer 的
     /// 虽然返回的是 `FlatBufferRowGroup` 但是实际上这里仅仅包含一行 `TimeseriesRow` 数据
     ///
-    pub(crate) fn build_flatbuf_row<'a>(&'a self, fbb: &mut FlatBufferBuilder<'a>, ver: TimeseriesVersion) -> OtsResult<WIPOffset<FlatBufferRowGroup<'a>>> {
+    pub(crate) fn build_flatbuf_row<'a>(&'a self, fbb: &mut FlatBufferBuilder<'a>) -> OtsResult<WIPOffset<FlatBufferRowGroup<'a>>> {
         let mut field_types = vec![];
         let mut field_names = vec![];
 
@@ -207,17 +207,7 @@ impl TimeseriesRow {
             fbb.create_string("")
         };
 
-        let tags = if !self.key.tags.is_empty() && matches!(ver, TimeseriesVersion::V0) {
-            let mut items = self.key.tags.iter().collect::<Vec<_>>();
-            items.sort_by(|a, b| a.0.cmp(b.0));
-            let s = items.iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",");
-            let s = format!("[{}]", s);
-            fbb.create_string(&s)
-        } else {
-            fbb.create_string("")
-        };
-
-        let tag_list = if !self.key.tags.is_empty() && matches!(ver, TimeseriesVersion::V1) {
+        let tag_list = if !self.key.tags.is_empty() {
             let mut items = self.key.tags.iter().collect::<Vec<_>>();
             items.sort_by(|a, b| a.0.cmp(b.0));
 
@@ -245,11 +235,7 @@ impl TimeseriesRow {
         rig_builder.add_field_values(fv);
         rig_builder.add_time(self.timestamp_us as i64);
         rig_builder.add_meta_cache_update_time(60);
-
-        match ver {
-            TimeseriesVersion::V0 => rig_builder.add_tags(tags),
-            TimeseriesVersion::V1 => rig_builder.add_tag_list(tag_list),
-        }
+        rig_builder.add_tag_list(tag_list);
 
         let row_in_group = rig_builder.finish();
 
@@ -382,7 +368,7 @@ impl From<&ColumnValue> for DataType {
 }
 
 /// 将时序表的行集合以 flat buffer 的格式编码
-pub(crate) fn encode_flatbuf_rows(rows: &[TimeseriesRow], supported_table_version: TimeseriesVersion) -> OtsResult<Vec<u8>> {
+pub(crate) fn encode_flatbuf_rows(rows: &[TimeseriesRow]) -> OtsResult<Vec<u8>> {
     if rows.is_empty() {
         return Ok(vec![]);
     }
@@ -392,7 +378,7 @@ pub(crate) fn encode_flatbuf_rows(rows: &[TimeseriesRow], supported_table_versio
     let mut fb_row_groups = Vec::with_capacity(rows.len());
 
     for row in rows {
-        let r = row.build_flatbuf_row(&mut fbb, supported_table_version)?;
+        let r = row.build_flatbuf_row(&mut fbb)?;
         fb_row_groups.push(r)
     }
 

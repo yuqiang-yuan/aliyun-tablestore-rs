@@ -3,12 +3,12 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{
-    OtsResult,
     crc8::crc_u8,
     error::OtsError,
     protos::plain_buffer::{
         self, HEADER, LITTLE_ENDIAN_32_SIZE, MASK_HEADER, MASK_ROW_CHECKSUM, TAG_DELETE_ROW_MARKER, TAG_ROW_CHECKSUM, TAG_ROW_DATA, TAG_ROW_PK,
     },
+    OtsResult,
 };
 
 use super::{Column, ColumnOp, ColumnValue, PrimaryKey, PrimaryKeyColumn, PrimaryKeyValue};
@@ -424,7 +424,7 @@ pub(crate) fn decode_plainbuf_rows(bytes: Vec<u8>, masks: u32) -> OtsResult<Vec<
 
 #[cfg(test)]
 mod test_row {
-    use base64::{Engine, prelude::BASE64_STANDARD};
+    use base64::{prelude::BASE64_STANDARD, Engine};
 
     use crate::{
         model::{Column, ColumnValue, PrimaryKey, PrimaryKeyColumn},

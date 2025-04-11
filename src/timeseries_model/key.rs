@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{OtsResult, error::OtsError};
+use crate::{error::OtsError, OtsResult};
 
-use super::{
-    TimeseriesVersion,
-    rules::{validate_timeseries_datasource, validate_timeseries_measurement, validate_timeseries_tag_name, validate_timeseries_tag_value},
-};
+use super::rules::{validate_timeseries_datasource, validate_timeseries_measurement, validate_timeseries_tag_name, validate_timeseries_tag_value};
 
 /// 时间线标识
 #[derive(Debug, Clone, Default)]
@@ -73,43 +70,6 @@ impl TimeseriesKey {
 
         Ok(())
     }
-
-    /// 将 `TimeseriesKey` 转换为 `TimeseriesKey` 的 protobuf 表示
-    /// 由于不同的库表版本对应的 protobuf 表示不一样，所以需要根据版本号进行转换
-    pub fn into_protobuf_timeseries_key(self, version: TimeseriesVersion) -> crate::protos::timeseries::TimeseriesKey {
-        let TimeseriesKey {
-            measurement_name,
-            datasource,
-            tags,
-        } = self;
-
-        let mut ret = crate::protos::timeseries::TimeseriesKey {
-            measurement: measurement_name,
-            source: datasource,
-            ..Default::default()
-        };
-
-        if !tags.is_empty() {
-            let mut items = tags.into_iter().collect::<Vec<_>>();
-            items.sort_by(|a, b| a.0.cmp(&b.0));
-
-            match version {
-                TimeseriesVersion::V0 => {
-                    let s = items.into_iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",");
-                    ret.tags = Some(format!("[{}]", s));
-                }
-
-                TimeseriesVersion::V1 => {
-                    ret.tag_list = items
-                        .into_iter()
-                        .map(|(k, v)| crate::protos::timeseries::TimeseriesTag { name: k, value: v })
-                        .collect();
-                }
-            }
-        }
-
-        ret
-    }
 }
 
 impl From<crate::protos::timeseries::TimeseriesKey> for TimeseriesKey {
@@ -142,7 +102,34 @@ impl From<crate::protos::timeseries::TimeseriesKey> for TimeseriesKey {
     }
 }
 
+/// 将 `TimeseriesKey` 转换为 `TimeseriesKey` 的 protobuf 表示
+impl From<TimeseriesKey> for crate::protos::timeseries::TimeseriesKey {
+    fn from(value: TimeseriesKey) -> Self {
+        let TimeseriesKey {
+            measurement_name,
+            datasource,
+            tags,
+        } = value;
 
+        let mut ret = crate::protos::timeseries::TimeseriesKey {
+            measurement: measurement_name,
+            source: datasource,
+            ..Default::default()
+        };
+
+        if !tags.is_empty() {
+            let mut items = tags.into_iter().collect::<Vec<_>>();
+            items.sort_by(|a, b| a.0.cmp(&b.0));
+
+            ret.tag_list = items
+                .into_iter()
+                .map(|(k, v)| crate::protos::timeseries::TimeseriesTag { name: k, value: v })
+                .collect();
+        }
+
+        ret
+    }
+}
 /// 解析 tags 字符串。
 /// 例如：从服务器返回的 tags 字符串为： `"[\"cluster=cluster_3\",\"region=region_7\"]"`
 pub(crate) fn parse_tags(tags: &str) -> HashMap<String, String> {
@@ -176,8 +163,5 @@ pub(crate) fn build_tags_string<'a>(tags: impl Iterator<Item = (&'a String, &'a 
 
     items.sort_by(|a, b| a.0.cmp(b.0));
 
-    format!(
-        "[{}]",
-        items.iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",")
-    )
+    format!("[{}]", items.iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(","))
 }

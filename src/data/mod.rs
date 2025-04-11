@@ -22,15 +22,15 @@ pub use update_row::*;
 #[cfg(test)]
 mod test_row_operations {
 
-    use fake::{Fake, faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4};
+    use fake::{faker::name::raw::Name, locales::ZH_CN, uuid::UUIDv4, Fake};
 
     use crate::{
-        OtsClient,
         data::{DeleteRowRequest, GetRowRequest, PutRowRequest, UpdateRowRequest},
         error::OtsError,
         model::{Column, ColumnValue, CompositeColumnValueFilter, Filter, PrimaryKey, PrimaryKeyValue, Row, SingleColumnValueFilter},
-        protos::{Direction, ReturnType, filter::LogicalOperator},
+        protos::{filter::LogicalOperator, Direction, ReturnType},
         test_util::setup,
+        OtsClient,
     };
 
     use super::{
@@ -55,16 +55,14 @@ mod test_row_operations {
         assert!(response.is_ok());
         let response = response.unwrap();
         assert!(response.row.is_some());
-        assert!(
-            response
-                .row
-                .as_ref()
-                .unwrap()
-                .primary_key
-                .columns
-                .iter()
-                .any(|k| { &k.name == "school_id" && k.value == PrimaryKeyValue::String("00020FFB-BB14-CCAD-0181-A929E71C7312".to_string()) })
-        );
+        assert!(response
+            .row
+            .as_ref()
+            .unwrap()
+            .primary_key
+            .columns
+            .iter()
+            .any(|k| { &k.name == "school_id" && k.value == PrimaryKeyValue::String("00020FFB-BB14-CCAD-0181-A929E71C7312".to_string()) }));
     }
 
     #[tokio::test]

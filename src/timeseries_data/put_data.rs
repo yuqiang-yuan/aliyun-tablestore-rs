@@ -1,10 +1,11 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     protos::timeseries::MetaUpdateMode,
-    timeseries_model::{self, TimeseriesRow, TimeseriesVersion, encode_flatbuf_rows, rules::validate_timeseries_table_name},
+    timeseries_model::{self, encode_flatbuf_rows, rules::validate_timeseries_table_name, TimeseriesRow, SUPPORTED_TABLE_VERSION},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 写入时序数据。目前暂时只支持 flat buffer 编码。
@@ -27,9 +28,6 @@ pub struct PutTimeseriesDataRequest {
 
     /// 元数据更新模式
     pub meta_update_mode: Option<MetaUpdateMode>,
-
-    /// 时序表模型版本号
-    pub supported_table_version: TimeseriesVersion,
 }
 
 impl PutTimeseriesDataRequest {
@@ -68,13 +66,6 @@ impl PutTimeseriesDataRequest {
         self
     }
 
-    /// 设置时序表模型版本
-    pub fn supported_table_version(mut self, ver: TimeseriesVersion) -> Self {
-        self.supported_table_version = ver;
-
-        self
-    }
-
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if self.rows.is_empty() {
             return Err(OtsError::ValidationFailed("can not put empty rows to timeseries table".to_string()));
@@ -105,10 +96,9 @@ impl From<PutTimeseriesDataRequest> for crate::protos::timeseries::PutTimeseries
             table_name,
             rows,
             meta_update_mode,
-            supported_table_version,
         } = value;
 
-        let bytes = encode_flatbuf_rows(rows.as_slice(), supported_table_version).unwrap();
+        let bytes = encode_flatbuf_rows(rows.as_slice()).unwrap();
 
         let checksum = crc32c::crc32c(&bytes);
 
@@ -120,7 +110,7 @@ impl From<PutTimeseriesDataRequest> for crate::protos::timeseries::PutTimeseries
                 rows_data: bytes,
             },
             meta_update_mode: meta_update_mode.map(|m| m as i32),
-            supported_table_version: Some(supported_table_version as i64),
+            supported_table_version: Some(SUPPORTED_TABLE_VERSION),
         }
     }
 }

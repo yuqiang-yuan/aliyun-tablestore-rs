@@ -91,9 +91,9 @@ impl IndexMeta {
 #[cfg(test)]
 mod test_index {
     use crate::{
-        OtsClient,
         protos::{CreateIndexRequest, IndexMeta},
         test_util::setup,
+        OtsClient,
     };
 
     async fn test_create_index_impl() {

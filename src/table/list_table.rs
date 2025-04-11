@@ -2,8 +2,9 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     protos::{ListTableRequest, ListTableResponse},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 获取当前实例下已创建的所有表的表名。

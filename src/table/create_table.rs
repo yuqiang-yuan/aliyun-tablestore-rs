@@ -4,15 +4,16 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     protos::{
         CapacityUnit, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType, ReservedThroughput, SseKeyType, SseSpecification,
         StreamSpecification, TableMeta, TableOptions,
     },
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
-use super::rules::{MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT, validate_column_name, validate_index_name, validate_table_name};
+use super::rules::{validate_column_name, validate_index_name, validate_table_name, MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT};
 
 /// 根据给定的表结构信息创建相应的数据表的请求。
 ///

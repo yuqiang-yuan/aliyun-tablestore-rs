@@ -1,9 +1,9 @@
 use prost::Message;
 
 use crate::{
-    OtsResult,
     error::OtsError,
     protos::timeseries::{MetaQueryCompositeOperator, MetaQueryConditionType, MetaQuerySingleOperator},
+    OtsResult,
 };
 
 /// 度量名称查询。

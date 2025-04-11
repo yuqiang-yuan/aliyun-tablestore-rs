@@ -3,14 +3,14 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use aliyun_tablestore_rs::{OtsClient, data::BulkImportRequest, model::Row};
-use base64::{Engine, prelude::BASE64_STANDARD};
+use aliyun_tablestore_rs::{data::BulkImportRequest, model::Row, OtsClient};
+use base64::{prelude::BASE64_STANDARD, Engine};
 use fake::{
-    Fake,
     faker::{name::zh_cn::Name, phone_number::zh_cn::PhoneNumber},
     uuid::UUIDv4,
+    Fake,
 };
-use rand::{Rng, random_range};
+use rand::{random_range, Rng};
 
 static INIT: Once = Once::new();
 

@@ -185,7 +185,6 @@ impl From<Range<f64>> for crate::protos::search::Range {
 #[cfg(test)]
 mod test_search_index {
     use crate::{
-        OtsClient,
         model::ColumnValue,
         protos::search::{ColumnReturnType, CreateSearchIndexRequest, FieldSchema, FieldType, IndexSchema, SortOrder},
         search::{
@@ -193,6 +192,7 @@ mod test_search_index {
             MaxAggregation, MinAggregation, ParallelScanRequest, PercentilesAggregation, ScanQuery, Sorter, SumAggregation, TopRowsAggregation,
         },
         test_util::setup,
+        OtsClient,
     };
 
     use super::{BoolQuery, ConstScoreQuery, GroupByFilter, MatchQuery, Query, RangeQuery, SearchQuery, SearchRequest, WildcardQuery};

@@ -1,8 +1,9 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     protos::search::{IndexInfo, ListSearchIndexRequest, ListSearchIndexResponse},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 列出多元索引列表。

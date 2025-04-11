@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use prost::Message;
 
-use crate::{OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options, error::OtsError, table::rules::validate_table_name};
+use crate::{add_per_request_options, error::OtsError, table::rules::validate_table_name, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 #[derive(Debug, Default, Clone)]
 pub struct DeleteDefinedColumnRequest {

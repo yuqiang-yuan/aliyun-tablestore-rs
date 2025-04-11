@@ -3,14 +3,14 @@ use std::io::{Cursor, Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{
-    OtsResult,
-    crc8::{crc_bytes, crc_f64, crc_i64, crc_u8, crc_u32, crc_u64},
+    crc8::{crc_bytes, crc_f64, crc_i64, crc_u32, crc_u64, crc_u8},
     error::OtsError,
     protos::plain_buffer::{
         self, CELL_OP_DELETE_ALL_VERSION, CELL_OP_DELETE_ONE_VERSION, CELL_OP_INCREMENT, LITTLE_ENDIAN_32_SIZE, LITTLE_ENDIAN_64_SIZE, TAG_CELL,
         TAG_CELL_CHECKSUM, TAG_CELL_NAME, TAG_CELL_OP, TAG_CELL_TIMESTAMP, TAG_CELL_VALUE, VT_BLOB, VT_BOOLEAN, VT_DOUBLE, VT_INF_MAX, VT_INF_MIN, VT_INTEGER,
         VT_STRING,
     },
+    OtsResult,
 };
 
 /// 列操作

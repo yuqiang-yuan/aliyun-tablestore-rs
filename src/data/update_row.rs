@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{Filter, Row},
     protos::{
@@ -11,6 +11,7 @@ use crate::{
         {Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation},
     },
     table::rules::{validate_column_name, validate_table_name},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 更新行数据的请求

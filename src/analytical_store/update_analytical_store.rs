@@ -1,9 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 更新时序分析存储配置信息，目前仅支持修改数据生命周期TTL。

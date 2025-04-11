@@ -1,10 +1,10 @@
 use prost::Message;
 
 use crate::{
-    OtsResult,
     error::OtsError,
     protos::search::{DecayFuncParamType, DecayMathFunction, FunctionModifier, MultiValueMode},
     table::rules::validate_column_name,
+    OtsResult,
 };
 
 use super::{Duration, GeoPoint, Query};

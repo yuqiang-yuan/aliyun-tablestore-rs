@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{build_tags_string, parse_tags, TimeseriesKey, TimeseriesVersion};
+use super::{build_tags_string, parse_tags, TimeseriesKey};
 
 #[derive(Debug, Default, Clone)]
 pub struct TimeseriesMeta {
@@ -56,22 +56,24 @@ impl TimeseriesMeta {
         self
     }
 
-    /// 设置更新时间，微秒　
+    /// 设置更新时间，微秒
     pub fn update_time_us(mut self, ts_us: u64) -> Self {
         self.update_time_us = Some(ts_us);
 
         self
     }
+}
 
-    pub(crate) fn into_protobuf_timeseries_meta(self, ver: TimeseriesVersion) -> crate::protos::timeseries::TimeseriesMeta {
-        let Self {
+impl From<TimeseriesMeta> for crate::protos::timeseries::TimeseriesMeta {
+    fn from(value: TimeseriesMeta) -> Self {
+        let TimeseriesMeta {
             key,
             attributes,
             update_time_us,
-        } = self;
+        } = value;
 
         crate::protos::timeseries::TimeseriesMeta {
-            time_series_key: key.into_protobuf_timeseries_key(ver),
+            time_series_key: crate::protos::timeseries::TimeseriesKey::from(key),
             attributes: Some(build_tags_string(attributes.iter())),
             update_time: update_time_us.map(|ts_us| ts_us as i64),
         }
@@ -88,11 +90,7 @@ impl From<crate::protos::timeseries::TimeseriesMeta> for TimeseriesMeta {
 
         Self {
             key: TimeseriesKey::from(time_series_key),
-            attributes: if let Some(s) = attributes {
-                parse_tags(&s)
-            } else {
-                HashMap::new()
-            },
+            attributes: if let Some(s) = attributes { parse_tags(&s) } else { HashMap::new() },
             update_time_us: update_time.map(|n| n as u64),
         }
     }

@@ -1,9 +1,9 @@
 use crate::{
-    OtsResult,
     error::OtsError,
     model::ColumnValue,
     protos::search::{DocSort, GeoDistanceType, PrimaryKeySort, ScoreSort, SortMode, SortOrder},
     table::rules::validate_column_name,
+    OtsResult,
 };
 
 use super::{GeoPoint, NestedFilter};

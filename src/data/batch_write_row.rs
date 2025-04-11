@@ -3,14 +3,15 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::{
-    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    add_per_request_options,
     error::OtsError,
     model::{Filter, Row},
     protos::{
-        Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation,
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+        Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation,
     },
     table::rules::validate_table_name,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
 /// 在BatchWriteRow操作中，表示要插入、更新和删除的一行信息。
