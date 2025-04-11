@@ -15,12 +15,12 @@ mod test_timeseries_data {
     use crate::{
         protos::timeseries::MetaQueryCompositeOperator,
         test_util::setup,
-        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow},
+        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesMeta, TimeseriesRow},
         util::current_time_ms,
         OtsClient,
     };
 
-    use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest};
+    use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaRequest};
 
     /// Test query timeseries data
     async fn test_get_timeseries_data_impl() {
@@ -165,5 +165,29 @@ mod test_timeseries_data {
     #[tokio::test]
     async fn test_query_timeseries_meta_with_attributes() {
         test_query_timeseries_meta_with_attributes_impl().await
+    }
+
+    async fn test_update_timeseries_meta_impl() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let req = UpdateTimeseriesMetaRequest::new("timeseries_demo_with_data").meta(
+            TimeseriesMeta::new()
+                .measurement_name("measure_13")
+                .datasource("data_13")
+                .attribute("attr1", "value"),
+        );
+
+        let resp = client.update_timeseries_meta(req).send().await;
+
+        assert!(resp.is_ok());
+
+        log::debug!("{:#?}", resp);
+    }
+
+    #[tokio::test]
+    async fn test_update_timeseries_meta() {
+        test_update_timeseries_meta_impl().await
     }
 }
