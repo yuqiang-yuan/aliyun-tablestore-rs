@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{error::OtsError, timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
 
 /// 检索时间线元数据
 ///
@@ -53,8 +53,8 @@ impl QueryTimeseriesMetaRequest {
     }
 
     /// 设置是否获取全部行数
-    pub fn get_total_hit(mut self, get_total_hit: bool) -> Self {
-        self.get_total_hit = Some(get_total_hit);
+    pub fn get_total_hit(mut self, with_total_hit: bool) -> Self {
+        self.get_total_hit = Some(with_total_hit);
 
         self
     }
@@ -90,6 +90,8 @@ impl QueryTimeseriesMetaRequest {
                 return Err(OtsError::ValidationFailed(format!("invalid limit: {}", n)));
             }
         }
+
+        self.condition.validate()?;
 
         Ok(())
     }
@@ -160,6 +162,8 @@ pub struct QueryTimeseriesMetaOperation {
     client: OtsClient,
     request: QueryTimeseriesMetaRequest,
 }
+
+add_per_request_options!(QueryTimeseriesMetaOperation);
 
 impl QueryTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: QueryTimeseriesMetaRequest) -> Self {

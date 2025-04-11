@@ -11,7 +11,7 @@ pub use query_meta::*;
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        test_util::setup, timeseries_model::{MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, util::current_time_ms, OtsClient
+        protos::timeseries::MetaQueryCompositeOperator, test_util::setup, timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, util::current_time_ms, OtsClient
     };
 
     use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest};
@@ -97,15 +97,55 @@ mod test_timeseries_data {
 
         let req = QueryTimeseriesMetaRequest::new(
             "timeseries_demo_with_data",
-            MetaQuery::Measurement(crate::timeseries_model::MeasurementMetaQuery::Equal("measure_11".to_string()))
+            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_11".to_string()))
         ).get_total_hit(true);
 
         let resp = client.query_timeseries_meta(req).send().await;
         log::debug!("{:?}", resp);
+
+        let resp = resp.unwrap();
+        for m in &resp.metas {
+            assert_eq!(&Some("measure_11".to_string()), &m.key.measurement_name);
+        }
+
+        let req = QueryTimeseriesMetaRequest::new(
+            "timeseries_demo_with_data",
+            MetaQuery::Composite(
+                Box::new(
+                    CompositeMetaQuery::new(MetaQueryCompositeOperator::OpAnd)
+                        .sub_query(
+                            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_7".to_string()))
+                        )
+                        .sub_query(
+                            MetaQuery::Datasource(DatasourceMetaQuery::Equal("data_3".to_string()))
+                        )
+                )
+            )
+        ).get_total_hit(true);
+
+        let resp = client.query_timeseries_meta(req).send().await;
+
+        assert!(resp.is_ok());
+
+        let resp = resp.unwrap();
+
+        assert!(resp.total_hit.is_some());
+        if let Some(n) = resp.total_hit {
+            assert!(n > 0)
+        } else {
+            panic!("shoule more than 1 row");
+        };
+
+        for m in &resp.metas {
+            assert_eq!(&Some("measure_7".to_string()), &m.key.measurement_name);
+            assert_eq!(&Some("data_3".to_string()), &m.key.datasource);
+        }
+
     }
 
     #[tokio::test]
     async fn test_query_timeseries_meta() {
         test_query_timeseries_meta_impl().await
     }
+
 }

@@ -1026,12 +1026,12 @@ impl OtsClient {
     }
 
     /// 时序表 - 查询分析存储的信息
-    pub fn describe_timeseries_analytical_store(self, table_name: &str, store_name: &str) -> DescribeTimeseriesAnalyticalStoreOperation {
+    pub fn describe_timeseries_analytical_store(&self, table_name: &str, store_name: &str) -> DescribeTimeseriesAnalyticalStoreOperation {
         DescribeTimeseriesAnalyticalStoreOperation::new(self.clone(), table_name, store_name)
     }
 
     /// 时序表 - 查询元数据
-    pub fn query_timeseries_meta(self, request: QueryTimeseriesMetaRequest) -> QueryTimeseriesMetaOperation {
+    pub fn query_timeseries_meta(&self, request: QueryTimeseriesMetaRequest) -> QueryTimeseriesMetaOperation {
         QueryTimeseriesMetaOperation::new(self.clone(), request)
     }
 }
