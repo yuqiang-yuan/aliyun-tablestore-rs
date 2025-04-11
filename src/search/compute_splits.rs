@@ -114,10 +114,10 @@ impl ComputeSplitsOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
+        let resp = client.send(req).await?;
 
-        let res_msg = crate::protos::ComputeSplitsResponse::decode(res.bytes().await?)?;
+        let resp_msg = crate::protos::ComputeSplitsResponse::decode(resp.bytes().await?)?;
 
-        ComputeSplitsResponse::try_from(res_msg)
+        ComputeSplitsResponse::try_from(resp_msg)
     }
 }

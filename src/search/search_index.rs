@@ -297,10 +297,10 @@ impl SearchOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
+        let resp = client.send(req).await?;
 
-        let res_msg = crate::protos::search::SearchResponse::decode(res.bytes().await?)?;
+        let resp_msg = crate::protos::search::SearchResponse::decode(resp.bytes().await?)?;
 
-        SearchResponse::try_from(res_msg)
+        SearchResponse::try_from(resp_msg)
     }
 }

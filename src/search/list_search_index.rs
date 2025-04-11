@@ -35,9 +35,9 @@ impl ListSearchIndexOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
-        let msg = ListSearchIndexResponse::decode(res.bytes().await?)?;
+        let resp = client.send(req).await?;
+        let resp_msg = ListSearchIndexResponse::decode(resp.bytes().await?)?;
 
-        Ok(msg.indices)
+        Ok(resp_msg.indices)
     }
 }

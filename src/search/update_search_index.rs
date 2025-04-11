@@ -48,8 +48,8 @@ impl UpdateSearchIndexOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
-        res.bytes().await?;
+        let resp = client.send(req).await?;
+        resp.bytes().await?;
 
         Ok(())
     }

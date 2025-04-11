@@ -100,7 +100,7 @@ mod test_index {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client
+        let resp = client
             .create_index(CreateIndexRequest {
                 main_table_name: "ccs2".to_string(),
                 index_meta: IndexMeta::builder("idx_cn").defined_column("course_name").primary_key("cc_id").build(),
@@ -109,7 +109,7 @@ mod test_index {
             .send()
             .await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
     }
 
     #[tokio::test]
@@ -121,9 +121,9 @@ mod test_index {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client.drop_index("ccs2", "idx_cn").send().await;
+        let resp = client.drop_index("ccs2", "idx_cn").send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
     }
 
     #[tokio::test]

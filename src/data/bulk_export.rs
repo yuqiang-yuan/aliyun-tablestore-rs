@@ -349,9 +349,9 @@ impl BulkExportOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
-        let res_msg = crate::protos::BulkExportResponse::decode(res.bytes().await?)?;
+        let resp = client.send(req).await?;
+        let resp_msg = crate::protos::BulkExportResponse::decode(resp.bytes().await?)?;
 
-        res_msg.try_into()
+        resp_msg.try_into()
     }
 }

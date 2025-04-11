@@ -255,16 +255,16 @@ mod test_row_operations {
 
         let req = PutRowRequest::new(table_name).row(row);
 
-        let res = client.put_row(req).send().await;
+        let resp = client.put_row(req).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = client
+        let resp = client
             .delete_row(DeleteRowRequest::new(table_name).primary_key_column_string("str_id", &id))
             .send()
             .await;
-        log::debug!("{:#?}", res);
-        assert!(res.is_ok());
+        log::debug!("{:#?}", resp);
+        assert!(resp.is_ok());
     }
 
     #[tokio::test]
@@ -289,16 +289,16 @@ mod test_row_operations {
 
         let request = BatchGetRowRequest::new().tables(vec![t1, t2]);
 
-        let res = client.batch_get_row(request).send().await;
+        let resp = client.batch_get_row(request).send().await;
 
-        log::debug!("batch get row response: {:#?}", res);
+        log::debug!("batch get row response: {:#?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
-        assert_eq!(2, res.tables.len());
+        let resp = resp.unwrap();
+        assert_eq!(2, resp.tables.len());
 
-        let tables = &res.tables;
+        let tables = &resp.tables;
 
         assert_eq!(2, tables.first().unwrap().rows.len());
 
@@ -351,11 +351,11 @@ mod test_row_operations {
 
         let req = BatchWriteRowRequest::new().table(t1).table(t2);
 
-        let res = client.batch_write_row(req).send().await;
+        let resp = client.batch_write_row(req).send().await;
 
-        log::debug!("{:#?}", res);
+        log::debug!("{:#?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
         let tmp_res = client
             .get_row(GetRowRequest::new("data_types").primary_key_column_string("str_id", &uuid))
@@ -385,16 +385,16 @@ mod test_row_operations {
             .column_string("str_col", "1")
             .column_bool("bool_col", false);
 
-        let res = client.put_row(PutRowRequest::new("data_types").row(new_row)).send().await;
+        let resp = client.put_row(PutRowRequest::new("data_types").row(new_row)).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
         let update_row = Row::new()
             .primary_key_column_string("str_id", &uuid)
             .column_string("str_col", "2")
             .column_bool("bool_col", false);
 
-        let res = client
+        let resp = client
             .update_row(
                 UpdateRowRequest::new("data_types").row(update_row).column_condition(Filter::Composite(
                     CompositeColumnValueFilter::new(LogicalOperator::LoAnd)
@@ -407,9 +407,9 @@ mod test_row_operations {
             .send()
             .await;
 
-        assert!(res.is_err());
+        assert!(resp.is_err());
 
-        if let Err(OtsError::ApiError(apie)) = res {
+        if let Err(OtsError::ApiError(apie)) = resp {
             let crate::protos::Error {
                 code,
                 message: _,
@@ -452,9 +452,9 @@ mod test_row_operations {
             req = req.put_row(row);
         }
 
-        let res = client.bulk_import(req).send().await;
+        let resp = client.bulk_import(req).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
     }
 
     #[tokio::test]
@@ -476,15 +476,15 @@ mod test_row_operations {
                 .end_primary_key_column_inf_max("str_id")
                 .columns_to_get(["str_id", "str_col", "int_col", "double_col", "blob_col", "bool_col"]);
 
-            let res = client.bulk_export(request).send().await;
-            let res = res.unwrap();
-            total_rows += res.rows.len();
+            let resp = client.bulk_export(request).send().await;
+            let resp = resp.unwrap();
+            total_rows += resp.rows.len();
 
-            res.rows.iter().for_each(|r| {
+            resp.rows.iter().for_each(|r| {
                 log::debug!("row: {:?}", r.get_primary_key_value("str_id").unwrap());
             });
 
-            match res.next_start_primary_key {
+            match resp.next_start_primary_key {
                 Some(next_pk) => start_pk = next_pk,
                 None => break,
             }

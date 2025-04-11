@@ -223,11 +223,11 @@ mod test_table {
         setup();
         let client = OtsClient::from_env();
 
-        let res = client
+        let resp = client
             .compute_split_points_by_size(ComputeSplitPointsBySizeRequest::new("schools", 1))
             .send()
             .await;
 
-        log::debug!("{:#?}", res);
+        log::debug!("{:#?}", resp);
     }
 }

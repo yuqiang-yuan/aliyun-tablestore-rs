@@ -202,8 +202,8 @@ mod test_search_index {
         setup();
 
         let client = OtsClient::from_env();
-        let res = client.list_search_index(None).send().await;
-        log::debug!("{:#?}", res);
+        let resp = client.list_search_index(None).send().await;
+        log::debug!("{:#?}", resp);
     }
 
     #[tokio::test]
@@ -211,7 +211,7 @@ mod test_search_index {
         setup();
 
         let client = OtsClient::from_env();
-        let res = client
+        let resp = client
             .create_search_index(CreateSearchIndexRequest {
                 table_name: "data_types".to_string(),
                 index_name: "si_1".to_string(),
@@ -229,9 +229,9 @@ mod test_search_index {
             .send()
             .await;
 
-        log::debug!("{:#?}", res);
+        log::debug!("{:#?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
     }
 
     #[tokio::test]
@@ -239,8 +239,8 @@ mod test_search_index {
         setup();
 
         let client = OtsClient::from_env();
-        let res = client.describe_search_index("data_types", "si_1").send().await;
-        log::debug!("{:#?}", res);
+        let resp = client.describe_search_index("data_types", "si_1").send().await;
+        log::debug!("{:#?}", resp);
     }
 
     #[tokio::test]
@@ -248,8 +248,8 @@ mod test_search_index {
         setup();
 
         let client = OtsClient::from_env();
-        let res = client.delete_search_index("data_types", "si_1").send().await;
-        log::debug!("{:#?}", res);
+        let resp = client.delete_search_index("data_types", "si_1").send().await;
+        log::debug!("{:#?}", resp);
     }
 
     async fn test_search_match_query_impl() {
@@ -268,15 +268,15 @@ mod test_search_index {
         let mut total_row = 0;
 
         loop {
-            let res = client.search(search_req.clone()).send().await;
+            let resp = client.search(search_req.clone()).send().await;
 
-            assert!(res.is_ok());
+            assert!(resp.is_ok());
 
-            let res = res.unwrap();
+            let resp = resp.unwrap();
 
             // log::debug!("{:#?}", res);
 
-            for row in &res.rows {
+            for row in &resp.rows {
                 log::debug!(
                     "user id: {:?}, phone number: {:?}",
                     row.get_primary_key_value("user_id"),
@@ -284,9 +284,9 @@ mod test_search_index {
                 );
             }
 
-            total_row += res.rows.len();
+            total_row += resp.rows.len();
 
-            if let Some(token) = res.next_token {
+            if let Some(token) = resp.next_token {
                 search_query = search_query.token(token);
                 search_req = search_req.search_query(search_query.clone());
             } else {
@@ -333,8 +333,8 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", search_query).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
-        log::debug!("{:?}", res);
+        let resp = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", resp);
     }
 
     #[tokio::test]
@@ -356,18 +356,18 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
-        log::debug!("{:?}", res);
+        let resp = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        log::debug!("{:#?}", res.group_by_results);
+        log::debug!("{:#?}", resp.group_by_results);
 
-        assert!(!res.group_by_results.is_empty());
+        assert!(!resp.group_by_results.is_empty());
 
-        let g_result = res.group_by_results.get("g_filter");
+        let g_result = resp.group_by_results.get("g_filter");
 
         assert!(g_result.is_some());
 
@@ -398,18 +398,18 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
-        log::debug!("{:?}", res);
+        let resp = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        log::debug!("{:#?}", res.group_by_results);
+        log::debug!("{:#?}", resp.group_by_results);
 
-        assert!(!res.group_by_results.is_empty());
+        assert!(!resp.group_by_results.is_empty());
 
-        let g_result = res.group_by_results.get("g_range");
+        let g_result = resp.group_by_results.get("g_range");
 
         assert!(g_result.is_some());
 
@@ -446,18 +446,18 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", query).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
-        log::debug!("{:?}", res);
+        let resp = client.search(search_req.clone()).send().await;
+        log::debug!("{:?}", resp);
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        log::debug!("{:#?}", res.group_by_results);
+        log::debug!("{:#?}", resp.group_by_results);
 
-        assert!(!res.group_by_results.is_empty());
+        assert!(!resp.group_by_results.is_empty());
 
-        let g_result = res.group_by_results.get("g_his");
+        let g_result = resp.group_by_results.get("g_his");
 
         assert!(g_result.is_some());
 
@@ -485,13 +485,13 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
+        let resp = client.search(search_req.clone()).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        for row in &res.rows {
+        for row in &resp.rows {
             assert_eq!(Some(&ColumnValue::String("万宇驰".to_string())), row.get_column_value("full_name"));
         }
     }
@@ -515,13 +515,13 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
+        let resp = client.search(search_req.clone()).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        for row in &res.rows {
+        for row in &resp.rows {
             assert_eq!(Some(&ColumnValue::String("万宇驰".to_string())), row.get_column_value("full_name"));
 
             assert_eq!(Some(&ColumnValue::String("M".to_string())), row.get_column_value("gender"));
@@ -542,13 +542,13 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
+        let resp = client.search(search_req.clone()).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        for row in &res.rows {
+        for row in &resp.rows {
             if let ColumnValue::String(full_name) = row.get_column_value("full_name").unwrap() {
                 assert!(full_name.starts_with("万"));
             } else {
@@ -571,13 +571,13 @@ mod test_search_index {
 
         let search_req = SearchRequest::new("users", "users_index", SearchQuery::new(query)).column_return_type(ColumnReturnType::ReturnAll);
 
-        let res = client.search(search_req.clone()).send().await;
+        let resp = client.search(search_req.clone()).send().await;
 
-        assert!(res.is_ok());
+        assert!(resp.is_ok());
 
-        let res = res.unwrap();
+        let resp = resp.unwrap();
 
-        for row in &res.rows {
+        for row in &resp.rows {
             log::debug!("score: {:?}", row.get_column_value("score"));
             assert!(row.get_column_value("score").unwrap() >= &ColumnValue::Double(0.0));
             assert!(row.get_column_value("score").unwrap() <= &ColumnValue::Double(10.0));
@@ -594,9 +594,9 @@ mod test_search_index {
 
         let client = OtsClient::from_env();
 
-        let res = client.compute_splits("users", "users_index").send().await;
+        let resp = client.compute_splits("users", "users_index").send().await;
 
-        log::debug!("{:#?}", res);
+        log::debug!("{:#?}", resp);
     }
 
     #[tokio::test]

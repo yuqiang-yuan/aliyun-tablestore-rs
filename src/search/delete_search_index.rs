@@ -35,9 +35,9 @@ impl DeleteSearchIndexOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
+        let resp = client.send(req).await?;
 
-        res.bytes().await?;
+        resp.bytes().await?;
 
         Ok(())
     }

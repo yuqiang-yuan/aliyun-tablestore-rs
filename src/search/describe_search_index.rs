@@ -54,7 +54,7 @@ impl DescribeSearchIndexOperation {
             ..Default::default()
         };
 
-        let res = client.send(req).await?;
-        Ok(DescribeSearchIndexResponse::decode(res.bytes().await?)?)
+        let resp = client.send(req).await?;
+        Ok(DescribeSearchIndexResponse::decode(resp.bytes().await?)?)
     }
 }
