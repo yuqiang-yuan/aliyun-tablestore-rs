@@ -1,10 +1,12 @@
 //! 时序数据
 
+mod delete_meta;
 mod get_data;
 mod put_data;
 mod query_meta;
 mod update_meta;
 
+pub use delete_meta::*;
 pub use get_data::*;
 pub use put_data::*;
 pub use query_meta::*;
@@ -20,7 +22,7 @@ mod test_timeseries_data {
         OtsClient,
     };
 
-    use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaRequest};
+    use super::{DeleteTimeseriesMetaRequest, GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaRequest};
 
     /// Test query timeseries data
     async fn test_get_timeseries_data_impl() {
@@ -189,5 +191,22 @@ mod test_timeseries_data {
     #[tokio::test]
     async fn test_update_timeseries_meta() {
         test_update_timeseries_meta_impl().await
+    }
+
+    async fn test_delete_timeseries_meta_impl() {
+        setup();
+        let client = OtsClient::from_env();
+        let req = DeleteTimeseriesMetaRequest::new("timeseries_demo_with_data").key(TimeseriesKey::new().measurement_name("measure_13").datasource("data_13"));
+
+        let resp = client.delete_timeseries_meta(req).send().await;
+
+        log::debug!("{:#?}", resp);
+
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_timeseries_meta() {
+        test_delete_timeseries_meta_impl().await;
     }
 }
