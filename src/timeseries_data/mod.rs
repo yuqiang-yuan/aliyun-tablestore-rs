@@ -5,21 +5,19 @@ mod get_data;
 mod put_data;
 mod query_meta;
 mod update_meta;
+mod split_scan;
 
 pub use delete_meta::*;
 pub use get_data::*;
 pub use put_data::*;
 pub use query_meta::*;
 pub use update_meta::*;
+pub use split_scan::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        protos::timeseries::MetaQueryCompositeOperator,
-        test_util::setup,
-        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesMeta, TimeseriesRow},
-        util::current_time_ms,
-        OtsClient,
+        protos::timeseries::MetaQueryCompositeOperator, test_util::setup, timeseries_data::SplitTimeseriesScanTaskRequest, timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesMeta, TimeseriesRow}, util::current_time_ms, OtsClient
     };
 
     use super::{DeleteTimeseriesMetaRequest, GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaRequest};
@@ -208,5 +206,19 @@ mod test_timeseries_data {
     #[tokio::test]
     async fn test_delete_timeseries_meta() {
         test_delete_timeseries_meta_impl().await;
+    }
+
+
+    #[tokio::test]
+    async fn test_split_timeseries_scan_task() {
+        setup();
+
+        let client = OtsClient::from_env();
+
+        let resp = client.split_timeseries_scan_task(
+            SplitTimeseriesScanTaskRequest::new("timeseries_demo_with_data", 1)
+        ).send().await;
+
+        log::debug!("{:#?}", resp);
     }
 }

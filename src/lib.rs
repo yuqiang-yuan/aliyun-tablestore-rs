@@ -35,8 +35,7 @@ use table::{
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
 use timeseries_data::{
-    DeleteTimeseriesMetaOperation, DeleteTimeseriesMetaRequest, GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation,
-    PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest,
+    DeleteTimeseriesMetaOperation, DeleteTimeseriesMetaRequest, GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, SplitTimeseriesScanTaskOperation, SplitTimeseriesScanTaskRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest
 };
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
@@ -1046,5 +1045,10 @@ impl OtsClient {
     /// 时序表 - 删除时间线元数据
     pub fn delete_timeseries_meta(&self, request: DeleteTimeseriesMetaRequest) -> DeleteTimeseriesMetaOperation {
         DeleteTimeseriesMetaOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 切分全量导出任务
+    pub fn split_timeseries_scan_task(&self, request: SplitTimeseriesScanTaskRequest) -> SplitTimeseriesScanTaskOperation {
+        SplitTimeseriesScanTaskOperation::new(self.clone(), request)
     }
 }
