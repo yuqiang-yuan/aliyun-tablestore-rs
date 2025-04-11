@@ -1,6 +1,10 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    timeseries_model::{MetaQuery, TimeseriesMeta, TimeseriesVersion, rules::validate_timeseries_table_name},
+};
 
 /// 检索时间线元数据
 ///
@@ -95,7 +99,6 @@ impl QueryTimeseriesMetaRequest {
 
         Ok(())
     }
-
 }
 
 impl From<QueryTimeseriesMetaRequest> for crate::protos::timeseries::QueryTimeseriesMetaRequest {
@@ -120,7 +123,7 @@ impl From<QueryTimeseriesMetaRequest> for crate::protos::timeseries::QueryTimese
     }
 }
 
-#[derive(Debug, Clone,)]
+#[derive(Debug, Clone)]
 pub struct QueryTimeseriesMetaResponse {
     /// 时间线元数据列表
     pub metas: Vec<TimeseriesMeta>,
@@ -144,15 +147,11 @@ impl From<crate::protos::timeseries::QueryTimeseriesMetaResponse> for QueryTimes
             metas: timeseries_metas.into_iter().map(TimeseriesMeta::from).collect(),
             total_hit: if let Some(n) = total_hit {
                 // 如果在请求中没有要求返回命中行数，服务会返回 `Some(-1)`
-                if n >= 0 {
-                    Some(n as u64)
-                } else {
-                    None
-                }
+                if n >= 0 { Some(n as u64) } else { None }
             } else {
                 None
             },
-            next_token
+            next_token,
         }
     }
 }

@@ -11,7 +11,11 @@ pub use query_meta::*;
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        protos::timeseries::MetaQueryCompositeOperator, test_util::setup, timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, util::current_time_ms, OtsClient
+        OtsClient,
+        protos::timeseries::MetaQueryCompositeOperator,
+        test_util::setup,
+        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesRow, TimeseriesVersion},
+        util::current_time_ms,
     };
 
     use super::{GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest};
@@ -97,8 +101,9 @@ mod test_timeseries_data {
 
         let req = QueryTimeseriesMetaRequest::new(
             "timeseries_demo_with_data",
-            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_11".to_string()))
-        ).get_total_hit(true);
+            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_11".to_string())),
+        )
+        .get_total_hit(true);
 
         let resp = client.query_timeseries_meta(req).send().await;
         log::debug!("{:?}", resp);
@@ -110,18 +115,13 @@ mod test_timeseries_data {
 
         let req = QueryTimeseriesMetaRequest::new(
             "timeseries_demo_with_data",
-            MetaQuery::Composite(
-                Box::new(
-                    CompositeMetaQuery::new(MetaQueryCompositeOperator::OpAnd)
-                        .sub_query(
-                            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_7".to_string()))
-                        )
-                        .sub_query(
-                            MetaQuery::Datasource(DatasourceMetaQuery::Equal("data_3".to_string()))
-                        )
-                )
-            )
-        ).get_total_hit(true);
+            MetaQuery::Composite(Box::new(
+                CompositeMetaQuery::new(MetaQueryCompositeOperator::OpAnd)
+                    .sub_query(MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_7".to_string())))
+                    .sub_query(MetaQuery::Datasource(DatasourceMetaQuery::Equal("data_3".to_string()))),
+            )),
+        )
+        .get_total_hit(true);
 
         let resp = client.query_timeseries_meta(req).send().await;
 
@@ -140,12 +140,10 @@ mod test_timeseries_data {
             assert_eq!(&Some("measure_7".to_string()), &m.key.measurement_name);
             assert_eq!(&Some("data_3".to_string()), &m.key.datasource);
         }
-
     }
 
     #[tokio::test]
     async fn test_query_timeseries_meta() {
         test_query_timeseries_meta_impl().await
     }
-
 }

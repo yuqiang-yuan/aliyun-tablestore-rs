@@ -129,10 +129,7 @@ impl From<crate::protos::timeseries::TimeseriesKey> for TimeseriesKey {
 
         if !tag_list.is_empty() {
             tag_list.into_iter().for_each(|t| {
-                let crate::protos::timeseries::TimeseriesTag {
-                    name,
-                    value,
-                } = t;
+                let crate::protos::timeseries::TimeseriesTag { name, value } = t;
                 tag_map.insert(name, value);
             });
         }

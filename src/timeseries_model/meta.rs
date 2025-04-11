@@ -1,6 +1,4 @@
-
 use super::TimeseriesKey;
-
 
 #[derive(Debug, Default, Clone)]
 pub struct TimeseriesMeta {
@@ -20,7 +18,7 @@ impl From<crate::protos::timeseries::TimeseriesMeta> for TimeseriesMeta {
         Self {
             key: TimeseriesKey::from(time_series_key),
             attributes,
-            update_time: update_time.map(|n| n as u64)
+            update_time: update_time.map(|n| n as u64),
         }
     }
 }

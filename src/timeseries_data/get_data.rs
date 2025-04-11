@@ -1,7 +1,11 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::decode_plainbuf_rows, protos::plain_buffer::MASK_HEADER, timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion}, OtsClient, OtsOp, OtsRequest, OtsResult
+    OtsClient, OtsOp, OtsRequest, OtsResult, add_per_request_options,
+    error::OtsError,
+    model::decode_plainbuf_rows,
+    protos::plain_buffer::MASK_HEADER,
+    timeseries_model::{TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, TimeseriesVersion, rules::validate_timeseries_table_name},
 };
 
 /// 查询某个时间线的数据

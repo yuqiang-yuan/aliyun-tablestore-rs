@@ -29,10 +29,7 @@ mod test_protos {
 
     use crate::{test_util::setup, util::debug_bytes};
 
-    use super::fbs::timeseries::{
-        DataType, FieldValuesBuilder, FlatBufferRowGroupBuilder, FlatBufferRowInGroupBuilder,
-        FlatBufferRowsBuilder,
-    };
+    use super::fbs::timeseries::{DataType, FieldValuesBuilder, FlatBufferRowGroupBuilder, FlatBufferRowInGroupBuilder, FlatBufferRowsBuilder};
 
     #[test]
     fn test_flat_buffer() {

@@ -34,7 +34,10 @@ use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
-use timeseries_data::{GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest};
+use timeseries_data::{
+    GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation,
+    QueryTimeseriesMetaRequest,
+};
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
 use util::get_iso8601_date_time_string;

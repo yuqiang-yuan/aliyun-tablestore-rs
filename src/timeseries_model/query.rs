@@ -1,6 +1,10 @@
 use prost::Message;
 
-use crate::{error::OtsError, protos::timeseries::{MetaQueryCompositeOperator, MetaQueryConditionType, MetaQuerySingleOperator}, OtsResult};
+use crate::{
+    OtsResult,
+    error::OtsError,
+    protos::timeseries::{MetaQueryCompositeOperator, MetaQueryConditionType, MetaQuerySingleOperator},
+};
 
 /// 度量名称查询。
 /// 变体中的 `String` 是指查询值
@@ -11,7 +15,7 @@ pub enum MeasurementMetaQuery {
     GreaterEqual(String),
     LessThan(String),
     LessEqual(String),
-    Prefix(String)
+    Prefix(String),
 }
 
 impl From<MeasurementMetaQuery> for crate::protos::timeseries::MetaQueryMeasurementCondition {
@@ -59,7 +63,7 @@ pub enum DatasourceMetaQuery {
     GreaterEqual(String),
     LessThan(String),
     LessEqual(String),
-    Prefix(String)
+    Prefix(String),
 }
 
 impl From<DatasourceMetaQuery> for crate::protos::timeseries::MetaQuerySourceCondition {
@@ -107,7 +111,7 @@ pub enum TagMetaQuery {
     GreaterEqual(String, String),
     LessThan(String, String),
     LessEqual(String, String),
-    Prefix(String, String)
+    Prefix(String, String),
 }
 
 impl From<TagMetaQuery> for crate::protos::timeseries::MetaQueryTagCondition {
@@ -147,7 +151,7 @@ impl From<TagMetaQuery> for crate::protos::timeseries::MetaQueryTagCondition {
                 op: MetaQuerySingleOperator::OpPrefix as i32,
                 tag_name,
                 value,
-            }
+            },
         }
     }
 }
@@ -161,7 +165,7 @@ pub enum AttributMetaQuery {
     GreaterEqual(String, String),
     LessThan(String, String),
     LessEqual(String, String),
-    Prefix(String, String)
+    Prefix(String, String),
 }
 
 impl From<AttributMetaQuery> for crate::protos::timeseries::MetaQueryAttributeCondition {
@@ -201,7 +205,7 @@ impl From<AttributMetaQuery> for crate::protos::timeseries::MetaQueryAttributeCo
                 op: MetaQuerySingleOperator::OpPrefix as i32,
                 attr_name,
                 value,
-            }
+            },
         }
     }
 }
@@ -233,7 +237,7 @@ impl From<UpdateTimeMetaQuery> for crate::protos::timeseries::MetaQueryUpdateTim
 
             UpdateTimeMetaQuery::GreaterEqual(value) => Self {
                 op: MetaQuerySingleOperator::OpGreaterEqual as i32,
-                value: value as i64
+                value: value as i64,
             },
 
             UpdateTimeMetaQuery::LessThan(value) => Self {
@@ -248,8 +252,8 @@ impl From<UpdateTimeMetaQuery> for crate::protos::timeseries::MetaQueryUpdateTim
 
             UpdateTimeMetaQuery::Prefix(value) => Self {
                 op: MetaQuerySingleOperator::OpPrefix as i32,
-                value: value as i64
-            }
+                value: value as i64,
+            },
         }
     }
 }
@@ -282,10 +286,7 @@ pub struct CompositeMetaQuery {
 
 impl CompositeMetaQuery {
     pub fn new(operator: MetaQueryCompositeOperator) -> Self {
-        Self {
-            operator,
-            sub_queries: vec![]
-        }
+        Self { operator, sub_queries: vec![] }
     }
 
     /// 设置逻辑操作
@@ -320,10 +321,7 @@ impl CompositeMetaQuery {
 
 impl From<CompositeMetaQuery> for crate::protos::timeseries::MetaQueryCompositeCondition {
     fn from(value: CompositeMetaQuery) -> Self {
-        let CompositeMetaQuery {
-            operator,
-            sub_queries,
-        } = value;
+        let CompositeMetaQuery { operator, sub_queries } = value;
 
         Self {
             op: operator as i32,
@@ -384,11 +382,11 @@ impl MetaQuery {
         match self {
             MetaQuery::UpdateTime(q) => {
                 q.validate()?;
-            },
+            }
 
             MetaQuery::Composite(q) => {
                 q.validate()?;
-            },
+            }
 
             _ => {}
         }
