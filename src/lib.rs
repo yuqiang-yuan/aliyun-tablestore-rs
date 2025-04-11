@@ -35,8 +35,7 @@ use table::{
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
 };
 use timeseries_data::{
-    GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation,
-    QueryTimeseriesMetaRequest,
+    GetTimeseriesDataOperation, GetTimeseriesDataRequest, PutTimeseriesDataOperation, PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest
 };
 use timeseries_table::DescribeTimeseriesTableOperation;
 use url::Url;
@@ -1036,5 +1035,10 @@ impl OtsClient {
     /// 时序表 - 查询元数据
     pub fn query_timeseries_meta(&self, request: QueryTimeseriesMetaRequest) -> QueryTimeseriesMetaOperation {
         QueryTimeseriesMetaOperation::new(self.clone(), request)
+    }
+
+    /// 时序表 - 更新时间线元数据
+    pub fn update_timeseries_meta(&self, request: UpdateTimeseriesMetaRequest) -> UpdateTimeseriesMetaOperation {
+        UpdateTimeseriesMetaOperation::new(self.clone(), request)
     }
 }

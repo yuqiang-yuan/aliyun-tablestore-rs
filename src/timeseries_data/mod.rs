@@ -3,10 +3,12 @@
 mod get_data;
 mod put_data;
 mod query_meta;
+mod update_meta;
 
 pub use get_data::*;
 pub use put_data::*;
 pub use query_meta::*;
+pub use update_meta::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
@@ -34,7 +36,8 @@ mod test_timeseries_data {
                 .tag("region", "region_7"),
         )
         .end_time_us(1744119422199000)
-        .limit(10);
+        .limit(10)
+        .supported_table_version(TimeseriesVersion::V0);
 
         let resp = client.get_timeseries_data(request).send().await;
         log::debug!("{:?}", resp);
@@ -145,5 +148,25 @@ mod test_timeseries_data {
     #[tokio::test]
     async fn test_query_timeseries_meta() {
         test_query_timeseries_meta_impl().await
+    }
+
+    async fn test_query_timeseries_meta_with_attributes_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let req = QueryTimeseriesMetaRequest::new(
+            "timeseries_demo_with_data",
+            MetaQuery::Measurement(MeasurementMetaQuery::Equal("measure_12".to_string())),
+        )
+        .get_total_hit(true)
+        .supported_table_version(TimeseriesVersion::V1);
+
+        let resp = client.query_timeseries_meta(req).send().await;
+        log::debug!("{:?}", resp);
+    }
+
+    #[tokio::test]
+    async fn test_query_timeseries_meta_with_attributes() {
+        test_query_timeseries_meta_with_attributes_impl().await
     }
 }

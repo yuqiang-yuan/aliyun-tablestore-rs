@@ -37,13 +37,13 @@ impl TimeseriesKey {
         self
     }
 
-    /// 增加一个 `supported_table_version` 为 `1` 的实例的标签
+    /// 增加一个标签
     pub fn tag(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.tags.insert(key.into(), value.into());
         self
     }
 
-    /// 设置一个 `supported_table_version` 为 `1` 的实例的所有标签
+    /// 设置所有标签
     pub fn tags(mut self, tags: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
         self.tags = tags.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
         self
@@ -76,7 +76,7 @@ impl TimeseriesKey {
 
     /// 将 `TimeseriesKey` 转换为 `TimeseriesKey` 的 protobuf 表示
     /// 由于不同的库表版本对应的 protobuf 表示不一样，所以需要根据版本号进行转换
-    pub fn into_timeseries_key_with_version(self, version: TimeseriesVersion) -> crate::protos::timeseries::TimeseriesKey {
+    pub fn into_protobuf_timeseries_key(self, version: TimeseriesVersion) -> crate::protos::timeseries::TimeseriesKey {
         let TimeseriesKey {
             measurement_name,
             datasource,
@@ -142,6 +142,7 @@ impl From<crate::protos::timeseries::TimeseriesKey> for TimeseriesKey {
     }
 }
 
+
 /// 解析 tags 字符串。
 /// 例如：从服务器返回的 tags 字符串为： `"[\"cluster=cluster_3\",\"region=region_7\"]"`
 pub(crate) fn parse_tags(tags: &str) -> HashMap<String, String> {
@@ -167,4 +168,16 @@ pub(crate) fn parse_tags(tags: &str) -> HashMap<String, String> {
     });
 
     ret
+}
+
+/// 从键值对儿构造字符串。同样适用于时间线元数据的属性对儿
+pub(crate) fn build_tags_string<'a>(tags: impl Iterator<Item = (&'a String, &'a String)>) -> String {
+    let mut items = tags.collect::<Vec<_>>();
+
+    items.sort_by(|a, b| a.0.cmp(b.0));
+
+    format!(
+        "[{}]",
+        items.iter().map(|(k, v)| format!("\"{}={}\"", k, v)).collect::<Vec<_>>().join(",")
+    )
 }

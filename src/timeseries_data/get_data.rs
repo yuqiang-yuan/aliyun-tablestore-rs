@@ -168,7 +168,7 @@ impl From<GetTimeseriesDataRequest> for crate::protos::timeseries::GetTimeseries
 
         Self {
             table_name,
-            time_series_key: key.into_timeseries_key_with_version(supported_table_version),
+            time_series_key: key.into_protobuf_timeseries_key(supported_table_version),
             begin_time: Some(begin_time_us as i64),
             end_time: Some(end_time_us as i64),
             specific_time: specific_time_us.map(|t| t as i64),
