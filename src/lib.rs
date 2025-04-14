@@ -40,7 +40,7 @@ use timeseries_data::{
     PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, ScanTimeseriesDataOperation, ScanTimeseriesDataRequest,
     SplitTimeseriesScanTaskOperation, SplitTimeseriesScanTaskRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest,
 };
-use timeseries_table::DescribeTimeseriesTableOperation;
+use timeseries_table::{CreateTimeseriesTableOperation, CreateTimeseriesTableRequest, DescribeTimeseriesTableOperation};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
@@ -273,7 +273,7 @@ impl OtsOp {
     }
 }
 
-/// The request to send to aliyun tablestore service
+/// OTS API 请求结构体
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct OtsRequest {
@@ -412,7 +412,7 @@ impl Default for OtsClientOptions {
     }
 }
 
-/// Aliyun tablestore client
+/// 客户端
 #[allow(dead_code)]
 #[derive(Clone, Default)]
 pub struct OtsClient {
@@ -1006,6 +1006,11 @@ impl OtsClient {
         PutTimeseriesDataOperation::new(self.clone(), request)
     }
 
+    /// 时序表 - 创建时序表
+    pub fn create_timeseries_table(&self, request: CreateTimeseriesTableRequest) -> CreateTimeseriesTableOperation {
+        CreateTimeseriesTableOperation::new(self.clone(), request)
+    }
+
     /// 时序表 - 查询时序表信息
     pub fn describe_timeseries_table(&self, table_name: &str) -> DescribeTimeseriesTableOperation {
         DescribeTimeseriesTableOperation::new(self.clone(), table_name)
@@ -1066,7 +1071,16 @@ impl OtsClient {
         ScanTimeseriesDataOperation::new(self.clone(), request)
     }
 
-    /// SQL 查询
+    /// SQL 查询。注意：返回的行中，主键值和普通列的值都放到普通列 `columns` 或者 `fields` 中了。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = OtsClient::from_env();
+    /// let req = SqlQueryRequest::new("select * from timeseries_demo_with_data where _m_name = 'measure_11'");
+    /// let resp = client.sql_query(req).send::<TimeseriesRow>().await;
+    /// log::debug!("timeseries table: {:?}", resp)
+    /// ```
     pub fn sql_query(&self, request: SqlQueryRequest) -> SqlQueryOperation {
         SqlQueryOperation::new(self.clone(), request)
     }

@@ -1,4 +1,4 @@
-//! Protobuf and plainbuf and types generated from `.proto` file using `prost_build`.
+//! protobuf、plain buffer、simple row matrix、flatbuf 相关的
 
 // Mapping to Java SDK: ots_internal_api.proto
 include!("./table_store.rs");

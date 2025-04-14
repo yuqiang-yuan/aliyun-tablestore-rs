@@ -1,8 +1,8 @@
 /// 自定义时间线标识字段个数
-pub const MAX_ID_FIELD_COUNT: usize = 6;
+pub const MAX_TIMESERIES_KEY_COUNT: usize = 6;
 
 /// 可作为主键的数据字段个数
-pub const MAX_PRIMARY_KEY_FIELD_COUNT: usize = 6;
+pub const MAX_FIELD_PRIMARY_KEY_COUNT: usize = 4;
 
 /// 单行写入的属性列个数不能超过 1024 列
 pub const MAX_FIELD_COUNT: usize = 1024;
@@ -12,6 +12,18 @@ pub const MAX_ROW_COUNT: usize = 200;
 
 /// 一次写入数据大小上限为 `4 MB`
 pub const MAX_DATA_SIZE: usize = 1024 * 1024 * 4;
+
+/// 分析存储的默认名称
+pub const DEFAULT_ANALYTICAL_NAME: &str = "default_analytical_store";
+
+/// 数据 TTL 最小值
+pub const MIN_DATA_TTL_SECONDS: i32 = 86400;
+
+/// 元数据 TTL 最小值
+pub const MIN_META_TTL_SECONDS: i32 = 604800;
+
+/// 分析存储 TTL 最小值
+pub const MIN_ANALYTICAL_STORE_TTL_SECONDS: i32 = 2592000;
 
 /// 验证时序表名称
 ///

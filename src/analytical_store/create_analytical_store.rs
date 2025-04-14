@@ -4,7 +4,7 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     protos::timeseries::AnalyticalStoreSyncType,
-    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name, MIN_ANALYTICAL_STORE_TTL_SECONDS},
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
@@ -76,8 +76,11 @@ impl CreateTimeseriesAnalyticalStoreRequest {
         }
 
         if let Some(n) = self.ttl_seconds {
-            if n != -1 && n < 2592000 {
-                return Err(OtsError::ValidationFailed(format!("invalid store data ttl (seconds): {}", n)));
+            if n != -1 && n < MIN_ANALYTICAL_STORE_TTL_SECONDS {
+                return Err(OtsError::ValidationFailed(format!(
+                    "invalid store data ttl (seconds): {}. must be -1 or greater than {}",
+                    n, MIN_ANALYTICAL_STORE_TTL_SECONDS
+                )));
             }
         }
 
