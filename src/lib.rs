@@ -30,6 +30,7 @@ use search::{
     ComputeSplitsOperation, CreateSearchIndexOperation, DeleteSearchIndexOperation, DescribeSearchIndexOperation, ListSearchIndexOperation,
     ParallelScanOperation, ParallelScanRequest, SearchOperation, SearchRequest, UpdateSearchIndexOperation,
 };
+use sql::{SqlQueryOperation, SqlQueryRequest};
 use table::{
     ComputeSplitPointsBySizeOperation, ComputeSplitPointsBySizeRequest, CreateTableOperation, CreateTableRequest, DeleteTableOperation, DescribeTableOperation,
     ListTableOperation, UpdateTableOperation, UpdateTableRequest,
@@ -59,6 +60,7 @@ pub mod timeseries_data;
 pub mod timeseries_model;
 pub mod timeseries_table;
 pub mod util;
+pub mod sql;
 
 #[cfg(test)]
 pub mod test_util;
@@ -155,6 +157,8 @@ pub enum OtsOp {
     ListTunnel,
     DescribeTunnel,
     DeleteTunnel,
+
+    SQLQuery,
 }
 
 impl From<OtsOp> for String {
@@ -231,6 +235,8 @@ impl Display for OtsOp {
             OtsOp::Search => "Search",
             OtsOp::ComputeSplits => "ComputeSplits",
             OtsOp::ParallelScan => "ParallelScan",
+
+            OtsOp::SQLQuery => "SQLQuery",
         };
 
         write!(f, "{}", s)
@@ -262,6 +268,7 @@ impl OtsOp {
                 | Self::ComputeSplits
                 | Self::ListTunnel
                 | Self::DescribeTunnel
+                | Self::SQLQuery
         )
     }
 }
@@ -1057,5 +1064,10 @@ impl OtsClient {
     /// 时序表 - 扫描数据
     pub fn scan_timeseries_data(&self, request: ScanTimeseriesDataRequest) -> ScanTimeseriesDataOperation {
         ScanTimeseriesDataOperation::new(self.clone(), request)
+    }
+
+    /// SQL 查询
+    pub fn sql_query(&self, request: SqlQueryRequest) -> SqlQueryOperation {
+        SqlQueryOperation::new(self.clone(), request)
     }
 }
