@@ -2,7 +2,6 @@ use prost::Message;
 
 use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsResult};
 
-
 /// 切分全量导出任务
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/splittimeseriesscantask>
@@ -58,7 +57,10 @@ impl SplitTimeseriesScanTaskRequest {
         }
 
         if self.split_count_hint > i32::MAX as u32 {
-            return Err(OtsError::ValidationFailed(format!("invalid split count hint: {}, too large for i32", self.split_count_hint)));
+            return Err(OtsError::ValidationFailed(format!(
+                "invalid split count hint: {}, too large for i32",
+                self.split_count_hint
+            )));
         }
 
         Ok(())

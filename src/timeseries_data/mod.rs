@@ -4,23 +4,33 @@ mod delete_meta;
 mod get_data;
 mod put_data;
 mod query_meta;
-mod update_meta;
+mod scan_data;
 mod split_scan;
+mod update_meta;
 
 pub use delete_meta::*;
 pub use get_data::*;
 pub use put_data::*;
 pub use query_meta::*;
-pub use update_meta::*;
+pub use scan_data::*;
 pub use split_scan::*;
+pub use update_meta::*;
 
 #[cfg(test)]
 mod test_timeseries_data {
     use crate::{
-        protos::timeseries::MetaQueryCompositeOperator, test_util::setup, timeseries_data::SplitTimeseriesScanTaskRequest, timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesMeta, TimeseriesRow}, util::current_time_ms, OtsClient
+        protos::timeseries::MetaQueryCompositeOperator,
+        test_util::setup,
+        timeseries_data::SplitTimeseriesScanTaskRequest,
+        timeseries_model::{CompositeMetaQuery, DatasourceMetaQuery, MeasurementMetaQuery, MetaQuery, TimeseriesKey, TimeseriesMeta, TimeseriesRow},
+        util::current_time_ms,
+        OtsClient,
     };
 
-    use super::{DeleteTimeseriesMetaRequest, GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, UpdateTimeseriesMetaRequest};
+    use super::{
+        DeleteTimeseriesMetaRequest, GetTimeseriesDataRequest, PutTimeseriesDataRequest, QueryTimeseriesMetaRequest, ScanTimeseriesDataRequest,
+        UpdateTimeseriesMetaRequest,
+    };
 
     /// Test query timeseries data
     async fn test_get_timeseries_data_impl() {
@@ -208,17 +218,31 @@ mod test_timeseries_data {
         test_delete_timeseries_meta_impl().await;
     }
 
-
     #[tokio::test]
     async fn test_split_timeseries_scan_task() {
         setup();
 
         let client = OtsClient::from_env();
 
-        let resp = client.split_timeseries_scan_task(
-            SplitTimeseriesScanTaskRequest::new("timeseries_demo_with_data", 1)
-        ).send().await;
+        let resp = client
+            .split_timeseries_scan_task(SplitTimeseriesScanTaskRequest::new("timeseries_demo_with_data", 1))
+            .send()
+            .await;
 
         log::debug!("{:#?}", resp);
+    }
+
+    async fn test_scan_timeseries_data_impl() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let req = ScanTimeseriesDataRequest::new("timeseries_demo_with_data").limit(10);
+        let resp = client.scan_timeseries_data(req).send().await;
+        log::debug!("{:?}", resp);
+    }
+
+    #[tokio::test]
+    async fn test_scan_timeseries_data() {
+        test_scan_timeseries_data_impl().await;
     }
 }
