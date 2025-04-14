@@ -55,12 +55,12 @@ pub mod macros;
 pub mod model;
 pub mod protos;
 pub mod search;
+pub mod sql;
 pub mod table;
 pub mod timeseries_data;
 pub mod timeseries_model;
 pub mod timeseries_table;
 pub mod util;
-pub mod sql;
 
 #[cfg(test)]
 pub mod test_util;

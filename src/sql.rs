@@ -2,10 +2,23 @@ use std::collections::HashMap;
 
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, model::{decode_plainbuf_rows, Row}, protos::{plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM}, ConsumedCapacity, SqlPayloadVersion, SqlStatementType}, timeseries_model::TimeseriesRow, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    add_per_request_options,
+    error::OtsError,
+    model::{decode_plainbuf_rows, Row},
+    protos::{
+        plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
+        ConsumedCapacity, SqlPayloadVersion, SqlStatementType,
+    },
+    timeseries_model::TimeseriesRow,
+    OtsClient, OtsOp, OtsRequest, OtsResult,
+};
 
 /// 从字节解析数据的 trait
-pub trait TryFromBytes where Self: Sized {
+pub trait TryFromBytes
+where
+    Self: Sized,
+{
     fn try_from_bytes(bytes: Vec<u8>) -> OtsResult<Vec<Self>>;
 }
 
@@ -23,9 +36,7 @@ impl TryFromBytes for TimeseriesRow {
     fn try_from_bytes(bytes: Vec<u8>) -> OtsResult<Vec<Self>> {
         let rows: Vec<Row> = Row::try_from_bytes(bytes)?;
 
-        Ok(
-            rows.into_iter().map(TimeseriesRow::from).collect()
-        )
+        Ok(rows.into_iter().map(TimeseriesRow::from).collect())
     }
 }
 
@@ -113,7 +124,7 @@ impl From<SqlQueryRequest> for crate::protos::SqlQueryRequest {
 #[derive(Debug, Clone)]
 pub struct SqlQueryResponse<T>
 where
-    T: TryFromBytes
+    T: TryFromBytes,
 {
     pub consumes: HashMap<String, ConsumedCapacity>,
     pub rows: Vec<T>,
@@ -123,7 +134,7 @@ where
 
 impl<T> TryFrom<crate::protos::SqlQueryResponse> for SqlQueryResponse<T>
 where
-    T: TryFromBytes
+    T: TryFromBytes,
 {
     type Error = OtsError;
 
@@ -136,33 +147,25 @@ where
             next_search_token,
         } = value;
 
-        Ok(
-            Self {
-                consumes: consumes.into_iter()
-                    .filter(|tcc| tcc.table_name.is_some())
-                    .map(|tcc| {
-                        (
-                            tcc.table_name.unwrap(),
-                            tcc.consumed.unwrap_or_default()
-                        )
-                    })
-                    .collect::<HashMap<_, _>>(),
+        Ok(Self {
+            consumes: consumes
+                .into_iter()
+                .filter(|tcc| tcc.table_name.is_some())
+                .map(|tcc| (tcc.table_name.unwrap(), tcc.consumed.unwrap_or_default()))
+                .collect::<HashMap<_, _>>(),
 
-                rows: if let Some(rows_bytes) = rows {
-                    T::try_from_bytes(rows_bytes)?
-                } else {
-                    vec![]
-                },
+            rows: if let Some(rows_bytes) = rows {
+                T::try_from_bytes(rows_bytes)?
+            } else {
+                vec![]
+            },
 
-                sql_statement_type: match r#type {
-                    Some(n) if (1..=6).contains(&n) => {
-                        SqlStatementType::try_from(n).unwrap()
-                    },
-                    _ => return Err(OtsError::ValidationFailed(format!("invalid sql statement type: {:?}", r#type)))
-                },
-                next_search_token
-            }
-        )
+            sql_statement_type: match r#type {
+                Some(n) if (1..=6).contains(&n) => SqlStatementType::try_from(n).unwrap(),
+                _ => return Err(OtsError::ValidationFailed(format!("invalid sql statement type: {:?}", r#type))),
+            },
+            next_search_token,
+        })
     }
 }
 
@@ -185,7 +188,6 @@ impl SqlQueryOperation {
     where
         T: TryFromBytes,
     {
-
         self.request.validate()?;
 
         let Self { client, request } = self;
