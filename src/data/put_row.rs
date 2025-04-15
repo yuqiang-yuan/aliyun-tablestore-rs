@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::model::rules::{validate_column_name, validate_table_name};
+use crate::OtsRequestOptions;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -188,30 +189,32 @@ impl TryFrom<crate::protos::PutRowResponse> for PutRowResponse {
 }
 
 /// 插入数据到指定的行
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct PutRowOperation {
     client: OtsClient,
     request: PutRowRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(PutRowOperation);
 
 impl PutRowOperation {
     pub(crate) fn new(client: OtsClient, request: PutRowRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     /// 执行写入数据操作
     pub async fn send(self) -> OtsResult<PutRowResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::PutRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::PutRow,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
 use prost::Message;
-use reqwest::Method;
 
 use crate::{
     add_per_request_options,
     error::OtsError,
     protos::{CapacityUnit, ReservedThroughput, StreamSpecification, TableOptions, UpdateTableResponse},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 use crate::model::rules::validate_table_name;
@@ -166,10 +165,11 @@ impl From<UpdateTableRequest> for crate::protos::UpdateTableRequest {
 }
 
 /// 修改表配置信息
-#[derive(Default)]
+#[derive(Clone)]
 pub struct UpdateTableOperation {
     client: OtsClient,
     request: UpdateTableRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(UpdateTableOperation);
@@ -177,20 +177,20 @@ add_per_request_options!(UpdateTableOperation);
 impl UpdateTableOperation {
     /// Create a new update table operation
     pub(crate) fn new(client: OtsClient, request: UpdateTableRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<UpdateTableResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::UpdateTableRequest = request.into();
 
         let req = OtsRequest {
-            method: Method::POST,
             operation: OtsOp::UpdateTable,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

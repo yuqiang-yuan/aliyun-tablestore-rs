@@ -4,7 +4,7 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name, MIN_ANALYTICAL_STORE_TTL_SECONDS},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 更新时序分析存储配置信息，目前仅支持修改数据生命周期TTL。
@@ -82,28 +82,30 @@ impl From<UpdateTimeseriesAnalyticalStoreRequest> for crate::protos::timeseries:
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UpdateTimeseriesAnalyticalStoreOperation {
     client: OtsClient,
     request: UpdateTimeseriesAnalyticalStoreRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(UpdateTimeseriesAnalyticalStoreOperation);
 
 impl UpdateTimeseriesAnalyticalStoreOperation {
     pub(crate) fn new(client: OtsClient, request: UpdateTimeseriesAnalyticalStoreRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::UpdateTimeseriesAnalyticalStoreRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::UpdateTimeseriesAnalyticalStore,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

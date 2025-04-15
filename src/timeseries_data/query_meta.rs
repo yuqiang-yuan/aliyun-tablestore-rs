@@ -4,7 +4,7 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     timeseries_model::{rules::validate_timeseries_table_name, MetaQuery, TimeseriesMeta, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 检索时间线元数据
@@ -135,29 +135,31 @@ impl From<crate::protos::timeseries::QueryTimeseriesMetaResponse> for QueryTimes
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct QueryTimeseriesMetaOperation {
     client: OtsClient,
     request: QueryTimeseriesMetaRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(QueryTimeseriesMetaOperation);
 
 impl QueryTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: QueryTimeseriesMetaRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<QueryTimeseriesMetaResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::QueryTimeseriesMetaRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::QueryTimeseriesMeta,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

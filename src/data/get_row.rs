@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::model::rules::validate_table_name;
+use crate::OtsRequestOptions;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -259,30 +260,32 @@ impl TryFrom<crate::protos::GetRowResponse> for GetRowResponse {
 /// 根据指定的主键读取单行数据。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/getrow>
-#[derive(Default, Debug, Clone)]
+#[derive(Clone)]
 pub struct GetRowOperation {
     client: OtsClient,
     request: GetRowRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(GetRowOperation);
 
 impl GetRowOperation {
     pub(crate) fn new(client: OtsClient, request: GetRowRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRowResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::GetRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::GetRow,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

@@ -1,6 +1,6 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
 
 /// 切分全量导出任务
 ///
@@ -69,29 +69,31 @@ impl From<SplitTimeseriesScanTaskRequest> for crate::protos::timeseries::SplitTi
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct SplitTimeseriesScanTaskOperation {
     client: OtsClient,
     request: SplitTimeseriesScanTaskRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(SplitTimeseriesScanTaskOperation);
 
 impl SplitTimeseriesScanTaskOperation {
     pub(crate) fn new(client: OtsClient, request: SplitTimeseriesScanTaskRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::timeseries::SplitTimeseriesScanTaskResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::SplitTimeseriesScanTaskRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::SplitTimeseriesScanTask,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

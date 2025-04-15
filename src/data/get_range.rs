@@ -7,7 +7,7 @@ use crate::{
     error::OtsError,
     model::{Filter, PrimaryKey, PrimaryKeyColumn},
     protos::{Direction, TimeRange},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
@@ -438,30 +438,32 @@ impl TryFrom<crate::protos::GetRangeResponse> for GetRangeResponse {
 }
 
 /// 读取指定主键范围内的数据。
-#[derive(Default, Debug, Clone)]
+#[derive(Clone)]
 pub struct GetRangeOperation {
     client: OtsClient,
     request: GetRangeRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(GetRangeOperation);
 
 impl GetRangeOperation {
     pub(crate) fn new(client: OtsClient, request: GetRangeRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`
     pub async fn send(self) -> OtsResult<GetRangeResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::GetRangeRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::GetRange,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

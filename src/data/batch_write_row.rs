@@ -11,7 +11,7 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         Condition, ConsumedCapacity, OperationType, ReturnContent, ReturnType, RowExistenceExpectation,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 在BatchWriteRow操作中，表示要插入、更新和删除的一行信息。
@@ -390,29 +390,31 @@ impl TryFrom<crate::protos::BatchWriteRowResponse> for BatchWriteRowResponse {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct BatchWriteRowOperation {
     client: OtsClient,
     request: BatchWriteRowRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(BatchWriteRowOperation);
 
 impl BatchWriteRowOperation {
     pub(crate) fn new(client: OtsClient, request: BatchWriteRowRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<BatchWriteRowResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::BatchWriteRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BatchWriteRow,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

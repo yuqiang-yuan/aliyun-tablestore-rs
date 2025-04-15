@@ -1,7 +1,6 @@
 use prost::Message;
-use reqwest::Method;
 
-use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
 
 use crate::model::rules::validate_table_name;
 
@@ -35,10 +34,11 @@ impl From<DeleteTableRequest> for crate::protos::DeleteTableRequest {
 /// 删除本实例下指定的表。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletetable>
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct DeleteTableOperation {
     client: OtsClient,
     request: DeleteTableRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteTableOperation);
@@ -48,6 +48,7 @@ impl DeleteTableOperation {
         Self {
             client,
             request: DeleteTableRequest::new(table_name),
+            options: OtsRequestOptions::default(),
         }
     }
 }
@@ -56,14 +57,14 @@ impl DeleteTableOperation {
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::DeleteTableRequest = request.into();
 
         let req = OtsRequest {
-            method: Method::POST,
             operation: OtsOp::DeleteTable,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

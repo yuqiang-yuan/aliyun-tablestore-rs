@@ -1,10 +1,7 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options,
-    error::OtsError,
-    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    add_per_request_options, error::OtsError, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult
 };
 
 /// 删除一个时序分析存储
@@ -70,29 +67,31 @@ impl From<DeleteTimeseriesAnalyticalStoreRequest> for crate::protos::timeseries:
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct DeleteTimeseriesAnalyticalStoreOperation {
     client: OtsClient,
     request: DeleteTimeseriesAnalyticalStoreRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteTimeseriesAnalyticalStoreOperation);
 
 impl DeleteTimeseriesAnalyticalStoreOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteTimeseriesAnalyticalStoreRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::DeleteTimeseriesAnalyticalStoreRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::DeleteTimeseriesAnalyticalStore,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

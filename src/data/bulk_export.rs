@@ -13,7 +13,7 @@ use crate::{
         simple_row_matrix::SimpleRowMatrix,
         ConsumedCapacity, DataBlockType,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 接口批量导出数据。数据编码采用 Simple Row Matrix 格式
@@ -315,29 +315,31 @@ impl TryFrom<crate::protos::BulkExportResponse> for BulkExportResponse {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct BulkExportOperation {
     client: OtsClient,
     request: BulkExportRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(BulkExportOperation);
 
 impl BulkExportOperation {
     pub(crate) fn new(client: OtsClient, request: BulkExportRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<BulkExportResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::BulkExportRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BulkExport,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

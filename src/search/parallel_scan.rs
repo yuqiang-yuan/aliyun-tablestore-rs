@@ -4,6 +4,7 @@ use prost::Message;
 
 use super::Query;
 use crate::model::rules::{validate_index_name, validate_table_name};
+use crate::OtsRequestOptions;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -280,28 +281,30 @@ impl TryFrom<crate::protos::search::ParallelScanResponse> for ParallelScanRespon
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ParallelScanOperation {
     client: OtsClient,
     request: ParallelScanRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(ParallelScanOperation);
 
 impl ParallelScanOperation {
     pub(crate) fn new(client: OtsClient, request: ParallelScanRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<ParallelScanResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::search::ParallelScanRequest::from(request);
         let req = OtsRequest {
             operation: OtsOp::ParallelScan,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

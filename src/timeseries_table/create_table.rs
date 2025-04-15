@@ -10,7 +10,7 @@ use crate::{
         validate_timeseries_table_name, DEFAULT_ANALYTICAL_NAME, MAX_FIELD_PRIMARY_KEY_COUNT, MAX_TIMESERIES_KEY_COUNT, MIN_ANALYTICAL_STORE_TTL_SECONDS,
         MIN_DATA_TTL_SECONDS, MIN_META_TTL_SECONDS,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 创建时序表
@@ -260,29 +260,31 @@ impl From<CreateTimeseriesTableRequest> for crate::protos::timeseries::CreateTim
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct CreateTimeseriesTableOperation {
     client: OtsClient,
     request: CreateTimeseriesTableRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(CreateTimeseriesTableOperation);
 
 impl CreateTimeseriesTableOperation {
     pub(crate) fn new(client: OtsClient, request: CreateTimeseriesTableRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::CreateTimeseriesTableRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::CreateTimeseriesTable,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

@@ -1,7 +1,7 @@
 use prost::Message;
 
 use crate::model::rules::{validate_index_name, validate_table_name};
-use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
 
 /// 调用 ComputeSplits 接口获取当前 ParallelScan 单个请求的最大并发数，用于使用多元索引并发导出数据时的并发度规划。
 #[derive(Debug, Clone, Default)]
@@ -71,10 +71,11 @@ impl TryFrom<crate::protos::ComputeSplitsResponse> for ComputeSplitsResponse {
     }
 }
 /// 计算最大并发数
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct ComputeSplitsOperation {
     client: OtsClient,
     request: ComputeSplitsRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(ComputeSplitsOperation);
@@ -84,19 +85,21 @@ impl ComputeSplitsOperation {
         Self {
             client,
             request: ComputeSplitsRequest::new(table_name, index_name),
+            options: OtsRequestOptions::default(),
         }
     }
 
     pub async fn send(self) -> OtsResult<ComputeSplitsResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::ComputeSplitsRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::ComputeSplits,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

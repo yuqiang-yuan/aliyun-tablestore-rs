@@ -1,11 +1,10 @@
 use prost::Message;
-use reqwest::Method;
 
 use crate::{
     add_per_request_options,
     error::OtsError,
     protos::{DescribeTableRequest, DescribeTableResponse},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 use crate::model::rules::validate_table_name;
@@ -13,10 +12,11 @@ use crate::model::rules::validate_table_name;
 /// 查询指定表的结构信息以及预留读吞吐量和预留写吞吐量设置信息。
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/describetable>
-#[derive(Default, Debug, Clone)]
+#[derive(Clone)]
 pub struct DescribeTableOperation {
     client: OtsClient,
     table_name: String,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DescribeTableOperation);
@@ -26,6 +26,7 @@ impl DescribeTableOperation {
         Self {
             client,
             table_name: table_name.to_string(),
+            options: OtsRequestOptions::default(),
         }
     }
 
@@ -40,14 +41,14 @@ impl DescribeTableOperation {
     pub async fn send(self) -> OtsResult<DescribeTableResponse> {
         self.validate()?;
 
-        let Self { client, table_name } = self;
+        let Self { client, table_name, options } = self;
 
         let body = DescribeTableRequest { table_name }.encode_to_vec();
 
         let req = OtsRequest {
-            method: Method::POST,
             operation: OtsOp::DescribeTable,
             body,
+            options,
             ..Default::default()
         };
 

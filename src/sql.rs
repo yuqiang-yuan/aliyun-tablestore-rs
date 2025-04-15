@@ -12,7 +12,7 @@ use crate::{
         ConsumedCapacity, SqlPayloadVersion, SqlStatementType,
     },
     timeseries_model::TimeseriesRow,
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 从字节解析数据的 trait
@@ -170,17 +170,18 @@ where
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct SqlQueryOperation {
     client: OtsClient,
     request: SqlQueryRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(SqlQueryOperation);
 
 impl SqlQueryOperation {
     pub(crate) fn new(client: OtsClient, request: SqlQueryRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     /// 注意：这里使用 SQL 查询之后的数据就没有再区分主键和普通列了，
@@ -191,13 +192,14 @@ impl SqlQueryOperation {
     {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::SqlQueryRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::SQLQuery,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

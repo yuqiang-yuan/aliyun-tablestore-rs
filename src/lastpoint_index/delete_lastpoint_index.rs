@@ -4,17 +4,18 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     timeseries_model::rules::{validate_lastpoint_index_name, validate_timeseries_table_name},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 删除 lastpoint 索引
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletetimeserieslastpointindex>
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct DeleteTimeseriesLastpointIndexOperation {
     client: OtsClient,
     table_name: String,
     index_name: String,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteTimeseriesLastpointIndexOperation);
@@ -25,6 +26,7 @@ impl DeleteTimeseriesLastpointIndexOperation {
             client,
             table_name: table_name.to_string(),
             index_name: index_name.to_string(),
+            options: OtsRequestOptions::default(),
         }
     }
 
@@ -44,6 +46,7 @@ impl DeleteTimeseriesLastpointIndexOperation {
             client,
             table_name,
             index_name,
+            options,
         } = self;
 
         let msg = crate::protos::timeseries::DeleteTimeseriesLastpointIndexRequest {
@@ -54,6 +57,7 @@ impl DeleteTimeseriesLastpointIndexOperation {
         let req = OtsRequest {
             operation: OtsOp::DeleteTimeseriesLastpointIndex,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

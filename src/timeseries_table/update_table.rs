@@ -3,7 +3,7 @@ use prost::Message;
 use crate::{
     error::OtsError,
     timeseries_model::rules::{validate_timeseries_table_name, MIN_DATA_TTL_SECONDS, MIN_META_TTL_SECONDS},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 更新时序表的配置信息或时序时间线表的配置信息
@@ -118,27 +118,29 @@ impl From<UpdateTimeseriesTableRequest> for crate::protos::timeseries::UpdateTim
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct UpdateTimeseriesTableOperation {
     client: OtsClient,
     request: UpdateTimeseriesTableRequest,
+    options: OtsRequestOptions,
 }
 
 impl UpdateTimeseriesTableOperation {
     pub(crate) fn new(client: OtsClient, request: UpdateTimeseriesTableRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::UpdateTimeseriesTableRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::UpdateTimeseriesTable,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

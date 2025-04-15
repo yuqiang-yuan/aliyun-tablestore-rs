@@ -276,6 +276,11 @@ impl OtsOp {
     }
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct OtsRequestOptions {
+    pub timeout_ms: Option<u64>,
+}
+
 /// OTS API 请求结构体
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -285,6 +290,7 @@ pub struct OtsRequest {
     headers: HashMap<String, String>,
     query: HashMap<String, String>,
     body: Vec<u8>,
+    options: OtsRequestOptions,
 }
 
 impl Default for OtsRequest {
@@ -295,6 +301,7 @@ impl Default for OtsRequest {
             headers: HashMap::new(),
             query: HashMap::new(),
             body: Vec::new(),
+            options: OtsRequestOptions::default(),
         }
     }
 }
@@ -390,34 +397,116 @@ impl RetryPolicy for DefaultRetryPolicy {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct OtsClientOptions {
-    pub timeout_ms: Option<u64>,
-    pub retry_policy: Box<dyn RetryPolicy>,
+/// 客户端构建器
+///
+/// # Examples
+///
+/// ```
+/// let builder = OtsClient.builder("aid", "asec").endpoint("").instance_name("");
+/// let client = builder.build();
+/// ```
+#[derive(Clone)]
+pub struct OtsClientBuilder {
+    access_key_id: String,
+    access_key_secret: String,
+    sts_token: Option<String>,
+    retry_policy: Box<dyn RetryPolicy>,
+    region: String,
+    instance_name: String,
+    endpoint: String,
+    http_client: Option<reqwest::Client>,
 }
 
-impl OtsClientOptions {
-    pub fn new() -> Self {
+impl OtsClientBuilder {
+    pub fn new(ak_id: impl AsRef<str>, ak_sec: impl AsRef<str>) -> Self {
         Self {
+            access_key_id: ak_id.as_ref().to_string(),
+            access_key_secret: ak_sec.as_ref().to_string(),
             retry_policy: Box::new(DefaultRetryPolicy::default()),
-            timeout_ms: None,
+            sts_token: None,
+            region: String::new(),
+            instance_name: String::new(),
+            endpoint: String::new(),
+            http_client: None,
         }
     }
 
+    /// 设置 STS Token
+    pub fn sts_token(mut self, token: impl AsRef<str>) -> Self {
+        self.sts_token = Some(token.as_ref().to_string());
+
+        self
+    }
+
+    /// 设置重试策略
+    pub fn rety_policy(mut self, policy: Box<dyn RetryPolicy>) -> Self {
+        self.retry_policy = policy;
+
+        self
+    }
+
+    /// 设置地域
+    pub fn region(mut self, region: impl AsRef<str>) -> Self {
+        self.region = region.as_ref().to_string();
+
+        self
+    }
+
+    /// 设置实例名称
+    pub fn instance_name(mut self, instance_name: impl AsRef<str>) -> Self {
+        self.instance_name = instance_name.as_ref().to_string();
+
+        self
+    }
+
+    /// 设置 endpoint。例如：`https://instance-name.cn-beijing.ots.aliyuncs.com`
+    pub fn endpoint(mut self, endpoint: impl AsRef<str>) -> Self {
+        self.endpoint = endpoint.as_ref().to_string();
+
+        self
+    }
+
+    /// 设置自定义的 Client
+    pub fn http_client(mut self, client: reqwest::Client) -> Self {
+        self.http_client = Some(client);
+
+        self
+    }
+
+    /// 获取充实策略的可写引用
     pub fn retry_policy_mut(&mut self) -> &mut Box<dyn RetryPolicy> {
         &mut self.retry_policy
     }
-}
 
-impl Default for OtsClientOptions {
-    fn default() -> Self {
-        Self::new()
+    pub fn build(self) -> OtsClient {
+        let Self {
+            access_key_id,
+            access_key_secret,
+            sts_token,
+            retry_policy,
+            region,
+            instance_name,
+            endpoint,
+            http_client,
+        } = self;
+
+        OtsClient {
+            access_key_id,
+            access_key_secret,
+            sts_token,
+            region,
+            instance_name,
+            endpoint,
+            http_client: http_client.unwrap_or(reqwest::Client::new()),
+            retry_policy,
+        }
     }
 }
 
+
 /// 客户端
 #[allow(dead_code)]
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct OtsClient {
     access_key_id: String,
     access_key_secret: String,
@@ -426,7 +515,7 @@ pub struct OtsClient {
     instance_name: String,
     endpoint: String,
     http_client: reqwest::Client,
-    options: OtsClientOptions,
+    retry_policy: Box<dyn RetryPolicy>,
 }
 
 impl std::fmt::Debug for OtsClient {
@@ -437,7 +526,6 @@ impl std::fmt::Debug for OtsClient {
             .field("instance_name", &self.instance_name)
             .field("endpoint", &self.endpoint)
             .field("http_client", &self.http_client)
-            .field("options", &self.options)
             .finish()
     }
 }
@@ -474,8 +562,31 @@ impl OtsClient {
             instance_name: instance_name.to_string(),
             endpoint,
             http_client: reqwest::Client::new(),
-            options: OtsClientOptions::default(),
+            retry_policy: Box::new(DefaultRetryPolicy::default()),
         }
+    }
+
+    /// 使用 AK_ID、AK_SEC 和网络访问地址构建实例
+    pub fn new(ak_id: impl AsRef<str>, ak_sec: impl AsRef<str>, endpoint: impl AsRef<str>) -> Self {
+        let endpoint = endpoint.as_ref().to_lowercase();
+
+        let (instance_name, region) = Self::parse_instance_and_region(endpoint.as_str());
+
+        Self {
+            access_key_id: ak_id.as_ref().to_string(),
+            access_key_secret: ak_sec.as_ref().to_string(),
+            region: region.to_string(),
+            instance_name: instance_name.to_string(),
+            endpoint,
+            http_client: reqwest::Client::new(),
+            sts_token: None,
+            retry_policy: Box::new(DefaultRetryPolicy::default()),
+        }
+    }
+
+    /// 客户端构建器
+    pub fn builder(ak_id: impl AsRef<str>, ak_sec: impl AsRef<str>) -> OtsClientBuilder {
+        OtsClientBuilder::new(ak_id, ak_sec)
     }
 
     /// V2 版本签名，直接填充请求头 Map
@@ -560,6 +671,7 @@ impl OtsClient {
             mut headers,
             query: _,
             body,
+            options,
         } = req;
 
         // 不会发生变化的请求头
@@ -587,7 +699,7 @@ impl OtsClient {
                 .body(request_body.clone());
 
             // Handle per-request options
-            if let Some(ms) = self.options.timeout_ms {
+            if let Some(ms) = options.timeout_ms {
                 request_builder = request_builder.timeout(Duration::from_millis(ms));
             }
 
@@ -613,14 +725,14 @@ impl OtsClient {
                 };
 
                 log::error!("api call failed, check retry against retry policy for operation {} and error {}", operation, e);
-                let should_retry = self.options.retry_policy.should_retry(retried, operation, &e);
+                let should_retry = self.retry_policy.should_retry(retried, operation, &e);
                 log::info!("should retry: {} for operation {} with error {}", should_retry, operation, e);
 
                 if !should_retry {
                     return Err(e);
                 }
 
-                let next_delay = self.options.retry_policy.delay_ms();
+                let next_delay = self.retry_policy.delay_ms();
                 log::info!("delay for {} ms to retry", next_delay);
                 tokio::time::sleep(tokio::time::Duration::from_millis(next_delay as u64)).await;
 

@@ -4,17 +4,18 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 查询时序分析存储描述信息，例如分析存储配置信息、分析存储同步状态、分析存储大小等
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/describe-timeseries-analytical-store>
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct DescribeTimeseriesAnalyticalStoreOperation {
     client: OtsClient,
     table_name: String,
     store_name: String,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DescribeTimeseriesAnalyticalStoreOperation);
@@ -25,6 +26,7 @@ impl DescribeTimeseriesAnalyticalStoreOperation {
             client,
             table_name: table_name.to_string(),
             store_name: store_name.to_string(),
+            options: OtsRequestOptions::default()
         }
     }
 
@@ -44,6 +46,7 @@ impl DescribeTimeseriesAnalyticalStoreOperation {
             client,
             table_name,
             store_name,
+            options
         } = self;
 
         let msg = crate::protos::timeseries::DescribeTimeseriesAnalyticalStoreRequest { table_name, store_name };
@@ -51,6 +54,7 @@ impl DescribeTimeseriesAnalyticalStoreOperation {
         let req = OtsRequest {
             operation: OtsOp::DescribeTimeseriesAnalyticalStore,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

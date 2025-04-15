@@ -11,7 +11,7 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         Condition, ConsumedCapacity, ReturnContent, ReturnType, RowExistenceExpectation,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 删除一行数据。
@@ -229,29 +229,31 @@ impl TryFrom<crate::protos::DeleteRowResponse> for DeleteRowResponse {
 }
 
 /// 删除行数据操作
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct DeleteRowOperation {
     client: OtsClient,
     request: DeleteRowRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteRowOperation);
 
 impl DeleteRowOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteRowRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<DeleteRowResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::DeleteRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::DeleteRow,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

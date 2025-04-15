@@ -5,7 +5,7 @@ use crate::{
     error::OtsError,
     protos::timeseries::DeleteTimeseriesMetaResponse,
     timeseries_model::{rules::validate_timeseries_table_name, TimeseriesKey, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 删除时间线元数据
@@ -71,29 +71,31 @@ impl From<DeleteTimeseriesMetaRequest> for crate::protos::timeseries::DeleteTime
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct DeleteTimeseriesMetaOperation {
     client: OtsClient,
     request: DeleteTimeseriesMetaRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteTimeseriesMetaOperation);
 
 impl DeleteTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteTimeseriesMetaRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<DeleteTimeseriesMetaResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::DeleteTimeseriesMetaRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::DeleteTimeseriesMeta,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

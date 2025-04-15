@@ -6,7 +6,7 @@ use crate::{
     model::decode_plainbuf_rows,
     protos::plain_buffer::MASK_HEADER,
     timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesKey, TimeseriesRow, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 查询某个时间线的数据
@@ -184,26 +184,28 @@ impl TryFrom<crate::protos::timeseries::GetTimeseriesDataResponse> for GetTimese
 }
 
 /// 查询某个时间线的数据
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct GetTimeseriesDataOperation {
     client: OtsClient,
     request: GetTimeseriesDataRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(GetTimeseriesDataOperation);
 
 impl GetTimeseriesDataOperation {
     pub(crate) fn new(client: OtsClient, request: GetTimeseriesDataRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<GetTimeseriesDataResponse> {
         self.request.validate()?;
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
         let msg = crate::protos::timeseries::GetTimeseriesDataRequest::from(request);
         let req = OtsRequest {
             operation: OtsOp::GetTimeseriesData,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

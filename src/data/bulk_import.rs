@@ -9,7 +9,7 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         OperationType,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -142,29 +142,31 @@ impl From<BulkImportRequest> for crate::protos::BulkImportRequest {
 }
 
 /// 批量写入操作
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct BulkImportOperation {
     client: OtsClient,
     request: BulkImportRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(BulkImportOperation);
 
 impl BulkImportOperation {
     pub(crate) fn new(client: OtsClient, request: BulkImportRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::BulkImportResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::BulkImportRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BulkImport,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

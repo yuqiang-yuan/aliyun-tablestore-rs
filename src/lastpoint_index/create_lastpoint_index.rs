@@ -4,7 +4,7 @@ use crate::{
     add_per_request_options,
     error::OtsError,
     timeseries_model::rules::{validate_lastpoint_index_name, validate_timeseries_table_name},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 创建Lastpoint索引
@@ -101,29 +101,31 @@ impl From<CreateTimeseriesLastpointIndexRequest> for crate::protos::timeseries::
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct CreateTimeseriesLastpointIndexOperation {
     client: OtsClient,
     request: CreateTimeseriesLastpointIndexRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(CreateTimeseriesLastpointIndexOperation);
 
 impl CreateTimeseriesLastpointIndexOperation {
     pub(crate) fn new(client: OtsClient, request: CreateTimeseriesLastpointIndexRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::CreateTimeseriesLastpointIndexRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::CreateTimeseriesLastpointIndex,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

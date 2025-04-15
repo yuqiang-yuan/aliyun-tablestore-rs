@@ -9,7 +9,7 @@ use crate::{
         timeseries::RowsSerializeType,
     },
     timeseries_model::{rules::validate_timeseries_table_name, TimeseriesFieldToGet, TimeseriesRow, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 const MAX_ROWS: u32 = 5000;
@@ -192,29 +192,31 @@ impl TryFrom<crate::protos::timeseries::ScanTimeseriesDataResponse> for ScanTime
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct ScanTimeseriesDataOperation {
     client: OtsClient,
     request: ScanTimeseriesDataRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(ScanTimeseriesDataOperation);
 
 impl ScanTimeseriesDataOperation {
     pub(crate) fn new(client: OtsClient, request: ScanTimeseriesDataRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<ScanTimeseriesDataResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::ScanTimeseriesDataRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::ScanTimeseriesData,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

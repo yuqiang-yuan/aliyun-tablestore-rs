@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::model::rules::{validate_table_name, MAX_COLUMNS_TO_GET};
+use crate::OtsRequestOptions;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -357,29 +358,31 @@ impl TryFrom<crate::protos::BatchGetRowResponse> for BatchGetRowResponse {
 }
 
 /// 批量读取表数据的操作
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct BatchGetRowOperation {
     client: OtsClient,
     request: BatchGetRowRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(BatchGetRowOperation);
 
 impl BatchGetRowOperation {
     pub(crate) fn new(client: OtsClient, request: BatchGetRowRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<BatchGetRowResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::BatchGetRowRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::BatchGetRow,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

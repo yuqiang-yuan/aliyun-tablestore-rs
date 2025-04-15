@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use prost::Message;
 
 use crate::model::rules::validate_table_name;
-use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
 
 #[derive(Debug, Default, Clone)]
 pub struct DeleteDefinedColumnRequest {
@@ -60,29 +60,31 @@ impl From<DeleteDefinedColumnRequest> for crate::protos::DeleteDefinedColumnRequ
 /// 删除预定义列
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/deletedefinedcolumn>
-#[derive(Default, Debug, Clone)]
+#[derive(Clone)]
 pub struct DeleteDefinedColumnOperation {
     client: OtsClient,
     request: DeleteDefinedColumnRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(DeleteDefinedColumnOperation);
 
 impl DeleteDefinedColumnOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteDefinedColumnRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::DeleteDefinedColumnRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::DeleteDefinedColumn,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

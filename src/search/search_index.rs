@@ -15,7 +15,7 @@ use crate::{
         search::{ColumnReturnType, SearchHit},
         ConsumedCapacity,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 通过多元索引查询数据。
@@ -249,29 +249,31 @@ impl TryFrom<crate::protos::search::SearchResponse> for SearchResponse {
 }
 
 /// 多元索引搜索
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SearchOperation {
     client: OtsClient,
     request: SearchRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(SearchOperation);
 
 impl SearchOperation {
     pub(crate) fn new(client: OtsClient, request: SearchRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<SearchResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::search::SearchRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::Search,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

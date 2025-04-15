@@ -5,7 +5,7 @@ use crate::{
     error::OtsError,
     protos::timeseries::UpdateTimeseriesMetaResponse,
     timeseries_model::{rules::validate_timeseries_table_name, TimeseriesMeta, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 更新时间线元数据。如果更新的时间线元数据不存在，则直接执行新增操作。
@@ -77,29 +77,31 @@ impl From<UpdateTimeseriesMetaRequest> for crate::protos::timeseries::UpdateTime
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct UpdateTimeseriesMetaOperation {
     client: OtsClient,
     request: UpdateTimeseriesMetaRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(UpdateTimeseriesMetaOperation);
 
 impl UpdateTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: UpdateTimeseriesMetaRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<UpdateTimeseriesMetaResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::UpdateTimeseriesMetaRequest::from(request);
 
         let req = OtsRequest {
             operation: OtsOp::UpdateTimeseriesMeta,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

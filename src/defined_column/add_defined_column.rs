@@ -2,6 +2,7 @@ use prost::Message;
 use reqwest::Method;
 
 use crate::model::rules::{validate_column_name, validate_table_name};
+use crate::OtsRequestOptions;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -104,24 +105,25 @@ impl From<AddDefinedColumnRequest> for crate::protos::AddDefinedColumnRequest {
 /// 添加预定义列
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/adddefinedcolumn>
-#[derive(Default, Debug, Clone)]
+#[derive(Clone)]
 pub struct AddDefinedColumnOperation {
     client: OtsClient,
     request: AddDefinedColumnRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(AddDefinedColumnOperation);
 
 impl AddDefinedColumnOperation {
     pub(crate) fn new(client: OtsClient, request: AddDefinedColumnRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     /// 执行添加预定义列操作
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::AddDefinedColumnRequest = request.into();
 
@@ -129,6 +131,7 @@ impl AddDefinedColumnOperation {
             method: Method::POST,
             operation: OtsOp::AddDefinedColumn,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

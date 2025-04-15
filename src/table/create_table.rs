@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use prost::Message;
-use reqwest::Method;
 
 use crate::{
     add_per_request_options,
@@ -10,7 +9,7 @@ use crate::{
         CapacityUnit, DefinedColumnSchema, DefinedColumnType, IndexMeta, PrimaryKeySchema, PrimaryKeyType, ReservedThroughput, SseKeyType, SseSpecification,
         StreamSpecification, TableMeta, TableOptions,
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 use crate::model::rules::{validate_column_name, validate_index_name, validate_table_name, MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT};
@@ -440,30 +439,31 @@ impl From<CreateTableRequest> for crate::protos::CreateTableRequest {
 }
 
 /// 创建库表请求
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct CreateTableOperation {
     client: OtsClient,
     request: CreateTableRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(CreateTableOperation);
 
 impl CreateTableOperation {
     pub(crate) fn new(client: OtsClient, request: CreateTableRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<()> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::CreateTableRequest = request.into();
 
         let req = OtsRequest {
-            method: Method::POST,
             operation: OtsOp::CreateTable,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

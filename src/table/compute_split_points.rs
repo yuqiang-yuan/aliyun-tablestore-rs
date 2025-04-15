@@ -8,7 +8,7 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         {compute_split_points_by_size_response::SplitLocation, ConsumedCapacity, PrimaryKeySchema},
     },
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 use crate::model::rules::validate_table_name;
@@ -155,29 +155,31 @@ impl TryFrom<crate::protos::ComputeSplitPointsBySizeResponse> for ComputeSplitPo
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone)]
 pub struct ComputeSplitPointsBySizeOperation {
     client: OtsClient,
     request: ComputeSplitPointsBySizeRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(ComputeSplitPointsBySizeOperation);
 
 impl ComputeSplitPointsBySizeOperation {
     pub(crate) fn new(client: OtsClient, request: ComputeSplitPointsBySizeRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<ComputeSplitPointsBySizeResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg: crate::protos::ComputeSplitPointsBySizeRequest = request.into();
 
         let req = OtsRequest {
             operation: OtsOp::ComputeSplitPointsBySize,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 

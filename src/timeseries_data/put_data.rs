@@ -5,7 +5,7 @@ use crate::{
     error::OtsError,
     protos::timeseries::MetaUpdateMode,
     timeseries_model::{self, encode_flatbuf_rows, rules::validate_timeseries_table_name, TimeseriesRow, SUPPORTED_TABLE_VERSION},
-    OtsClient, OtsOp, OtsRequest, OtsResult,
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 写入时序数据。目前暂时只支持 flat buffer 编码。
@@ -108,23 +108,24 @@ impl From<PutTimeseriesDataRequest> for crate::protos::timeseries::PutTimeseries
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct PutTimeseriesDataOperation {
     client: OtsClient,
     request: PutTimeseriesDataRequest,
+    options: OtsRequestOptions,
 }
 
 add_per_request_options!(PutTimeseriesDataOperation);
 
 impl PutTimeseriesDataOperation {
     pub(crate) fn new(client: OtsClient, request: PutTimeseriesDataRequest) -> Self {
-        Self { client, request }
+        Self { client, request, options: OtsRequestOptions::default() }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::timeseries::PutTimeseriesDataResponse> {
         self.request.validate()?;
 
-        let Self { client, request } = self;
+        let Self { client, request, options } = self;
 
         let msg = crate::protos::timeseries::PutTimeseriesDataRequest::from(request);
 
@@ -139,6 +140,7 @@ impl PutTimeseriesDataOperation {
         let req = OtsRequest {
             operation: OtsOp::PutTimeseriesData,
             body: msg.encode_to_vec(),
+            options,
             ..Default::default()
         };
 
