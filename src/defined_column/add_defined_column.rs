@@ -23,13 +23,6 @@ impl AddDefinedColumnRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加预定义列
     fn add_column(mut self, name: impl Into<String>, col_type: DefinedColumnType) -> Self {
         let col = DefinedColumnSchema {

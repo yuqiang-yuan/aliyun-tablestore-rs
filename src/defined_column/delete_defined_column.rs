@@ -19,13 +19,6 @@ impl DeleteDefinedColumnRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加一个要删除的列的名字
     pub fn column(mut self, col_name: &str) -> Self {
         self.columns.insert(col_name.into());

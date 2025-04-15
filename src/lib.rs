@@ -4,13 +4,10 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::Bytes;
 use defined_column::{AddDefinedColumnOperation, AddDefinedColumnRequest, DeleteDefinedColumnOperation, DeleteDefinedColumnRequest};
 use error::OtsError;
-use index::{CreateIndexOperation, DropIndexOperation};
+use index::{CreateIndexOperation, CreateIndexRequest, DropIndexOperation};
 use lastpoint_index::{CreateTimeseriesLastpointIndexOperation, CreateTimeseriesLastpointIndexRequest, DeleteTimeseriesLastpointIndexOperation};
 use prost::Message;
-use protos::{
-    search::{CreateSearchIndexRequest, UpdateSearchIndexRequest},
-    CreateIndexRequest,
-};
+use protos::search::{CreateSearchIndexRequest, UpdateSearchIndexRequest};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Response,

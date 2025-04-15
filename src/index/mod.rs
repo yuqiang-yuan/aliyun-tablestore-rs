@@ -91,9 +91,7 @@ impl IndexMeta {
 #[cfg(test)]
 mod test_index {
     use crate::{
-        protos::{CreateIndexRequest, IndexMeta},
-        test_util::setup,
-        OtsClient,
+        index::CreateIndexRequest, test_util::setup, OtsClient
     };
 
     async fn test_create_index_impl() {
@@ -101,11 +99,11 @@ mod test_index {
         let client = OtsClient::from_env();
 
         let resp = client
-            .create_index(CreateIndexRequest {
-                main_table_name: "ccs2".to_string(),
-                index_meta: IndexMeta::builder("idx_cn").defined_column("course_name").primary_key("cc_id").build(),
-                include_base_data: Some(true),
-            })
+            .create_index(
+                CreateIndexRequest::new("ccs2")
+                    .index_name("idx_cn")
+                    .primary_key_name("cc_id")
+            )
             .send()
             .await;
 
