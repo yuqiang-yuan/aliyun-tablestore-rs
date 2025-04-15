@@ -45,7 +45,7 @@ use timeseries_table::{
     ListTimeseriesTableOperation, UpdateTimeseriesTableOperation, UpdateTimeseriesTableRequest,
 };
 use url::Url;
-use util::get_iso8601_date_time_string;
+use util::{get_iso8601_date_time_string, hmac_sha256};
 
 pub mod analytical_store;
 pub mod crc8;
@@ -75,7 +75,10 @@ const HEADER_CONTENT_MD5: &str = "x-ots-contentmd5";
 const HEADER_SIGNATURE: &str = "x-ots-signature";
 const HEADER_DATE: &str = "x-ots-date";
 const HEADER_STS_TOKEN: &str = "x-ots-ststoken";
+const HEADER_SIGN_REGION: &str = "x-ots-signregion";
+const HEADER_SIGN_DATE: &str = "x-ots-signdate";
 const HEADER_INSTANCE_NAME: &str = "x-ots-instancename";
+const HEADER_SIGNATURE_V4: &str = "x-ots-signaturev4";
 
 const API_VERSION: &str = "2015-12-31";
 
@@ -478,32 +481,24 @@ impl OtsClient {
         }
     }
 
-    fn prepare_headers(&self, req: &mut OtsRequest) {
-        let headers = &mut req.headers;
-        headers.insert("User-Agent".to_string(), USER_AGENT.to_string());
+    /// V2 版本签名，直接填充请求头 Map
+    fn fill_signature_v2(&self, operation: &str, headers: &mut HashMap<String, String>) {
+        let date_time_string = get_iso8601_date_time_string();
+        let date = &date_time_string[..10].replace("-", "");
+
+        headers.insert("user-agent".to_string(), USER_AGENT.to_string());
         headers.insert(HEADER_API_VERSION.to_string(), API_VERSION.to_string());
-        headers.insert(HEADER_DATE.to_string(), get_iso8601_date_time_string());
+        headers.insert(HEADER_DATE.to_string(), date_time_string.clone());
+        headers.insert(HEADER_SIGN_DATE.to_string(), date.to_string());
         headers.insert(HEADER_ACCESS_KEY_ID.to_string(), self.access_key_id.clone());
         headers.insert(HEADER_INSTANCE_NAME.to_string(), self.instance_name.clone());
+        headers.insert(HEADER_SIGN_REGION.to_string(), self.region.clone());
 
         if let Some(s) = &self.sts_token {
             headers.insert(HEADER_STS_TOKEN.to_string(), s.to_string());
         }
 
-        let body_bytes = &req.body;
-
-        log::debug!("body bytes: {:?}", body_bytes);
-
-        headers.insert("Content-Length".to_string(), format!("{}", body_bytes.len()));
-        let content_md5_base64 = BASE64_STANDARD.encode(md5::compute(body_bytes).as_slice());
-        headers.insert(HEADER_CONTENT_MD5.to_string(), content_md5_base64);
-    }
-
-    fn header_sign(&self, req: &mut OtsRequest) {
-        self.prepare_headers(req);
-
-        let mut canonical_headers = req
-            .headers
+        let mut canonical_headers = headers
             .iter()
             .map(|(k, v)| (k.to_lowercase(), v))
             .filter(|(k, _)| k.starts_with("x-ots-") && k != HEADER_SIGNATURE)
@@ -513,41 +508,81 @@ impl OtsClient {
 
         let canonical_headers = canonical_headers.join("\n");
 
-        let string_to_sign = format!("/{}\n{}\n\n{}\n", req.operation, req.method, canonical_headers);
+        let string_to_sign = format!("/{}\nPOST\n\n{}\n", operation, canonical_headers);
 
-        log::debug!("string to sign: ({})", string_to_sign);
+        log::debug!("string to sign: \n-----\n{}\n-----", string_to_sign);
         let sig = util::hmac_sha1(self.access_key_secret.as_bytes(), string_to_sign.as_bytes());
         let sig_string = BASE64_STANDARD.encode(&sig);
 
         log::debug!("signature = {}", sig_string);
 
-        req.headers.insert(HEADER_SIGNATURE.to_string(), sig_string);
+        headers.insert(HEADER_SIGNATURE.to_string(), sig_string);
+    }
+
+    /// V4 版本签名，没调通。阿里云的人建议线用 V2 吧
+    #[allow(dead_code)]
+    fn fill_signature_v4(&self, operation: &str, headers: &mut HashMap<String, String>) {
+        let date_time_string = get_iso8601_date_time_string();
+        let date_string = &date_time_string[..10].replace("-", "");
+
+        headers.insert("user-agent".to_string(), USER_AGENT.to_string());
+        headers.insert(HEADER_API_VERSION.to_string(), API_VERSION.to_string());
+        headers.insert(HEADER_DATE.to_string(), date_time_string.clone());
+        headers.insert(HEADER_SIGN_DATE.to_string(), date_string.to_string());
+        headers.insert(HEADER_ACCESS_KEY_ID.to_string(), self.access_key_id.clone());
+        headers.insert(HEADER_INSTANCE_NAME.to_string(), self.instance_name.clone());
+        headers.insert(HEADER_SIGN_REGION.to_string(), self.region.clone());
+
+        if let Some(s) = &self.sts_token {
+            headers.insert(HEADER_STS_TOKEN.to_string(), s.to_string());
+        }
+
+        let mut canonical_headers = headers
+            .iter()
+            .map(|(k, v)| (k.to_lowercase(), v))
+            .filter(|(k, _)| k.starts_with("x-ots-") && k != HEADER_SIGNATURE_V4)
+            .map(|(k, v)| format!("{}:{}", k, v))
+            .collect::<Vec<_>>();
+        canonical_headers.sort();
+
+        let canonical_headers = canonical_headers.join("\n");
+
+        let string_to_sign = format!("/{}\nPOST\n\n{}\nots", operation, canonical_headers);
+
+        log::debug!("string to sign: \n-----\n{}\n----", string_to_sign);
+
+        let sign = hmac_sha256(self.access_key_secret.as_bytes(), string_to_sign.as_bytes());
+
+        headers.insert(HEADER_SIGNATURE_V4.to_string(), BASE64_STANDARD.encode(sign));
     }
 
     pub async fn send(&self, req: OtsRequest) -> OtsResult<Response> {
-        let mut req = req;
-        self.header_sign(&mut req);
-
         let OtsRequest {
             method,
             operation,
-            headers,
+            mut headers,
             query: _,
             body,
         } = req;
 
-        let mut header_map = HeaderMap::new();
-        headers.into_iter().for_each(|(k, v)| {
-            log::debug!(">> header: {}: {}", k, v);
-            header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(&v).unwrap());
-        });
+        // 不会发生变化的请求头
+        headers.insert("content-lenght".to_string(), format!("{}", body.len()));
+        let content_md5_base64 = BASE64_STANDARD.encode(md5::compute(&body).as_slice());
+        headers.insert(HEADER_CONTENT_MD5.to_string(), content_md5_base64);
 
-        let request_body = Bytes::from_owner(body);
         let url = Url::parse(format!("{}/{}", self.endpoint, operation).as_str()).unwrap();
-
+        let request_body = Bytes::from_owner(body);
         let mut retried = 0u32;
 
         loop {
+            self.fill_signature_v2(&operation.to_string(), &mut headers);
+
+            let mut header_map = HeaderMap::new();
+            headers.iter().for_each(|(k, v)| {
+                log::debug!(">> header: {}: {}", k, v);
+                header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(&v).unwrap());
+            });
+
             let mut request_builder = self
                 .http_client
                 .request(method.clone(), url.clone())
@@ -582,7 +617,7 @@ impl OtsClient {
 
                 log::error!("api call failed, check retry against retry policy for operation {} and error {}", operation, e);
                 let should_retry = self.options.retry_policy.should_retry(retried, operation, &e);
-                log::info!("should retry {} for operation {} with error {}", should_retry, operation, e);
+                log::info!("should retry: {} for operation {} with error {}", should_retry, operation, e);
 
                 if !should_retry {
                     return Err(e);
@@ -1000,8 +1035,7 @@ impl OtsClient {
     ///             .tag("region", "region_11")
     ///             .timestamp_us(ts_us + 1000)
     ///             .field_double("temp", 543.21),
-    ///     )
-    ///     .supported_table_version(TimeseriesVersion::V1);
+    ///     );
     ///
     /// let resp = client.put_timeseries_data(request).send().await;
     /// ```

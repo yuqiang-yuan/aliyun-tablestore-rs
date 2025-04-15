@@ -9,6 +9,8 @@
 
 This is a Rust SDK for the Aliyun Tablestore (OTS) service. Aliyun tablestore is a fully managed NoSQL database service that provides high-performance, scalable, and cost-effective storage for large amounts of structured data. It supports various data models such as key-value, wide-column, and document, and offers features like strong consistency, global distribution, and automatic sharding.
 
+So far, local transactions, tunnel and streaming **NOT** supported.
+
 There operations are implemented:
 
 - Wide-column table
@@ -46,18 +48,16 @@ There operations are implemented:
 - Time series table
   - Table operations
     - Create table
+    - Delete table
+    - Update table
+    - List table
     - Describe table
   - Data operations
     - Get data
     - Put data
     - Query meta
     - Update meta
-
-
-TODO List:
-
-- [ ] Test group by date histogram
-- [ ] Test group by geo grid
-- [ ] Test group by geo distance
-- [ ] Test group by composite
-- [ ] Test search with routing values.
+    - Delete meta
+    - Split scan
+    - Scan data
+- SQL Query

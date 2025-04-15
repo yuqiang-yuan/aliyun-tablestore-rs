@@ -23,6 +23,16 @@ pub(crate) fn current_time_ms() -> u128 {
 }
 
 #[allow(dead_code)]
+pub(crate) fn get_http_date() -> String {
+    // HTTP Date 格式必须使用 UTC 时间
+    let now: DateTime<Utc> = Utc::now();
+
+    // 格式化为 HTTP Date 格式
+    // 例如: "Sun, 06 Nov 1994 08:49:37 GMT"
+    now.format("%a, %d %b %Y %H:%M:%S GMT").to_string()
+}
+
+#[allow(dead_code)]
 /// Hmac-SHA256 digest
 pub(crate) fn hmac_sha256(key_data: &[u8], msg_data: &[u8]) -> Vec<u8> {
     type HmacSha256 = Hmac<Sha256>;
