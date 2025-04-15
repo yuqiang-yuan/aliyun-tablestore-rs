@@ -2,11 +2,13 @@
 //!
 
 mod create_table;
+mod delete_table;
 mod describe_table;
 mod list_table;
 mod update_table;
 
 pub use create_table::*;
+pub use delete_table::*;
 pub use describe_table::*;
 pub use list_table::*;
 pub use update_table::*;
@@ -61,6 +63,15 @@ mod test_timeseries_table {
         let request = UpdateTimeseriesTableRequest::new("my_ts_test").ttl_seconds(-1);
         let resp = client.update_timeseries_table(request).send().await;
 
+        log::debug!("{:?}", resp);
+    }
+
+    #[tokio::test]
+    async fn test_delete_timeseries_table() {
+        setup();
+        let client = OtsClient::from_env();
+
+        let resp = client.delete_timeseries_table("my_ts_test").send().await;
         log::debug!("{:?}", resp);
     }
 }
