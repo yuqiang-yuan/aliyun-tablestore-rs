@@ -54,12 +54,12 @@ impl UpdateTimeseriesAnalyticalStoreRequest {
 
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if !validate_timeseries_table_name(&self.table_name) {
-            return Err(OtsError::ValidationFailed(format!("invalid time series table name: {}", self.table_name)));
+            return Err(OtsError::ValidationFailed(format!("invalid timeseries table name: {}", self.table_name)));
         }
 
         if !validate_analytical_store_name(&self.store_name) {
             return Err(OtsError::ValidationFailed(format!(
-                "invalid time series analytical store name: {}",
+                "invalid timeseries analytical store name: {}",
                 self.store_name
             )));
         }
