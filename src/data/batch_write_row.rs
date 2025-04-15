@@ -401,7 +401,11 @@ add_per_request_options!(BatchWriteRowOperation);
 
 impl BatchWriteRowOperation {
     pub(crate) fn new(client: OtsClient, request: BatchWriteRowRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<BatchWriteRowResponse> {

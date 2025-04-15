@@ -449,7 +449,11 @@ add_per_request_options!(GetRangeOperation);
 
 impl GetRangeOperation {
     pub(crate) fn new(client: OtsClient, request: GetRangeRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     /// 发送请求。*注意：* 如果 `time_range` 和 `max_versions` 都没有设置，则默认设置 `max_versions` 为 `1`

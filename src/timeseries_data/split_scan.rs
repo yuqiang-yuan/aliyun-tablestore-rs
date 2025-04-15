@@ -1,6 +1,9 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
+use crate::{
+    add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsRequestOptions,
+    OtsResult,
+};
 
 /// 切分全量导出任务
 ///
@@ -80,7 +83,11 @@ add_per_request_options!(SplitTimeseriesScanTaskOperation);
 
 impl SplitTimeseriesScanTaskOperation {
     pub(crate) fn new(client: OtsClient, request: SplitTimeseriesScanTaskRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::timeseries::SplitTimeseriesScanTaskResponse> {

@@ -82,7 +82,11 @@ add_per_request_options!(DeleteTimeseriesMetaOperation);
 
 impl DeleteTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteTimeseriesMetaRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<DeleteTimeseriesMetaResponse> {

@@ -17,7 +17,10 @@ add_per_request_options!(ListTableOperation);
 
 impl ListTableOperation {
     pub(crate) fn new(client: OtsClient) -> Self {
-        Self { client, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     /// Consume the builder and send request
@@ -25,8 +28,6 @@ impl ListTableOperation {
         let msg = ListTableRequest {};
 
         let Self { client, options } = self;
-
-
 
         let req = OtsRequest {
             operation: OtsOp::ListTable,

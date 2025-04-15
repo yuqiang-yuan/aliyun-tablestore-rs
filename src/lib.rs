@@ -503,7 +503,6 @@ impl OtsClientBuilder {
     }
 }
 
-
 /// 客户端
 #[allow(dead_code)]
 #[derive(Clone)]

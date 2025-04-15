@@ -1,7 +1,11 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, model::rules::{validate_index_name, validate_table_name}, protos::{IndexSyncPhase, IndexType, IndexUpdateMode}, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult
+    add_per_request_options,
+    error::OtsError,
+    model::rules::{validate_index_name, validate_table_name},
+    protos::{IndexSyncPhase, IndexType, IndexUpdateMode},
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 创建二级索引。仅 `max_versions = 1` 的表可以创建二级索引
@@ -110,7 +114,9 @@ impl CreateIndexRequest {
         }
 
         if self.primary_key_names.is_empty() {
-            return Err(OtsError::ValidationFailed("primary key columns can not be empty while creating index".to_string()));
+            return Err(OtsError::ValidationFailed(
+                "primary key columns can not be empty while creating index".to_string(),
+            ));
         }
 
         Ok(())
@@ -156,7 +162,11 @@ add_per_request_options!(CreateIndexOperation);
 
 impl CreateIndexOperation {
     pub(crate) fn new(client: OtsClient, request: CreateIndexRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {

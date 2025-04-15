@@ -1,7 +1,10 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name}, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult
+    add_per_request_options,
+    error::OtsError,
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 删除一个时序分析存储
@@ -78,7 +81,11 @@ add_per_request_options!(DeleteTimeseriesAnalyticalStoreOperation);
 
 impl DeleteTimeseriesAnalyticalStoreOperation {
     pub(crate) fn new(client: OtsClient, request: DeleteTimeseriesAnalyticalStoreRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {

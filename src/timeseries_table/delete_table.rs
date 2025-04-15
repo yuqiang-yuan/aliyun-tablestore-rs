@@ -1,6 +1,9 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult};
+use crate::{
+    add_per_request_options, error::OtsError, timeseries_model::rules::validate_timeseries_table_name, OtsClient, OtsOp, OtsRequest, OtsRequestOptions,
+    OtsResult,
+};
 
 /// 删除指定时序表
 pub struct DeleteTimeseriesTableOperation {

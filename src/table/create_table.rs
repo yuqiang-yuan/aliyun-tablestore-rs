@@ -450,7 +450,11 @@ add_per_request_options!(CreateTableOperation);
 
 impl CreateTableOperation {
     pub(crate) fn new(client: OtsClient, request: CreateTableRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {

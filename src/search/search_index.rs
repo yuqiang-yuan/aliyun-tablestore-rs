@@ -260,7 +260,11 @@ add_per_request_options!(SearchOperation);
 
 impl SearchOperation {
     pub(crate) fn new(client: OtsClient, request: SearchRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<SearchResponse> {

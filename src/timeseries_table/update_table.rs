@@ -127,7 +127,11 @@ pub struct UpdateTimeseriesTableOperation {
 
 impl UpdateTimeseriesTableOperation {
     pub(crate) fn new(client: OtsClient, request: UpdateTimeseriesTableRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {

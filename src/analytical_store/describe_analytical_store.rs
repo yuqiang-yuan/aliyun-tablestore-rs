@@ -26,7 +26,7 @@ impl DescribeTimeseriesAnalyticalStoreOperation {
             client,
             table_name: table_name.to_string(),
             store_name: store_name.to_string(),
-            options: OtsRequestOptions::default()
+            options: OtsRequestOptions::default(),
         }
     }
 
@@ -46,7 +46,7 @@ impl DescribeTimeseriesAnalyticalStoreOperation {
             client,
             table_name,
             store_name,
-            options
+            options,
         } = self;
 
         let msg = crate::protos::timeseries::DescribeTimeseriesAnalyticalStoreRequest { table_name, store_name };

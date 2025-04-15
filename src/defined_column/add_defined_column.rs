@@ -116,7 +116,11 @@ add_per_request_options!(AddDefinedColumnOperation);
 
 impl AddDefinedColumnOperation {
     pub(crate) fn new(client: OtsClient, request: AddDefinedColumnRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     /// 执行添加预定义列操作

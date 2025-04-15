@@ -1,7 +1,10 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::search::{DescribeSearchIndexRequest, DescribeSearchIndexResponse}, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult
+    add_per_request_options,
+    error::OtsError,
+    protos::search::{DescribeSearchIndexRequest, DescribeSearchIndexResponse},
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 查询多元索引描述信息，包括多元索引的字段信息和索引配置等。

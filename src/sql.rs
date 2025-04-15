@@ -181,7 +181,11 @@ add_per_request_options!(SqlQueryOperation);
 
 impl SqlQueryOperation {
     pub(crate) fn new(client: OtsClient, request: SqlQueryRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     /// 注意：这里使用 SQL 查询之后的数据就没有再区分主键和普通列了，

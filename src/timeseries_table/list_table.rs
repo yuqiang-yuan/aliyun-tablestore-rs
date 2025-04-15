@@ -12,7 +12,10 @@ add_per_request_options!(ListTimeseriesTableOperation);
 
 impl ListTimeseriesTableOperation {
     pub(crate) fn new(client: OtsClient) -> Self {
-        Self { client, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<crate::protos::timeseries::ListTimeseriesTableResponse> {

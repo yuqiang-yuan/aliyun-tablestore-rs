@@ -292,7 +292,11 @@ add_per_request_options!(ParallelScanOperation);
 
 impl ParallelScanOperation {
     pub(crate) fn new(client: OtsClient, request: ParallelScanRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<ParallelScanResponse> {

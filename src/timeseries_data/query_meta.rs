@@ -146,7 +146,11 @@ add_per_request_options!(QueryTimeseriesMetaOperation);
 
 impl QueryTimeseriesMetaOperation {
     pub(crate) fn new(client: OtsClient, request: QueryTimeseriesMetaRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<QueryTimeseriesMetaResponse> {

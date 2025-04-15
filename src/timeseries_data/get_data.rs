@@ -195,7 +195,11 @@ add_per_request_options!(GetTimeseriesDataOperation);
 
 impl GetTimeseriesDataOperation {
     pub(crate) fn new(client: OtsClient, request: GetTimeseriesDataRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<GetTimeseriesDataResponse> {

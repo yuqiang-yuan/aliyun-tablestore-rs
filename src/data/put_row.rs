@@ -200,7 +200,11 @@ add_per_request_options!(PutRowOperation);
 
 impl PutRowOperation {
     pub(crate) fn new(client: OtsClient, request: PutRowRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     /// 执行写入数据操作

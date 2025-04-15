@@ -177,7 +177,11 @@ add_per_request_options!(UpdateTableOperation);
 impl UpdateTableOperation {
     /// Create a new update table operation
     pub(crate) fn new(client: OtsClient, request: UpdateTableRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<UpdateTableResponse> {

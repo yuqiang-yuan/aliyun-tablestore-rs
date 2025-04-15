@@ -1,7 +1,11 @@
 use prost::Message;
 
 use crate::{
-    add_per_request_options, error::OtsError, protos::timeseries::AnalyticalStoreSyncType, timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name, MIN_ANALYTICAL_STORE_TTL_SECONDS}, OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult
+    add_per_request_options,
+    error::OtsError,
+    protos::timeseries::AnalyticalStoreSyncType,
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name, MIN_ANALYTICAL_STORE_TTL_SECONDS},
+    OtsClient, OtsOp, OtsRequest, OtsRequestOptions, OtsResult,
 };
 
 /// 为已存在的时序表创建一个时序分析存储用于低成本存储时序数据以及查询与分析时序数据
@@ -101,7 +105,11 @@ add_per_request_options!(CreateTimeseriesAnalyticalStoreOperation);
 
 impl CreateTimeseriesAnalyticalStoreOperation {
     pub(crate) fn new(client: OtsClient, request: CreateTimeseriesAnalyticalStoreRequest) -> Self {
-        Self { client, request, options: OtsRequestOptions::default() }
+        Self {
+            client,
+            request,
+            options: OtsRequestOptions::default(),
+        }
     }
 
     pub async fn send(self) -> OtsResult<()> {
