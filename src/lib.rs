@@ -40,7 +40,10 @@ use timeseries_data::{
     PutTimeseriesDataRequest, QueryTimeseriesMetaOperation, QueryTimeseriesMetaRequest, ScanTimeseriesDataOperation, ScanTimeseriesDataRequest,
     SplitTimeseriesScanTaskOperation, SplitTimeseriesScanTaskRequest, UpdateTimeseriesMetaOperation, UpdateTimeseriesMetaRequest,
 };
-use timeseries_table::{CreateTimeseriesTableOperation, CreateTimeseriesTableRequest, DescribeTimeseriesTableOperation};
+use timeseries_table::{
+    CreateTimeseriesTableOperation, CreateTimeseriesTableRequest, DescribeTimeseriesTableOperation, ListTimeseriesTableOperation,
+    UpdateTimeseriesTableOperation, UpdateTimeseriesTableRequest,
+};
 use url::Url;
 use util::get_iso8601_date_time_string;
 
@@ -1014,6 +1017,16 @@ impl OtsClient {
     /// 时序表 - 查询时序表信息
     pub fn describe_timeseries_table(&self, table_name: &str) -> DescribeTimeseriesTableOperation {
         DescribeTimeseriesTableOperation::new(self.clone(), table_name)
+    }
+
+    /// 时序表 - 列出时序表
+    pub fn list_timeseries_table(&self) -> ListTimeseriesTableOperation {
+        ListTimeseriesTableOperation::new(self.clone())
+    }
+
+    /// 时序表 - 更新表配置
+    pub fn update_timeseries_table(&self, request: UpdateTimeseriesTableRequest) -> UpdateTimeseriesTableOperation {
+        UpdateTimeseriesTableOperation::new(self.clone(), request)
     }
 
     /// 时序表 - 创建 lastpoint 索引
