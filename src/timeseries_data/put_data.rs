@@ -38,13 +38,6 @@ impl PutTimeseriesDataRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加一行数据
     pub fn row(mut self, row: TimeseriesRow) -> Self {
         self.rows.push(row);

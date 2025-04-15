@@ -37,20 +37,6 @@ impl CreateTimeseriesLastpointIndexRequest {
         }
     }
 
-    /// 设置时序表名称
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置索引名称
-    pub fn index_name(mut self, index_name: &str) -> Self {
-        self.index_name = index_name.to_string();
-
-        self
-    }
-
     /// 设置是否包含存量数据
     pub fn include_base_data(mut self, include_base_data: bool) -> Self {
         self.include_base_data = Some(include_base_data);

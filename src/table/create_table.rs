@@ -313,7 +313,12 @@ impl CreateTableRequest {
         }
 
         if !(MIN_PRIMARY_KEY_COUNT..=MAX_PRIMARY_KEY_COUNT).contains(&self.primary_keys.len()) {
-            return Err(OtsError::ValidationFailed(format!("invalid primary key count: {}. maximum primary key count must between {} to {}", self.primary_keys.len(), MIN_PRIMARY_KEY_COUNT, MAX_PRIMARY_KEY_COUNT)));
+            return Err(OtsError::ValidationFailed(format!(
+                "invalid primary key count: {}. maximum primary key count must between {} to {}",
+                self.primary_keys.len(),
+                MIN_PRIMARY_KEY_COUNT,
+                MAX_PRIMARY_KEY_COUNT
+            )));
         }
 
         for pk in &self.primary_keys {
@@ -324,7 +329,10 @@ impl CreateTableRequest {
 
         if let Some(n) = self.ttl_seconds {
             if n != -1 && n < 86400 {
-                return Err(OtsError::ValidationFailed(format!("invalid time-to-live settings: {}. must be -1 or greater than 86400", n)));
+                return Err(OtsError::ValidationFailed(format!(
+                    "invalid time-to-live settings: {}. must be -1 or greater than 86400",
+                    n
+                )));
             }
         }
 

@@ -21,16 +21,6 @@ impl ComputeSplitsRequest {
         }
     }
 
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-        self
-    }
-
-    pub fn index_name(mut self, index_name: &str) -> Self {
-        self.index_name = index_name.to_string();
-        self
-    }
-
     pub(crate) fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed("table_name is invalid".to_string()));

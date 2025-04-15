@@ -30,13 +30,6 @@ impl UpdateTimeseriesMetaRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加一个时间线元数据
     pub fn meta(mut self, meta: TimeseriesMeta) -> Self {
         self.metas.push(meta);

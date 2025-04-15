@@ -288,7 +288,7 @@ mod test_search_index {
 
             if let Some(token) = resp.next_token {
                 search_query = search_query.token(token);
-                search_req = search_req.search_query(search_query.clone());
+                search_req.search_query = search_query.clone();
             } else {
                 break;
             }

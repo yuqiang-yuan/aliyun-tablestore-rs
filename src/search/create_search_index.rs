@@ -2,7 +2,7 @@ use prost::Message;
 
 use crate::{add_per_request_options, protos::search::CreateSearchIndexRequest, OtsClient, OtsOp, OtsRequest, OtsResult};
 
-/// 接口创建一个多元索引。
+/// 接口创建一个多元索引。这个请求数据太复杂了，还是建议去控制台创建吧。Sorry
 ///
 /// 创建多元索引前，请确保数据表的最大版本数为 `1`，数据生命周期满足如下条件中的任意一个。
 ///

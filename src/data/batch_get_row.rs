@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use prost::Message;
 
-use crate::model::rules::validate_table_name;
+use crate::model::rules::{validate_table_name, MAX_COLUMNS_TO_GET};
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -36,13 +36,6 @@ impl TableInBatchGetRowRequest {
             table_name: table_name.to_string(),
             ..Default::default()
         }
-    }
-
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
     }
 
     /// 添加一个主键
@@ -141,10 +134,11 @@ impl TableInBatchGetRowRequest {
             }
         }
 
-        if self.columns_to_get.len() > 128 {
+        if self.columns_to_get.len() > MAX_COLUMNS_TO_GET {
             return Err(OtsError::ValidationFailed(format!(
-                "invalid columns to get, must be less than or equal to 128. you passed {} columns to get",
-                self.columns_to_get.len()
+                "invalid columns to get: {}, must be less than or equal to {}",
+                self.columns_to_get.len(),
+                MAX_COLUMNS_TO_GET,
             )));
         }
 

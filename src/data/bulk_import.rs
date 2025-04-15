@@ -78,13 +78,6 @@ impl BulkImportRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加写入行
     pub fn put_row(mut self, row: Row) -> Self {
         self.rows.push(RowInBulkImportRequest::put_row(row));

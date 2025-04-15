@@ -49,13 +49,6 @@ impl ScanTimeseriesDataRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 设置 Split info
     pub fn split_info(mut self, info: impl Into<Vec<u8>>) -> Self {
         self.split_info = Some(info.into());

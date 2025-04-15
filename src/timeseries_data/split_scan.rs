@@ -26,20 +26,6 @@ impl SplitTimeseriesScanTaskRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置期望数
-    pub fn split_count_hint(mut self, count: u32) -> Self {
-        self.split_count_hint = count;
-
-        self
-    }
-
     /// 设置度量名称
     pub fn measurement_name(mut self, m_name: impl Into<String>) -> Self {
         self.measurement_name = Some(m_name.into());

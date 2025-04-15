@@ -90,20 +90,14 @@ impl IndexMeta {
 
 #[cfg(test)]
 mod test_index {
-    use crate::{
-        index::CreateIndexRequest, test_util::setup, OtsClient
-    };
+    use crate::{index::CreateIndexRequest, test_util::setup, OtsClient};
 
     async fn test_create_index_impl() {
         setup();
         let client = OtsClient::from_env();
 
         let resp = client
-            .create_index(
-                CreateIndexRequest::new("ccs2")
-                    .index_name("idx_cn")
-                    .primary_key_name("cc_id")
-            )
+            .create_index(CreateIndexRequest::new("ccs2", "index_cn").primary_key_name("cc_id"))
             .send()
             .await;
 

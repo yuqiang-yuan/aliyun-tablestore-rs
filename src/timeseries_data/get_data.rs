@@ -51,18 +51,6 @@ impl GetTimeseriesDataRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-        self
-    }
-
-    /// 设置时间线标识
-    pub fn key(mut self, key: TimeseriesKey) -> Self {
-        self.key = key;
-        self
-    }
-
     /// 设置开始时间。微秒时间戳（从 1970-01-01 00:00:00 UTC 计算起的微秒数）
     pub fn begin_time_us(mut self, begin_time: u64) -> Self {
         self.begin_time_us = begin_time;

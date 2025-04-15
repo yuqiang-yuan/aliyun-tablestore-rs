@@ -42,13 +42,6 @@ impl GetRowRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 设置主键
     pub fn primary_key(mut self, pk: PrimaryKey) -> Self {
         self.primary_key = pk;

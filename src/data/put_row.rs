@@ -52,13 +52,6 @@ impl PutRowRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 设置要写入的行数据
     pub fn row(mut self, row: Row) -> Self {
         self.row = row;

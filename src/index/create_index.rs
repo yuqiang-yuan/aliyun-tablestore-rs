@@ -1,6 +1,12 @@
 use prost::Message;
 
-use crate::{add_per_request_options, error::OtsError, model::rules::{validate_index_name, validate_table_name}, protos::{IndexSyncPhase, IndexType, IndexUpdateMode}, OtsClient, OtsOp, OtsRequest, OtsResult};
+use crate::{
+    add_per_request_options,
+    error::OtsError,
+    model::rules::{validate_index_name, validate_table_name},
+    protos::{IndexSyncPhase, IndexType, IndexUpdateMode},
+    OtsClient, OtsOp, OtsRequest, OtsResult,
+};
 
 /// 创建二级索引。仅 `max_versions = 1` 的表可以创建二级索引
 ///
@@ -34,18 +40,12 @@ pub struct CreateIndexRequest {
 }
 
 impl CreateIndexRequest {
-    pub fn new(table_name: &str) -> Self {
+    pub fn new(table_name: &str, index_name: &str) -> Self {
         Self {
             table_name: table_name.to_string(),
+            index_name: index_name.to_string(),
             ..Default::default()
         }
-    }
-
-    /// 设置索引名称
-    pub fn index_name(mut self, index_name: &str) -> Self {
-        self.index_name = index_name.to_string();
-
-        self
     }
 
     /// 添加一个主键列到索引
@@ -109,7 +109,7 @@ impl CreateIndexRequest {
             return Err(OtsError::ValidationFailed(format!("invalid table name: {}", self.table_name)));
         }
 
-        if !validate_index_name(&self.index_name)  {
+        if !validate_index_name(&self.index_name) {
             return Err(OtsError::ValidationFailed(format!("invalid index name: {}", self.index_name)));
         }
 

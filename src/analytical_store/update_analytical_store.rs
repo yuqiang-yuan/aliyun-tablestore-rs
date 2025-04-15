@@ -3,7 +3,7 @@ use prost::Message;
 use crate::{
     add_per_request_options,
     error::OtsError,
-    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name},
+    timeseries_model::rules::{validate_analytical_store_name, validate_timeseries_table_name, MIN_ANALYTICAL_STORE_TTL_SECONDS},
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
@@ -31,20 +31,6 @@ impl UpdateTimeseriesAnalyticalStoreRequest {
         }
     }
 
-    /// 设置时序表名称
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置分析存储名称
-    pub fn store_name(mut self, store_name: &str) -> Self {
-        self.store_name = store_name.to_string();
-
-        self
-    }
-
     /// 设置分析存储数据保留时间。取值必须大于等于 `2592000` 秒（即 `30` 天）或者必须为 `-1`（数据永不过期）
     pub fn ttl_seconds(mut self, ttl: i32) -> Self {
         self.ttl_seconds = Some(ttl);
@@ -65,8 +51,11 @@ impl UpdateTimeseriesAnalyticalStoreRequest {
         }
 
         if let Some(n) = self.ttl_seconds {
-            if n != -1 && n < 2592000 {
-                return Err(OtsError::ValidationFailed(format!("invalid store data ttl (seconds): {}", n)));
+            if n != -1 && n < MIN_ANALYTICAL_STORE_TTL_SECONDS {
+                return Err(OtsError::ValidationFailed(format!(
+                    "invalid store data ttl (seconds): {}. must be -1 or greater than {}",
+                    n, MIN_ANALYTICAL_STORE_TTL_SECONDS
+                )));
             }
         }
 

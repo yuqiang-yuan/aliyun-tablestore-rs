@@ -35,13 +35,6 @@ impl UpdateTimeseriesTableRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 设置数据生命周期，单位为秒。 默认为 `-1` 表示永不过期。最低 `86400` 秒（1 天）
     pub fn ttl_seconds(mut self, ttl_seconds: i32) -> Self {
         self.ttl_seconds = Some(ttl_seconds);

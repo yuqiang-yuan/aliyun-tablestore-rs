@@ -31,20 +31,6 @@ impl DeleteTimeseriesAnalyticalStoreRequest {
         }
     }
 
-    /// 设置时序表名称
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置分析存储名称
-    pub fn store_name(mut self, store_name: &str) -> Self {
-        self.store_name = store_name.to_string();
-
-        self
-    }
-
     /// 设置是否级联删除分析存储关联的 SQL 映射表
     pub fn drop_mapping_table(mut self, drop_mapping_table: bool) -> Self {
         self.drop_mapping_table = Some(drop_mapping_table);

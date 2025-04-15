@@ -16,20 +16,25 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
-/// 接口批量导出数据。
+/// 接口批量导出数据。数据编码采用 Simple Row Matrix 格式
 ///
 /// 官方文档：<https://help.aliyun.com/zh/tablestore/developer-reference/bulkexport>
 #[derive(Debug, Clone)]
 pub struct BulkExportRequest {
+    /// 表名
     pub table_name: String,
+
     /// 要返回的列。使用 DBT_SIMPLE_ROW_MATRIX 编码方式的返回值时，必须至少设置一个返回列
     pub columns_to_get: HashSet<String>,
-    pub inclusive_start_primary_key: PrimaryKey,
-    pub exclusive_end_primary_key: PrimaryKey,
-    pub filter: Option<Filter>,
 
-    /// 返回结果的数据块编码类型。默认为 DBT_SIMPLE_ROW_MATRIX
-    pub data_block_type: DataBlockType,
+    /// 起始主键，包含
+    pub inclusive_start_primary_key: PrimaryKey,
+
+    /// 结束主键，不包含
+    pub exclusive_end_primary_key: PrimaryKey,
+
+    /// 过滤器
+    pub filter: Option<Filter>,
 }
 
 impl Default for BulkExportRequest {
@@ -40,7 +45,6 @@ impl Default for BulkExportRequest {
             inclusive_start_primary_key: PrimaryKey::new(),
             exclusive_end_primary_key: PrimaryKey::new(),
             filter: None,
-            data_block_type: DataBlockType::DbtSimpleRowMatrix,
         }
     }
 }
@@ -51,13 +55,6 @@ impl BulkExportRequest {
             table_name: table_name.to_string(),
             ..Default::default()
         }
-    }
-
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
     }
 
     /// 添加主键查询范围
@@ -203,13 +200,6 @@ impl BulkExportRequest {
         self
     }
 
-    /// 设置返回数据的编码方式
-    pub fn data_block_type(mut self, block_type: DataBlockType) -> Self {
-        self.data_block_type = block_type;
-
-        self
-    }
-
     /// 发送请求前验证
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
@@ -220,7 +210,7 @@ impl BulkExportRequest {
             return Err(OtsError::ValidationFailed("invalid primary key: empty primary key columns".to_string()));
         }
 
-        if DataBlockType::DbtSimpleRowMatrix == self.data_block_type && self.columns_to_get.is_empty() {
+        if self.columns_to_get.is_empty() {
             return Err(OtsError::ValidationFailed(
                 "columns to get must be set when using simple row matrix data block type".to_string(),
             ));
@@ -238,7 +228,6 @@ impl From<BulkExportRequest> for crate::protos::BulkExportRequest {
             inclusive_start_primary_key,
             exclusive_end_primary_key,
             filter,
-            data_block_type,
         } = value;
 
         crate::protos::BulkExportRequest {
@@ -247,7 +236,7 @@ impl From<BulkExportRequest> for crate::protos::BulkExportRequest {
             inclusive_start_primary_key: inclusive_start_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             exclusive_end_primary_key: exclusive_end_primary_key.encode_plain_buffer(MASK_HEADER | MASK_ROW_CHECKSUM),
             filter: filter.map(|f| f.into_protobuf_bytes()),
-            data_block_type_hint: Some(data_block_type as i32),
+            data_block_type_hint: Some(DataBlockType::DbtSimpleRowMatrix as i32),
         }
     }
 }
@@ -257,7 +246,10 @@ pub struct BulkExportResponse {
     pub consumed: ConsumedCapacity,
     pub rows: Vec<Row>,
     pub next_start_primary_key: Option<PrimaryKey>,
-    pub data_block_type: DataBlockType,
+
+    /// 先不对外暴露这个属性
+    #[allow(dead_code)]
+    data_block_type: DataBlockType,
 }
 
 impl TryFrom<crate::protos::BulkExportResponse> for BulkExportResponse {

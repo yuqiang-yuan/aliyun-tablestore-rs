@@ -4,6 +4,9 @@ pub const MIN_PRIMARY_KEY_COUNT: usize = 1;
 /// 一个宽表最多 4 个主键列
 pub const MAX_PRIMARY_KEY_COUNT: usize = 4;
 
+/// 读请求一行数据中获取的列的最大个数
+pub const MAX_COLUMNS_TO_GET: usize = 128;
+
 /// 约束条件：
 ///
 /// - 由英文字母、数字或下划线（_）组成，大小写敏感，长度限制为1~255字节。

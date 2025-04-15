@@ -51,24 +51,6 @@ impl ScanQuery {
         }
     }
 
-    /// 设置查询条件
-    pub fn query(mut self, query: Query) -> Self {
-        self.query = query;
-        self
-    }
-
-    /// 设置最大并发数
-    pub fn max_parallel(mut self, max_parallel: u32) -> Self {
-        self.max_parallel = max_parallel;
-        self
-    }
-
-    /// 设置当前并发ID
-    pub fn current_parallel_id(mut self, current_parallel_id: u32) -> Self {
-        self.current_parallel_id = current_parallel_id;
-        self
-    }
-
     /// 设置一次返回的数据行数
     pub fn limit(mut self, limit: u32) -> Self {
         self.limit = Some(limit);

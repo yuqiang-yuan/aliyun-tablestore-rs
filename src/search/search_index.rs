@@ -58,27 +58,6 @@ impl SearchRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置索引名
-    pub fn index_name(mut self, index_name: &str) -> Self {
-        self.index_name = index_name.to_string();
-
-        self
-    }
-
-    /// 设置查询配置
-    pub fn search_query(mut self, query: SearchQuery) -> Self {
-        self.search_query = query;
-
-        self
-    }
-
     /// 添加一个路由主键
     pub fn routing_value(mut self, pk: PrimaryKey) -> Self {
         self.routing_values.push(pk);

@@ -68,13 +68,6 @@ impl GetRangeRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 本次查询的顺序。
     ///
     /// - 如果设置此项为 `FORWARD`（正序），则 `inclusive_start_primary` 必须小于 `exclusive_end_primary`，响应中各行按照主键由小到大的顺序进行排列。

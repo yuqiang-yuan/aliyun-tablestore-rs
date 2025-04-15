@@ -28,13 +28,6 @@ impl DeleteTimeseriesMetaRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加一个时间线标识
     pub fn key(mut self, key: TimeseriesKey) -> Self {
         self.keys.push(key);

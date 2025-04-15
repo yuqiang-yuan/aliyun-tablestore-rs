@@ -35,20 +35,6 @@ impl CreateTimeseriesAnalyticalStoreRequest {
         }
     }
 
-    /// 设置时序表名称
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置分析存储名称
-    pub fn store_name(mut self, store_name: &str) -> Self {
-        self.store_name = store_name.to_string();
-
-        self
-    }
-
     /// 设置分析存储数据保留时间。取值必须大于等于 `2592000` 秒（即 `30` 天）或者必须为 `-1`（数据永不过期）
     pub fn ttl_seconds(mut self, ttl: i32) -> Self {
         self.ttl_seconds = Some(ttl);

@@ -39,20 +39,6 @@ impl QueryTimeseriesMetaRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 设置查询条件
-    pub fn condition(mut self, condition: MetaQuery) -> Self {
-        self.condition = condition;
-
-        self
-    }
-
     /// 设置是否获取全部行数
     pub fn get_total_hit(mut self, with_total_hit: bool) -> Self {
         self.get_total_hit = Some(with_total_hit);
