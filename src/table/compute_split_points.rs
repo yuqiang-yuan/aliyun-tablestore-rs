@@ -40,19 +40,6 @@ impl ComputeSplitPointsBySizeRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
-    /// 每个分片的近似大小，以百兆为单位。
-    pub fn split_size(mut self, split_size: u64) -> Self {
-        self.split_size = split_size;
-        self
-    }
-
     /// 指定分割大小的单位，以便在分割点计算时使用正确的单位，并确保计算结果的准确性。
     pub fn split_size_unit_in_byte(mut self, split_size_unit_in_byte: u64) -> Self {
         self.split_size_unit_in_byte = Some(split_size_unit_in_byte);
@@ -68,6 +55,22 @@ impl ComputeSplitPointsBySizeRequest {
     fn validate(&self) -> OtsResult<()> {
         if !validate_table_name(&self.table_name) {
             return Err(OtsError::ValidationFailed(format!("Invalid table name: {}", self.table_name)));
+        }
+
+        if self.split_size > i64::MAX as u64 {
+            return Err(OtsError::ValidationFailed(format!("split size: {} is too large for i64", self.split_size)));
+        }
+
+        if let Some(n) = self.split_size_unit_in_byte {
+            if n > i64::MAX as u64 {
+                return Err(OtsError::ValidationFailed(format!("split size unit in byte: {} is too large for i64", n)));
+            }
+        }
+
+        if let Some(n) = self.split_point_limit {
+            if n > i32::MAX as u32 {
+                return Err(OtsError::ValidationFailed(format!("split point limit: {} is too large for i32", n)));
+            }
         }
 
         Ok(())
@@ -151,6 +154,7 @@ impl TryFrom<crate::protos::ComputeSplitPointsBySizeResponse> for ComputeSplitPo
         })
     }
 }
+
 #[derive(Default, Clone, Debug)]
 pub struct ComputeSplitPointsBySizeOperation {
     client: OtsClient,

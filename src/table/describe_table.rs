@@ -16,7 +16,7 @@ use crate::model::rules::validate_table_name;
 #[derive(Default, Debug, Clone)]
 pub struct DescribeTableOperation {
     client: OtsClient,
-    pub table_name: String,
+    table_name: String,
 }
 
 add_per_request_options!(DescribeTableOperation);

@@ -91,13 +91,6 @@ impl CreateTableRequest {
         }
     }
 
-    /// 设置表名
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-
-        self
-    }
-
     /// 添加主键列。一个表格至少包含 1 个主键列，最多包含 4 个主键列
     fn add_primary_key(mut self, name: impl Into<String>, key_type: PrimaryKeyType, auto_inc: Option<bool>) -> Self {
         let pk = PrimaryKeySchema {
@@ -320,7 +313,7 @@ impl CreateTableRequest {
         }
 
         if !(MIN_PRIMARY_KEY_COUNT..=MAX_PRIMARY_KEY_COUNT).contains(&self.primary_keys.len()) {
-            return Err(OtsError::ValidationFailed(format!("invalid primary key count: {}", self.primary_keys.len())));
+            return Err(OtsError::ValidationFailed(format!("invalid primary key count: {}. maximum primary key count must between {} to {}", self.primary_keys.len(), MIN_PRIMARY_KEY_COUNT, MAX_PRIMARY_KEY_COUNT)));
         }
 
         for pk in &self.primary_keys {
@@ -329,9 +322,9 @@ impl CreateTableRequest {
             }
         }
 
-        if let Some(n) = &self.ttl_seconds {
-            if *n != -1 && *n < 86400 {
-                return Err(OtsError::ValidationFailed(format!("invalid time-to-live settings: {}", *n)));
+        if let Some(n) = self.ttl_seconds {
+            if n != -1 && n < 86400 {
+                return Err(OtsError::ValidationFailed(format!("invalid time-to-live settings: {}. must be -1 or greater than 86400", n)));
             }
         }
 

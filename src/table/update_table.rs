@@ -46,11 +46,6 @@ impl UpdateTableRequest {
         }
     }
 
-    pub fn table_name(mut self, table_name: &str) -> Self {
-        self.table_name = table_name.to_string();
-        self
-    }
-
     /// 预设读取吞吐量。最大 100000 CU
     pub fn reserved_throughput_read(mut self, read_cu: i32) -> Self {
         self.reserved_throughput_read = Some(read_cu);
