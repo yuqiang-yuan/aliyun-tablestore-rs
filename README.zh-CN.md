@@ -64,9 +64,9 @@
 
 
 
-## Examples
+## 示例代码
 
-### Get range example
+### 根据主键范围查询数据
 
 ```rust
 use aliyun_tablestore_rs::{data::GetRangeRequest, OtsClient, OtsResult};
