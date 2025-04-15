@@ -4,6 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use prost::Message;
 
+use super::{AggregationResult, GroupByResult, SearchQuery};
+use crate::model::rules::{validate_index_name, validate_table_name};
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -13,11 +15,8 @@ use crate::{
         search::{ColumnReturnType, SearchHit},
         ConsumedCapacity,
     },
-    table::rules::{validate_index_name, validate_table_name},
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
-
-use super::{AggregationResult, GroupByResult, SearchQuery};
 
 /// 通过多元索引查询数据。
 ///

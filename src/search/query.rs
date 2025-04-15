@@ -1,16 +1,15 @@
 use prost::Message;
 
+use super::{Aggregation, GeoPoint, GroupBy, ScoreFunction, Sort, Sorter};
+use crate::model::rules::validate_column_name;
 use crate::{
     error::OtsError,
     model::ColumnValue,
     protos::search::{
         Collapse, FunctionCombineMode, FunctionScoreMode, HighlightEncoder, HighlightFragmentOrder, QueryOperator, QueryType, ScoreMode, SearchFilter,
     },
-    table::rules::validate_column_name,
     OtsResult,
 };
-
-use super::{Aggregation, GeoPoint, GroupBy, ScoreFunction, Sort, Sorter};
 
 /// 包括模糊匹配和短语或邻近查询
 #[derive(Debug, Default, Clone)]

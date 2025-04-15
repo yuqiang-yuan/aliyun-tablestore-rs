@@ -11,7 +11,7 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
-use super::rules::validate_table_name;
+use crate::model::rules::validate_table_name;
 
 /// 将全表的数据在逻辑上划分成接近指定大小的若干分片，返回这些分片之间的分割点以及分片所在机器的提示。一般用于计算引擎规划并发度等执行计划。
 ///

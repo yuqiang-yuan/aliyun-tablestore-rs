@@ -10,7 +10,7 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
-use super::rules::validate_table_name;
+use crate::model::rules::validate_table_name;
 
 /// 修改表的配置信息 table_options 和 Stream 配置 StreamSpecification。
 /// 如果表处于 CU 模式（原按量模式）的高性能型实例中，

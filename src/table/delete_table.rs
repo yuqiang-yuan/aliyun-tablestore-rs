@@ -3,7 +3,7 @@ use reqwest::Method;
 
 use crate::{add_per_request_options, error::OtsError, OtsClient, OtsOp, OtsRequest, OtsResult};
 
-use super::rules::validate_table_name;
+use crate::model::rules::validate_table_name;
 
 #[derive(Debug, Default, Clone)]
 pub struct DeleteTableRequest {

@@ -2,16 +2,15 @@ use std::collections::HashSet;
 
 use prost::Message;
 
+use super::Query;
+use crate::model::rules::{validate_index_name, validate_table_name};
 use crate::{
     add_per_request_options,
     error::OtsError,
     model::Row,
     protos::{plain_buffer::MASK_HEADER, search::ColumnReturnType},
-    table::rules::{validate_index_name, validate_table_name},
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
-
-use super::Query;
 
 /// 在ParallelScan操作中表示扫描查询配置
 ///

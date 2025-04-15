@@ -3,6 +3,7 @@ use std::{collections::HashSet, io::Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 use prost::Message;
 
+use crate::model::rules::validate_table_name;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -12,7 +13,6 @@ use crate::{
         simple_row_matrix::SimpleRowMatrix,
         ConsumedCapacity, DataBlockType,
     },
-    table::rules::validate_table_name,
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 

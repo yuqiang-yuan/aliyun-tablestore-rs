@@ -3,6 +3,7 @@ mod column;
 mod filter;
 mod primary_key;
 mod row;
+pub(crate) mod rules;
 
 pub use column::*;
 pub use filter::*;

@@ -580,7 +580,7 @@ impl OtsClient {
             let mut header_map = HeaderMap::new();
             headers.iter().for_each(|(k, v)| {
                 log::debug!(">> header: {}: {}", k, v);
-                header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(&v).unwrap());
+                header_map.insert(HeaderName::from_str(&k.to_lowercase()).unwrap(), HeaderValue::from_str(v).unwrap());
             });
 
             let mut request_builder = self

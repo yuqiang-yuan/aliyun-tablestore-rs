@@ -13,7 +13,7 @@ use crate::{
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 
-use super::rules::{validate_column_name, validate_index_name, validate_table_name, MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT};
+use crate::model::rules::{validate_column_name, validate_index_name, validate_table_name, MAX_PRIMARY_KEY_COUNT, MIN_PRIMARY_KEY_COUNT};
 
 /// 根据给定的表结构信息创建相应的数据表的请求。
 ///

@@ -1,11 +1,11 @@
 use prost::Message;
 use reqwest::Method;
 
+use crate::model::rules::{validate_column_name, validate_table_name};
 use crate::{
     add_per_request_options,
     error::OtsError,
     protos::{DefinedColumnSchema, DefinedColumnType},
-    table::rules::{validate_column_name, validate_table_name},
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 

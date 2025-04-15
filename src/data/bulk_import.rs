@@ -1,5 +1,6 @@
 use prost::Message;
 
+use crate::model::rules::validate_table_name;
 use crate::{
     add_per_request_options,
     error::OtsError,
@@ -8,7 +9,6 @@ use crate::{
         plain_buffer::{MASK_HEADER, MASK_ROW_CHECKSUM},
         OperationType,
     },
-    table::rules::validate_table_name,
     OtsClient, OtsOp, OtsRequest, OtsResult,
 };
 

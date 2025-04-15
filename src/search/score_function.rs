@@ -1,13 +1,12 @@
 use prost::Message;
 
+use super::{Duration, GeoPoint, Query};
+use crate::model::rules::validate_column_name;
 use crate::{
     error::OtsError,
     protos::search::{DecayFuncParamType, DecayMathFunction, FunctionModifier, MultiValueMode},
-    table::rules::validate_column_name,
     OtsResult,
 };
-
-use super::{Duration, GeoPoint, Query};
 
 /// 在 [`FunctionsScoreQuery`](`crate::search::FunctionsScoreQuery`) 中使用，
 /// 该函数的功能是对 doc 中的某个 field（必须为 `long` 或者 `double` 类型）简单运算打分。

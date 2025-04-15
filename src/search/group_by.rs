@@ -2,15 +2,14 @@ use std::{collections::HashMap, ops::Range};
 
 use prost::Message;
 
+use super::{validate_aggregation_name, validate_group_name, validate_timezone_string, Aggregation, AggregationResult, Duration, GeoPoint, Query};
+use crate::model::rules::validate_column_name;
 use crate::{
     error::OtsError,
     model::ColumnValue,
     protos::search::{FieldRange, GeoGrid, GeoHashPrecision, GroupByType, SortOrder},
-    table::rules::validate_column_name,
     OtsResult,
 };
-
-use super::{validate_aggregation_name, validate_group_name, validate_timezone_string, Aggregation, AggregationResult, Duration, GeoPoint, Query};
 
 /// 分组中的item排序规则集。
 #[derive(Debug, Clone)]

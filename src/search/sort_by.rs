@@ -1,12 +1,11 @@
+use super::{GeoPoint, NestedFilter};
+use crate::model::rules::validate_column_name;
 use crate::{
     error::OtsError,
     model::ColumnValue,
     protos::search::{DocSort, GeoDistanceType, PrimaryKeySort, ScoreSort, SortMode, SortOrder},
-    table::rules::validate_column_name,
     OtsResult,
 };
-
-use super::{GeoPoint, NestedFilter};
 
 /// 多元索引中字段排序方式的配置。
 #[derive(Debug, Default, Clone)]

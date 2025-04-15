@@ -1,7 +1,7 @@
+use crate::model::rules::validate_table_name;
 use crate::model::Row;
 use crate::protos::plain_buffer::{HEADER, MASK_HEADER, MASK_ROW_CHECKSUM};
 use crate::protos::ConsumedCapacity;
-use crate::table::rules::validate_table_name;
 use crate::{
     add_per_request_options,
     error::OtsError,
