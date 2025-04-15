@@ -31,7 +31,7 @@ async fn main() {
     setup();
     let client = OtsClient::from_env();
 
-    const MAX_USERS: usize = 10_000_000;
+    const MAX_USERS: usize = 1000;
     const BATCH_ROWS: usize = 200;
 
     let mut total = 0;
@@ -70,7 +70,7 @@ async fn main() {
             );
         }
 
-        let _ = client.bulk_import(req).send().await.unwrap();
+        let _ = client.bulk_import(req).timeout_ms(1000).send().await.unwrap();
 
         total += BATCH_ROWS;
 

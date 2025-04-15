@@ -473,7 +473,7 @@ impl OtsClientBuilder {
         self
     }
 
-    /// 获取充实策略的可写引用
+    /// 获取重试策略的可写引用
     pub fn retry_policy_mut(&mut self) -> &mut Box<dyn RetryPolicy> {
         &mut self.retry_policy
     }
@@ -566,6 +566,12 @@ impl OtsClient {
     }
 
     /// 使用 AK_ID、AK_SEC 和网络访问地址构建实例
+    ///
+    /// # Arguments
+    ///
+    /// - `ak_id`: Access key id
+    /// - `ak_sec`: Access key secret
+    /// - `endpoint`: 服务地址
     pub fn new(ak_id: impl AsRef<str>, ak_sec: impl AsRef<str>, endpoint: impl AsRef<str>) -> Self {
         let endpoint = endpoint.as_ref().to_lowercase();
 
@@ -584,6 +590,11 @@ impl OtsClient {
     }
 
     /// 客户端构建器
+    ///
+    /// # Arguments
+    ///
+    /// - `ak_id`: Access key id
+    /// - `ak_sec`: Access key secret
     pub fn builder(ak_id: impl AsRef<str>, ak_sec: impl AsRef<str>) -> OtsClientBuilder {
         OtsClientBuilder::new(ak_id, ak_sec)
     }
@@ -663,6 +674,7 @@ impl OtsClient {
         headers.insert(HEADER_SIGNATURE_V4.to_string(), BASE64_STANDARD.encode(sign));
     }
 
+    /// 发送请求
     pub async fn send(&self, req: OtsRequest) -> OtsResult<Response> {
         let OtsRequest {
             method,
