@@ -76,13 +76,6 @@ impl SqlQueryRequest {
         }
     }
 
-    /// 设置查询语句
-    pub fn query(mut self, query: impl AsRef<str>) -> Self {
-        self.query = query.as_ref().to_string();
-
-        self
-    }
-
     /// 设置 sql 版本
     pub fn sql_version(mut self, ver: SqlVersion) -> Self {
         self.sql_version = ver;

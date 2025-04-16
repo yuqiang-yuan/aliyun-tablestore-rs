@@ -306,6 +306,7 @@ impl Default for OtsRequest {
     }
 }
 
+/// 重试策略。需要注意的是 `clone_box` 方法中用来重置策略的状态数据（如果有的话）
 pub trait RetryPolicy: std::fmt::Debug + Send + Sync {
     /// 是否需要重试。参数分别表示重试次数、操作和发生的错误
     fn should_retry(&self, retried: u32, op: OtsOp, ots_error: &OtsError) -> bool;
