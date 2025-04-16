@@ -33,6 +33,14 @@ thiserror = "2.0.12"
 tokio = { version = "1.44.0", features = ["full"] }
 url = "2.5.4"
 
+[[example]]
+name = "gen_data"
+path = "examples/gen_data.rs"
+
+[[example]]
+name = "get_range_example"
+path = "examples/get_range_example.rs"
+
 [build-dependencies]
 prost-build = "0.13.5"
 
