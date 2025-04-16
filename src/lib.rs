@@ -65,7 +65,7 @@ pub mod util;
 #[cfg(test)]
 pub mod test_util;
 
-const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.0";
+const USER_AGENT: &str = "aliyun-tablestore-rs/0.1.1";
 const HEADER_API_VERSION: &str = "x-ots-apiversion";
 const HEADER_ACCESS_KEY_ID: &str = "x-ots-accesskeyid";
 const HEADER_CONTENT_MD5: &str = "x-ots-contentmd5";

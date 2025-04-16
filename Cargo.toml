@@ -1,6 +1,6 @@
 [package]
 name = "aliyun-tablestore-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 rust-version = "1.80.1"
@@ -23,6 +23,7 @@ hmac = "0.12.1"
 hmac-sha1 = "0.2.2"
 log = "0.4.26"
 md5 = "0.7.0"
+proc-macro2 = "1.0.95"
 prost = "0.13.5"
 regex = "1.11.1"
 reqwest = {version = "0.12.13", default-features = false, features = ["stream"]}

@@ -2,11 +2,7 @@ use aliyun_tablestore_rs::{data::GetRangeRequest, OtsClient, OtsResult};
 
 #[tokio::main]
 pub async fn main() -> OtsResult<()> {
-    let client = OtsClient::new(
-        "your_ak_id",
-        "your_ak_sec",
-        "https://instance-name.region.ots.aliyuncs.com",
-    );
+    let client = OtsClient::new("your_ak_id", "your_ak_sec", "https://instance-name.region.ots.aliyuncs.com");
     let resp = client
         .get_range(
             GetRangeRequest::new("users")
