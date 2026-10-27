@@ -127,8 +127,16 @@ impl PrimaryKey {
         self
     }
 
+    #[deprecated = "spelling mistake. use `column_inf_max` instead"]
     /// 添加一个极大值列。范围查询时可以使用
     pub fn column_info_max(mut self, name: &str) -> Self {
+        self.columns.push(PrimaryKeyColumn::inf_max(name));
+
+        self
+    }
+
+    /// 添加一个极大值列。范围查询时可以使用
+    pub fn column_inf_max(mut self, name: &str) -> Self {
         self.columns.push(PrimaryKeyColumn::inf_max(name));
 
         self

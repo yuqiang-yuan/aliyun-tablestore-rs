@@ -1,9 +1,9 @@
 # Aliyun Tablestore (OTS) Rust SDK
 
-[![Crates.io Version](https://img.shields.io/crates/v/aliyun-tablestore-rs?_ts_=20250411)](https://crates.io/crates/aliyun-tablestore-rs)
-![Crates.io MSRV](https://img.shields.io/crates/msrv/aliyun-tablestore-rs?_ts_=20250411)
+[![Crates.io Version](https://img.shields.io/crates/v/aliyun-tablestore-rs?_ts_=20261027)](https://crates.io/crates/aliyun-tablestore-rs)
+![Crates.io MSRV](https://img.shields.io/crates/msrv/aliyun-tablestore-rs?_ts_=20261027)
 [![docs.rs](https://img.shields.io/docsrs/aliyun-tablestore-rs)](https://docs.rs/aliyun-tablestore-rs)
-[![Crates.io License](https://img.shields.io/crates/l/aliyun-tablestore-rs?_ts_=20250411)](https://github.com/yuqiang-yuan/aliyun-tablestore-rs?tab=License-1-ov-file)
+[![Crates.io License](https://img.shields.io/crates/l/aliyun-tablestore-rs?_ts_=20261027)](https://github.com/yuqiang-yuan/aliyun-tablestore-rs?tab=License-1-ov-file)
 
 [English](https://github.com/yuqiang-yuan/aliyun-tablestore-rs) | [中文](https://github.com/yuqiang-yuan/aliyun-tablestore-rs/blob/dev/README.zh-CN.md)
 
